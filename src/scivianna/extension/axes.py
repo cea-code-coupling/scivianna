@@ -134,6 +134,13 @@ You can also hide/show the axes on the plot and force a plot update.
             self.w_inp,
             margin=0
         )
+        def update_w(*args, **kwargs):
+            to_update = {"w": self.w_inp.value}
+            self.__new_data = {**self.__new_data, **to_update}
+            self.range_updated = True
+            if pn.state.curdoc is not None:
+                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+        self.w_inp.param.watch(update_w, "value")
 
         # 
         #   Vectors widgets
