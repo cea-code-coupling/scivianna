@@ -8,22 +8,22 @@ from scivianna.data.data_container import DataContainer
 class Data1D(DataContainer):
     """Data class containing the 2D geometry data"""
 
-    line_ids:List[Union[int, str]]
+    line_ids:np.ndarray[Union[int, str]]
     """List of contained line ids"""
-    line_values:List[pd.Series]
+    line_values:np.ndarray[pd.Series]
     """List of contained line values"""
-    line_colors:List[Tuple[int, int, int]]
+    line_colors:np.ndarray[Tuple[int, int, int]]
     """List of contained line colors"""
-    line_styles:List[str]
+    line_styles:np.ndarray[str]
     """List of contained line edge colors"""
     
     def __init__(self):
         """ Empty constructor of the Data1D class.
         """
-        self.line_ids = []
-        self.line_values = []
-        self.line_colors = []
-        self.line_styles = []
+        self.line_ids = np.array([])
+        self.line_values = np.array([])
+        self.line_colors = np.array([])
+        self.line_styles = np.array([])
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame):
@@ -82,10 +82,10 @@ class Data1D(DataContainer):
             Identical copy of self
         """
         data1D = Data1D()
-        data1D.line_ids = np.array(self.line_ids).tolist()
-        data1D.line_values = np.array(self.line_values).tolist()
-        data1D.line_colors = np.array(self.line_colors).tolist()
-        data1D.line_styles = np.array(self.line_styles).tolist()
+        data1D.line_ids = self.line_ids.copy()
+        data1D.line_values = self.line_values.copy()
+        data1D.line_colors = self.line_colors.copy()
+        data1D.line_styles = self.line_styles.copy()
 
         return data1D
 

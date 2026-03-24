@@ -87,15 +87,15 @@ class Data2DWorker:
         assert colors.flatten().max() <= 255, f"The values must be lower than 255, found in array {colors.flatten().max()}."
         assert colors.flatten().min() >= 0, f"The values must be greater than 0, found in array {colors.flatten().min()}."
 
-        self.data2d.cell_colors = colors.tolist()
-        self.data2d.cell_edge_colors = get_edges_colors(colors).tolist()
+        self.data2d.cell_colors = colors
+        self.data2d.cell_edge_colors = get_edges_colors(colors)
 
         edge_colors = np.array(self.data2d.cell_edge_colors)
 
         if not isinstance(self.data2d.cell_values[0], str):
             edge_colors[:, 3] = np.where(np.isnan(np.array(self.data2d.cell_values)), 255, edge_colors[:, 3])
 
-        self.data2d.cell_edge_colors = edge_colors.tolist()
+        self.data2d.cell_edge_colors = edge_colors
 
         return True
     
@@ -126,8 +126,8 @@ class Data2DWorker:
         edge_colors = np.array(self.data2d.cell_edge_colors)
         edge_colors[:, -1] = alphas.astype(int)
 
-        self.data2d.cell_colors = colors.tolist()
-        self.data2d.cell_edge_colors = edge_colors.tolist()
+        self.data2d.cell_colors = colors
+        self.data2d.cell_edge_colors = edge_colors
 
         return True
 

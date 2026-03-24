@@ -26,9 +26,9 @@ def data2d():
         ]
     )
 
-    data2d.cell_values = np.cos(np.arange(10)).tolist()
-    data2d.cell_colors = (np.ones((10, 4))*255).astype(int).tolist()
-    data2d.cell_edge_colors = (np.ones((10, 4))*235).astype(int).tolist()
+    data2d.cell_values = np.cos(np.arange(10))
+    data2d.cell_colors = (np.ones((10, 4))*255).astype(int)
+    data2d.cell_edge_colors = (np.ones((10, 4))*235).astype(int)
 
     return data2d
 
@@ -79,7 +79,7 @@ def test_has_changed_after_set_values(worker: "Data2DWorker"):
     """Test that has_changed returns True after changing cell_values."""
     original_values = np.array(worker.data2d.cell_values)
     new_values = original_values + 1.0
-    worker.data2d.cell_values = new_values.tolist()
+    worker.data2d.cell_values = new_values
     assert worker.has_changed()
 
 @pytest.mark.default
@@ -122,7 +122,7 @@ def test_set_colors_valid(worker: "Data2DWorker"):
     """Test setting valid colors."""
     new_colors = np.ones((10, 4)) * 128
     assert worker.set_colors(new_colors)
-    assert np.allclose(worker.data2d.cell_colors, new_colors.tolist())
+    assert np.allclose(worker.data2d.cell_colors, new_colors)
 
 @pytest.mark.default
 def test_set_colors_invalid_type(worker: "Data2DWorker"):
