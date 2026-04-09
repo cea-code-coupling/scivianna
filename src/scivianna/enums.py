@@ -36,10 +36,10 @@ class GeometryType(Enum):
     """ 2D geometry : Everything is displayed 
     """
     _3D = 1
-    """ 3D geometry : U and V axis are required to slice the geometry, only a selected window is displayed
+    """ 3D geometry : U and V axis and w_value are required to slice the geometry, only a selected window is displayed
     """
     _3D_INFINITE = 1
-    """ 3D geometry : U and V axis are required to slice the geometry
+    """ 3D geometry : U and V axis and w_value are required to slice the geometry
     """
 
 class DataType(Enum):
