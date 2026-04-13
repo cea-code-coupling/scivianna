@@ -277,8 +277,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             line_color=EDGE_COLORS,
             fill_alpha = FILL_ALPHA,
             line_alpha = EDGE_ALPHA,
-            hover_line_alpha=0.6,
-            hover_fill_alpha=0.6,
+            # hover_line_alpha=0.6,
+            # hover_fill_alpha=0.6,
         )
 
     def update_2d_frame(

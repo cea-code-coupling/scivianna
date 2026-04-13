@@ -32,6 +32,7 @@ def plot_frame_in_axes(
     display_colorbar: bool = False,
     edge_width: float = 1.,
     options={},
+    plot_options={},
     custom_colors: Dict[str, Dict[str, str]] = {},
     rename_values: Dict[str, Dict[str, str]] = {},
     legend_options: Dict[str, Any] = {},
@@ -69,6 +70,8 @@ def plot_frame_in_axes(
         Display the polygons, by default False
     options : dict, optional
         Extra coloring options, by default {}
+    plot_options : dict, optional
+        Extra plot options given to geopandas, by default {}
     custom_colors : Dict[str, Dict[str, str]], optional
         HTML color code per field value. Expects a dictionnary such as:
         {
@@ -213,7 +216,7 @@ def plot_frame_in_axes(
                 f"Can't display the colorbar of a field whose visualisation mode is not FROM_VALUE or FROM_STRING, found {slave.get_label_coloring_mode(coloring_label)}"
             )
 
-    plotter.plot_2d_frame_in_axes(data, axes=axes)
+    plotter.plot_2d_frame_in_axes(data, axes=axes, plot_options=plot_options)
 
 
 def plot_frame(
@@ -230,6 +233,7 @@ def plot_frame(
     display_colorbar: bool = False,
     edge_width: float = 1.,
     options={},
+    plot_options={},
     custom_colors: Dict[str, Dict[str, str]] = {},
     rename_values: Dict[str, Dict[str, str]] = {},
     legend_options: Dict[str, Any] = {},
@@ -265,6 +269,8 @@ def plot_frame(
         Cells edge width, by default 1.
     options : dict, optional
         Extra coloring options, by default {}
+    plot_options : dict, optional
+        Extra plot options given to geopandas, by default {}
     custom_colors : Dict[str, Dict[str, str]], optional
         HTML color code per field value. Expects a dictionnary such as:
         {
@@ -305,6 +311,7 @@ def plot_frame(
         display_colorbar=display_colorbar,
         edge_width=edge_width,
         options=options,
+        plot_options=plot_options,
         custom_colors=custom_colors,
         rename_values=rename_values,
         legend_options=legend_options,
