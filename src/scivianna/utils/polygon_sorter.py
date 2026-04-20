@@ -57,10 +57,10 @@ class PolygonSorter:
         assert len(data.cell_edge_colors) == len(self.sort_indexes), f"Given cell edge colors list has a different length from the sorted indexes, respectively found {len(data.cell_edge_colors)} and {len(self.sort_indexes)}."
         assert len(data.cell_ids) == len(self.sort_indexes), f"Given cell ID list has a different length from the sorted indexes, respectively found {len(data.cell_ids)} and {len(self.sort_indexes)}."
         
-        data.cell_ids = np.array(data.cell_ids)[self.sort_indexes].tolist()
-        data.cell_colors = np.array(data.cell_colors)[self.sort_indexes].tolist()
-        data.cell_values = np.array(data.cell_values)[self.sort_indexes].tolist()
-        data.cell_edge_colors = np.array(data.cell_edge_colors)[self.sort_indexes].tolist()
+        data.cell_ids = np.array(data.cell_ids)[self.sort_indexes]
+        data.cell_colors = np.array(data.cell_colors)[self.sort_indexes]
+        data.cell_values = np.array(data.cell_values)[self.sort_indexes]
+        data.cell_edge_colors = np.array(data.cell_edge_colors)[self.sort_indexes]
         
         if data.data_type == DataType.POLYGONS:
             data.polygons = [data.polygons[i] for i in self.sort_indexes]

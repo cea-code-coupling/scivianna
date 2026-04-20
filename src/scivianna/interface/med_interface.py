@@ -474,7 +474,7 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
 
                 cells_ids = self.mesh.getCellIdsCrossingPlane(origin, vec, eps)
 
-                cell_ids = [int(c) for c in cells_ids]
+                cell_ids = [int(c) for c in list(cells_ids)]
 
             except Exception:
                 eps = 1e-7
