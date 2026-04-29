@@ -8,6 +8,8 @@ import multiprocessing as mp
 import panel_material_ui as pmui
 import panel as pn
 import pyvista as pv
+import vtk
+
 import scivianna
 from scivianna.extension.extension import Extension
 from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -124,7 +126,7 @@ class VTKInterface(Geometry2DPolygon):
     def __init__(
         self,
     ):
-        """Apollo 3 interface constructor."""
+        """VTK interface constructor."""
         self.data: Data2D = None
         self.reader: pv.BaseReader = None
         self.mesh: pv.MultiBlock = None
@@ -148,13 +150,46 @@ class VTKInterface(Geometry2DPolygon):
             self.times = self.reader.time_values
             self.load_at_time(self.reader.time_values[-1])
 
+        if file_label == "MULTI_BLOCK":
+            self.reader = vtk.vtkXMLMultiBlockDataReader()
+            self.reader.SetFileName(file_path) 
+            self.reader.Update()
+
+            data = self.reader.GetOutput()
+
+            append = vtk.vtkAppendFilter()
+
+            def add_blocks(block):
+                if block is None:
+                    return
+
+                if block.IsA("vtkUnstructuredGrid"):
+                    append.AddInputData(block)
+
+                elif block.IsA("vtkMultiBlockDataSet"):
+                    for i in range(block.GetNumberOfBlocks()):
+                        add_blocks(block.GetBlock(i))
+
+                elif block.IsA("vtkMultiPieceDataSet"):
+                    for i in range(block.GetNumberOfPieces()):
+                        add_blocks(block.GetPiece(i))
+
+            # Traverse everything
+            add_blocks(data)
+
+            append.Update()
+
+            self.mesh = pv.wrap(append.GetOutput())
+            self.mesh = self.mesh.point_data_to_cell_data()
+            self.mesh.cell_data["cell_id"] = list(range(self.mesh.number_of_cells))
+
         elif file_label == CSV:
             name = Path(file_path).name
             self.results[name] = csv_result.CSVInterface(file_path)
 
         else:
             raise NotImplementedError(
-                f"File label {file_label} not implemented in Apollo3 interface."
+                f"File label {file_label} not implemented in VTK interface."
             )
 
     def load_at_time(self, time: float):
@@ -254,6 +289,9 @@ class VTKInterface(Geometry2DPolygon):
 
         polygon_elements = []
 
+        if mesh_slice.GetNumberOfCells() == 0:
+            raise ValueError(f"Tried slicing at location {origin}, with normal {w}. Mesh has the bounds : {self.mesh.bounds}. No cell was found.")
+        
         point_ids = [mesh_slice.get_cell(j).point_ids for j in range(len(mesh_slice.cell_data["cell_id"]))]
 
         for i, pol in enumerate(point_ids):
