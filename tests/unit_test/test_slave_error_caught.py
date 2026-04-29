@@ -78,8 +78,8 @@ class ThrowingErrorInterface(ValueAtLocation):
 
 
 @pytest.mark.default
-def test_runtime_error():
-    slave = ComputeSlave(ThrowingErrorInterface)
+def test_runtime_error_allowed():
+    slave = ComputeSlave(ThrowingErrorInterface, allow_errors=True)
     try:
         val = slave.get_labels()
     except RuntimeError as e:
@@ -88,8 +88,8 @@ def test_runtime_error():
         assert val is None
 
 @pytest.mark.default
-def test_value_error():
-    slave = ComputeSlave(ThrowingErrorInterface)
+def test_value_error_allowed():
+    slave = ComputeSlave(ThrowingErrorInterface, allow_errors=True)
     try:
         val = slave.get_value(None, None, None, None)
     except ValueError as e:
@@ -98,11 +98,42 @@ def test_value_error():
         assert val is None
 
 @pytest.mark.default
-def test_notimplemented_error():
-    slave = ComputeSlave(ThrowingErrorInterface)
+def test_notimplemented_error_allowed():
+    slave = ComputeSlave(ThrowingErrorInterface, allow_errors=True)
     try:
         val = slave.get_values(None, None, None, None)
     except NotImplementedError as e:
         assert False, "NotImplementedError not caught"
     else:
         assert val is None
+
+
+@pytest.mark.default
+def test_runtime_error():
+    slave = ComputeSlave(ThrowingErrorInterface)
+    try:
+        val = slave.get_labels()
+    except RuntimeError as e:
+        assert True, "RuntimeError caught"
+    else:
+        assert False, "RuntimeError caught"
+
+@pytest.mark.default
+def test_value_error():
+    slave = ComputeSlave(ThrowingErrorInterface)
+    try:
+        val = slave.get_value(None, None, None, None)
+    except ValueError as e:
+        assert True, "ValueError caught"
+    else:
+        assert False, "ValueError caught"
+
+@pytest.mark.default
+def test_notimplemented_error():
+    slave = ComputeSlave(ThrowingErrorInterface)
+    try:
+        val = slave.get_values(None, None, None, None)
+    except NotImplementedError as e:
+        assert True, "NotImplementedError caught"
+    else:
+        assert False, "NotImplementedError caught"
