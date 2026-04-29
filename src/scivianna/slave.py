@@ -285,13 +285,15 @@ def worker(
 class ComputeSlave:
     """Class that creates a subprocess to interface with the code."""
 
-    def __init__(self, code_interface: Type[GenericInterface]):
+    def __init__(self, code_interface: Type[GenericInterface], allow_errors: bool = False):
         """ComputeSlave constructor
 
         Parameters
         ----------
         code_interface : Type[GenericInterface]
             Class of the GenericInterface
+        allow_errors : bool
+            If True, a notification is sent when an error is reached, if False, the error is raised
         """
         self.p: mp.Process = None
         """ Subprocess hosting the worker
@@ -308,6 +310,7 @@ class ComputeSlave:
         self.file_read: List[Tuple[str, str]] = []
         """ List of file read and their associated key.
         """
+        self.allow_errors = allow_errors
 
         self.running = False
         self.reset()
@@ -772,8 +775,11 @@ class ComputeSlave:
         self.ongoing_request = False
         if not self.q_errors.empty():
             error: Exception = self.q_errors.get()
-            pn.state.notifications.error(f"Error {error}, restoring data.")
-
+            if self.allow_errors:
+                pn.state.notifications.error(f"Error {error}, restoring data.")
+            else:
+                raise error
+            
             return None
         else:
             return self.q_returns.get()

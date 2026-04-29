@@ -71,7 +71,10 @@ class VisualizationPanel(pn.viewable.Viewer):
         
         self.panel_name = name
         self.copy_index = 1
+        
         self.slave = slave
+        self.slave.allow_errors = True
+
         self.update_polygons = False
         """Need to update the data at the next async call"""
         self.field_change_callback: Callable = None
