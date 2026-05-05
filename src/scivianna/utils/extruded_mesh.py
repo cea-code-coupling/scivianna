@@ -20,7 +20,7 @@ class ExtrudedStructuredMesh(Geometry2D):
     """Structured mesh build from a set of PolygonElement on the XY plane, extruded at a set of Z values
     """
     def __init__(
-        self, xy_mesh: List[PolygonElement], z_coords: np.ndarray
+        self, xy_mesh: List[PolygonElement], z_coords: np.ndarray, extrusion_vector: Tuple[float, float, float] = (0, 0, 1)
     ):
         """Builds the mesh based on the (r, theta, phi) bins.
 
@@ -36,6 +36,7 @@ class ExtrudedStructuredMesh(Geometry2D):
         # Create structured grid
         self.base_polygons = xy_mesh
         self.z_coords = z_coords
+        self.extrusion_vector = extrusion_vector
 
         self.build_pyvista_geometry()
         
@@ -55,12 +56,16 @@ class ExtrudedStructuredMesh(Geometry2D):
         polygon_faces = []
         cell_ids = []
 
+        remap_cells = any([len(polygons[k].interiors) for k in range(count_cells)])
+
+        print("Warning : PyVista remapping cell IDs")
+
         for k in range(count_cells):
             if (len(polygons[k].interiors) == 0):
                 poly = polygons[k]
                 points = poly.exterior.coords
                 faces = [len(points)] + list(range(len(points)))
-                cell_ids += [k]
+                cell_ids += [k] if remap_cells else [self.base_polygons[k].cell_id]
             else:
                 triangulated = shapely.constrained_delaunay_triangles(polygons[k])
                 points = []
@@ -103,7 +108,16 @@ class ExtrudedStructuredMesh(Geometry2D):
         extruded_cells = [
             mesh.copy(deep=True)
                 .translate([0., 0., self.z_coords[i]])
-                .extrude_trim((0, 0, 1), pv.Plane(center=(0, 0, self.z_coords[i+1]), direction=(0, 0, 1), i_size=1e6, j_size=1e6), inplace=True)
+                .extrude_trim(
+                    self.extrusion_vector, 
+                    pv.Plane(
+                        center=(0, 0, self.z_coords[i+1]), 
+                        direction=self.extrusion_vector, 
+                        i_size=1e6, 
+                        j_size=1e6
+                    ), 
+                    inplace=True
+                )
             for i in range(len(self.z_coords)-1)
         ]
 
@@ -185,6 +199,7 @@ class ExtrudedStructuredMesh(Geometry2D):
         """
         if self.past_computation == [*list(u), *list(v), *list(origin)]:
             return self.polygons
+        
         u = np.array(u)/np.linalg.norm(u)
         v = np.array(v)/np.linalg.norm(v)
         w = np.cross(u, v)
