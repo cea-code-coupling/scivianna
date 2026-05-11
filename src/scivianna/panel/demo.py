@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, Union
 import panel_material_ui as pmui
 from panel.reactive import ReactiveHTML
@@ -5,6 +6,7 @@ from panel.custom import Child
 import param
 import panel as pn
 
+import scivianna
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.visualisation_panel import VisualizationPanel
 
@@ -79,7 +81,7 @@ class Demonstrator:
                 for key in guis
             ], 
             label='Examples', 
-            icon='apps',
+            icon=(Path(scivianna.__file__).parent / "icon" / "apps.svg").read_text().strip(),
         )
 
         self.menu.param.watch(self.switch_app, "value")

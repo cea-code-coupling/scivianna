@@ -1,10 +1,13 @@
 
+from pathlib import Path
+
 from bokeh.plotting import curdoc
 
 import panel as pn
 import panel_material_ui as pmui
 from typing import TYPE_CHECKING
 
+import scivianna
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
@@ -48,7 +51,7 @@ This extension allows you run coupling simulations.
 """
 
         self.run_button = pn.widgets.ButtonIcon(
-            icon="player-play",
+            icon=(Path(scivianna.__file__).parent / "icon" / "player-play.svg").read_text().strip(),
             description="Start automatic update",
             height=30,
             width=30,

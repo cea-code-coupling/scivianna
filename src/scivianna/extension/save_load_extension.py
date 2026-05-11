@@ -3,6 +3,7 @@ from pathlib import Path
 import panel as pn
 import panel_material_ui as pmui
 
+import scivianna
 from scivianna.component.server_file_browser import ServerFileBrowser
 from scivianna.extension.extension import Extension
 from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -49,11 +50,11 @@ Else, only the view is saved.
             value=str(self.folder_path / "save_file.pkl"),
             width=280,
         )
-        self.save_button = pmui.Button(label="Save", width=280, icon="save_alt")
+        self.save_button = pmui.Button(label="Save", width=280, icon=(Path(scivianna.__file__).parent / "icon" / "save_alt.svg").read_text().strip())
         self.save_button.on_click(self.save_file)
 
         self.load_path = ServerFileBrowser(folder_path=self.folder_path, width=280)
-        self.load_button = pmui.Button(label="Load", width=280, icon="file_upload")
+        self.load_button = pmui.Button(label="Load", width=280, icon=(Path(scivianna.__file__).parent / "icon" / "file_upload.svg").read_text().strip())
         self.load_button.on_click(self.load_file)
 
     def save_file(self, *args, **kwargs):

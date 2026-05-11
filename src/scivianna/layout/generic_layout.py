@@ -1,9 +1,11 @@
 import functools 
+from pathlib import Path
 from typing import Callable, Dict, List, Tuple, Type, Union
 
 import panel as pn
 import panel_material_ui as pmui
 
+import scivianna
 from scivianna.enums import UpdateEvent
 from scivianna.extension.layout import LayoutExtension
 from scivianna.extension.coupling import CouplingExtension
@@ -315,7 +317,7 @@ class GenericLayout:
         """
         return pn.widgets.ButtonIcon(
             size="2.5em",
-            icon="layout-sidebar",
+            icon=(Path(scivianna.__file__).parent / "icon" / "layout-sidebar.svg").read_text().strip(),
             visible=False,
             description="Change side bar and coordinate bar to current plot."
         )

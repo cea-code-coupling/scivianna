@@ -1,7 +1,9 @@
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 import panel as pn
 import panel_material_ui as pmui
+import scivianna
 from scivianna.data.data2d import Data2D
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
@@ -62,14 +64,14 @@ You can for example request:
         )
         prompt_clear_button = pmui.IconButton(
             label="Clear",
-            icon='clear',            
+            icon=(Path(scivianna.__file__).parent / "icon" / 'clear.svg').read_text().strip(),            
             variant="outlined",
             description='Clear the prompt text',
             margin=1,
             )
         prompt_run_button = pmui.IconButton(
             label="Run",
-            icon='auto_fix_high',
+            icon=(Path(scivianna.__file__).parent / "icon" / 'auto_fix_high.svg').read_text().strip(),
             variant="contained",
             description='Apply to the geometry',
             margin=1,
@@ -105,8 +107,8 @@ You can for example request:
         self.llm_code = ""
         self.llm_comment = pn.pane.Markdown("")
         self.code_editor = pn.widgets.CodeEditor(value="", language='python', theme='monokai')
-        self.code_valid_button = pmui.IconButton(icon="check")
-        self.code_invalid_button = pmui.IconButton(icon="clear")
+        self.code_valid_button = pmui.IconButton(icon=(Path(scivianna.__file__).parent / "icon" / "check.svg").read_text().strip())
+        self.code_invalid_button = pmui.IconButton(icon=(Path(scivianna.__file__).parent / "icon" / "clear.svg").read_text().strip())
         self.dialog = pmui.Dialog(
             pn.Column(
                 self.llm_comment, 

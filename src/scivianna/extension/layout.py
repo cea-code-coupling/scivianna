@@ -1,7 +1,10 @@
 
+from pathlib import Path
+
 import panel as pn
 from typing import TYPE_CHECKING
 
+import scivianna
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
@@ -78,19 +81,19 @@ This extension allows you to split panels to visualize several fields/geometries
         self.frame_selector.param.watch(self.set_to_frame, "value")
 
         self.duplicate_horizontally_button = pn.widgets.ButtonIcon(
-            icon="columns-2", description="Duplicate horizontally", height=30, width=30
+            icon=(Path(scivianna.__file__).parent / "icon" / "columns-2.svg").read_text().strip(), description="Duplicate horizontally", height=30, width=30
         )
         self.duplicate_vertitally_button = pn.widgets.ButtonIcon(
-            icon="layout-rows", description="Duplicate vertically", height=30, width=30
+            icon=(Path(scivianna.__file__).parent / "icon" / "layout-rows.svg").read_text().strip(), description="Duplicate vertically", height=30, width=30
         )
         self.split_new_horizontally_button = pn.widgets.ButtonIcon(
-            icon="column-insert-right",
+            icon=(Path(scivianna.__file__).parent / "icon" / "column-insert-right.svg").read_text().strip(),
             description="Split horizontally",
             height=30,
             width=30,
         )
         self.split_new_vertically_button = pn.widgets.ButtonIcon(
-            icon="row-insert-bottom",
+            icon=(Path(scivianna.__file__).parent / "icon" / "row-insert-bottom.svg").read_text().strip(),
             description="Split vertically",
             height=30,
             width=30,
@@ -124,9 +127,9 @@ This extension allows you to split panels to visualize several fields/geometries
         self.layout_param_card = pn.Column(
             self.frame_selector,
             self.interface_selector,
-            pn.Row(
-                self.duplicate_horizontally_button, self.duplicate_vertitally_button
-            ),
+            # pn.Row(
+            #     self.duplicate_horizontally_button, self.duplicate_vertitally_button
+            # ),
             width=300,
             margin=0,
         )

@@ -1,7 +1,9 @@
+from pathlib import Path
 from typing import Callable, List, Tuple, Type, Union
 import panel as pn
 import panel_material_ui as pmui
 
+import scivianna
 from scivianna.component.overlay_component import Overlay
 from scivianna.data.data_container import DataContainer
 from scivianna.extension.extension import Extension
@@ -116,7 +118,7 @@ class VisualizationPanel(pn.viewable.Viewer):
         )
         self.gui_panel = self.gui.make_panel()
 
-        self.button = pmui.IconButton(icon="settings_applications", icon_size = "1em", margin=0)
+        self.button = pmui.IconButton(icon=(Path(scivianna.__file__).parent / "icon" / "settings_applications.svg").read_text().strip(), icon_size = "1em", margin=0)
         self.title_typo = pmui.Typography("## "+self.panel_name, margin=0)
 
         self.figure = Overlay(

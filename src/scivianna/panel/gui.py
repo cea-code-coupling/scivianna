@@ -1,9 +1,11 @@
 from functools import partial
+from pathlib import Path
 from typing import List, Tuple
 
 import panel_material_ui as pmui
 import panel as pn
 
+import scivianna
 from scivianna.extension.extension import Extension
 
 
@@ -21,7 +23,7 @@ class GUI:
         extensions : List[Extension]
             List of extensions to add to the GUI
         """
-        s = "10em"
+        s = "1em"
         button_margin_x = 2
         button_margin_y = 5
         self.button_margin = (button_margin_x, button_margin_y)
@@ -31,14 +33,14 @@ class GUI:
         self.buttons = []
 
         self.open_button = pmui.IconButton(
-            icon="keyboard_double_arrow_right",
+            icon=(Path(scivianna.__file__).parent / "icon" / "keyboard_double_arrow_right.svg").read_text().strip(),
             size=s,
             description="Open extensions",
             margin=self.button_margin,
         )
 
         self.close_button = pmui.IconButton(
-            icon="keyboard_double_arrow_left",
+            icon=(Path(scivianna.__file__).parent / "icon" / "keyboard_double_arrow_left.svg").read_text().strip(),
             size=s,
             description="Close extensions",
             margin=self.button_margin,
