@@ -179,14 +179,8 @@ class VTKInterface(Geometry2DPolygon):
 
             append.Update()
 
-            self.mesh = pv.wrap(append.GetOutput())
             self.mesh = self.mesh.point_data_to_cell_data()
             self.mesh.cell_data["cell_id"] = list(range(self.mesh.number_of_cells))
-
-        elif file_label == CSV:
-            name = Path(file_path).name
-            self.results[name] = csv_result.CSVInterface(file_path)
-
         else:
             raise NotImplementedError(
                 f"File label {file_label} not implemented in VTK interface."
@@ -206,7 +200,7 @@ class VTKInterface(Geometry2DPolygon):
             Provided time not in data
         """
         if not time in self.times:
-            raise ValueError(f"Provided time {time} does not exist.")
+            raise ValueError(f"Provided time {time} does not exist, found : {self.times}.")
         
         self.reader.set_active_time_value(time)
         self.mesh = extract_unstructured(self.reader.read()[0])
@@ -411,42 +405,54 @@ class VTKInterface(Geometry2DPolygon):
     
 
 if __name__ == "__main__":
-    file_path = Path("/path/to/file.pvd")
+    file_path = Path("/partage/spatial/Stages/2026_Manta_NTP/Results/Core/core.pvd")
     if True:
         import time 
-
         st = time.time()
-        from scivianna.plotter_2d.api import plot_frame
+
+        import matplotlib.pyplot as plt
+        from scivianna.plotter_2d.api import plot_frame_in_axes
         from scivianna.constants import Z
 
+        file_path = Path("/partage/spatial/Stages/2026_Manta_NTP/Results/Core/core.pvd")
+        fig, axes = plt.subplots(1, 2, width_ratios=[3, 1])
         interface = ComputeSlave(VTKInterface)
         interface.read_file(file_path, GEOMETRY)
 
-        fig, ax = plot_frame(
+        
+        axes[0].set_title("XY Temperature field (K)")
+        axes[0].set_xlabel("X coordinate (cm)")
+        axes[0].set_ylabel("Y coordinate (cm)")
+
+        plot_frame_in_axes(
             interface,
             "Temperature",
+            axes[0],
             w_value = .5,
             edge_width=0.1,
             display_colorbar=True,
-            options={"time": 0.5}
-        )
-        fig.savefig(
-            "plot_vtk.png",
-            dpi=500
+            options={"time": 1000.}
         )
         print("First plot time", time.time() - st)
         
-        fig, ax = plot_frame(
+        axes[1].set_title("XZ Temperature field (K)")
+        axes[1].set_xlabel("X coordinate (cm)")
+        axes[1].set_ylabel("Z coordinate (cm)")
+
+        plot_frame_in_axes(
             interface,
             "Temperature",
-            w_value = .5,
+            axes[1],
+            w_value = 0.,
             edge_width=0.1,
             v=Z,
             display_colorbar=True,
-            options={"time": 0.5}
+            options={"time": 1000.},
+            plot_options={"aspect": None}
         )
+        fig.tight_layout()
         fig.savefig(
-            "plot_vtk_xz.png",
+            "plot_vtk.png",
             dpi=500
         )
         print("Two plot time", time.time() - st)
