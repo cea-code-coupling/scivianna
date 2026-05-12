@@ -49,8 +49,9 @@ class SplitJSVertical(JSComponent):
     left = Child()
     right = Child()
 
+    _bundle = './dist/splitjs_component.bundle.js'
     _esm = """
-    import Split from 'https://esm.sh/split.js@1.6.5'
+    import Split
 
     export function render({ model }) {
       const splitDiv = document.createElement('div');
@@ -83,8 +84,9 @@ class SplitJSHorizontal(JSComponent):
     bottom = Child()
     top = Child()
 
+    _bundle = './dist/splitjs_component.bundle.js'
     _esm = """
-    import Split from 'https://esm.sh/split.js@1.6.5'
+    import Split
 
     export function render({ model }) {
       const splitDiv = document.createElement('div');
