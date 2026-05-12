@@ -30,6 +30,7 @@ setup(
         "scivianna": [
             "agent/*.py",
             "agent/*.md",
+            "component/dist/*.js",
             "input_file/*",
             "icon/*.svg",
             "utils/*",
