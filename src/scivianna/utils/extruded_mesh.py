@@ -211,6 +211,9 @@ class ExtrudedStructuredMesh(Geometry2D):
 
         mesh_slice: pv.PolyData = self.unstructured_mesh.slice(normal = w, origin = origin)
 
+        if mesh_slice.GetNumberOfCells() == 0:
+            raise ValueError(f"Requested slice is out of the box (u, v, origin) : {u}, {v}, {origin}. Please change your axes.")
+
         polygon_elements = {}
 
         cell_per_id = {i: [] for i in set(mesh_slice.cell_data["cell_id"])}
@@ -290,6 +293,7 @@ class ExtrudedStructuredMesh(Geometry2D):
                     ) for h in holes],
                     cell_id,
                 )
+
         self.polygons = list(polygon_elements.values())
         self.past_computation == [*list(u), *list(v), *list(origin)]
         
