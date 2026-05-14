@@ -36,6 +36,7 @@ from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.constants import MESH, X, Y
+import scivianna.utils
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
@@ -291,7 +292,10 @@ class Panel2D(VisualizationPanel):
         """
         to_update = {"x0": x0, "x1": x1, "y0": y0, "y1": y1}
         self.__new_data = {**self.__new_data, **to_update}
-        pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+        elif scivianna.utils._testing:
+            self.async_update_data()
 
         self.u_range = (x0, x1)
         self.v_range = (y0, y1)
@@ -366,6 +370,8 @@ class Panel2D(VisualizationPanel):
 
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
     def duplicate(self, keep_name: bool = False) -> "VisualizationPanel":
         """Get a copy of the panel. A panel of the same type is generated, the current display too, but a new slave process is created.
@@ -468,7 +474,10 @@ class Panel2D(VisualizationPanel):
 
             self.__data_to_update = True
             self.marked_to_recompute = True
-            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            if pn.state.curdoc is not None:
+                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
     def set_coordinates(
         self,
@@ -579,7 +588,7 @@ class Panel2D(VisualizationPanel):
             self.plotter.set_axes(self.u, self.v, self.w_value)
             self.marked_to_recompute = True
             if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+                cb = pn.state.curdoc.add_next_tick_callback(self.async_update_data)
 
     def set_field(self, field_name: str):
         """Updates the plotted field
@@ -597,14 +606,19 @@ class Panel2D(VisualizationPanel):
 
             else:
                 # Reseting indexes to prevent weird edges
+                print(pn.state.curdoc)
                 if pn.state.curdoc is not None:
                     pn.state.curdoc.add_next_tick_callback(self.polygon_sorter.reset_indexes)
+                elif scivianna.utils._testing:
+                    self.polygon_sorter.reset_indexes()
 
                 for extension in self.extensions:
                     extension.on_field_change(field_name)
 
                 if pn.state.curdoc is not None:
                     pn.state.curdoc.add_next_tick_callback(self.recompute)
+                elif scivianna.utils._testing:
+                    self.recompute()
 
                 if self.field_change_callback is not None:
                     self.field_change_callback(field_name)
@@ -623,3 +637,5 @@ class Panel2D(VisualizationPanel):
 
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.recompute)
+            elif scivianna.utils._testing:
+                self.recompute()
