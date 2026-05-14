@@ -260,8 +260,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.source_polygons.data = {
             XS: xs,
             YS: ys,
-            CELL_NAMES: data.cell_ids,
-            COMPO_NAMES: data.cell_values,
+            CELL_NAMES: data.cell_ids.tolist(),
+            COMPO_NAMES: data.cell_values.tolist(),
             COLORS: np.array(data.cell_colors)[:, :-1].tolist(),
             FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
             EDGE_COLORS: np.array(data.cell_edge_colors)[:, :-1].tolist(),
@@ -298,8 +298,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             data={
                 XS: xs,
                 YS: ys,
-                CELL_NAMES: data.cell_ids,
-                COMPO_NAMES: data.cell_values,
+                CELL_NAMES: data.cell_ids.tolist(),
+                COMPO_NAMES: data.cell_values.tolist(),
                 COLORS: np.array(data.cell_colors).tolist(),
                 EDGE_COLORS: np.array(data.cell_edge_colors).tolist(),
                 FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
@@ -321,7 +321,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
         self.source_polygons.patch(
             {
-                COMPO_NAMES: [(slice(0, cell_count), data.cell_values)],
+                COMPO_NAMES: [(slice(0, cell_count), data.cell_values.tolist())],
                 COLORS: [(slice(0, cell_count), np.array(data.cell_colors)[:, :-1].tolist())],
                 EDGE_COLORS: [
                     (slice(0, cell_count), np.array(data.cell_edge_colors).tolist())

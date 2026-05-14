@@ -82,10 +82,10 @@ class Data1D(DataContainer):
             Identical copy of self
         """
         data1D = Data1D()
-        data1D.line_ids = np.array(self.line_ids).tolist()
-        data1D.line_values = np.array(self.line_values).tolist()
-        data1D.line_colors = np.array(self.line_colors).tolist()
-        data1D.line_styles = np.array(self.line_styles).tolist()
+        data1D.line_ids = np.array(self.line_ids)
+        data1D.line_values = np.array(self.line_values)
+        data1D.line_colors = np.array(self.line_colors)
+        data1D.line_styles = np.array(self.line_styles)
 
         return data1D
 

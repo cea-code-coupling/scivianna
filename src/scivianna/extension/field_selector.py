@@ -145,14 +145,14 @@ def set_colors_list(
             f"Visualization mode {coloring_mode} not implemented."
         )
 
-    data.cell_colors = cell_colors.tolist()
+    data.cell_colors = cell_colors
 
     edge_colors = get_edges_colors(cell_colors)
 
     if not isinstance(cell_values[0], str):
         edge_colors[:, 3] = np.where(np.isnan(np.array(cell_values)), 255, edge_colors[:, 3])
 
-    data.cell_edge_colors = edge_colors.tolist()
+    data.cell_edge_colors = edge_colors
 
 
 class FieldSelector(Extension):
