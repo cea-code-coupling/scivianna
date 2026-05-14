@@ -311,7 +311,7 @@ You can also hide/show the axes on the plot and force a plot update.
 
     def on_frame_change(self, u_vector, v_vector):
         u, v = self.get_uv()
-        if [*u_vector, *v_vector] != [*u.tolist(), *(v.tolist())]:
+        if [*list(u_vector), *list(v_vector)] != [*u.tolist(), *(v.tolist())]:
             self.__new_data["u0"], self.__new_data["u1"], self.__new_data["u2"] = u_vector
             self.__new_data["v0"], self.__new_data["v1"], self.__new_data["v2"] = v_vector
 
