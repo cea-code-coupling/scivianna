@@ -6,6 +6,7 @@ from scivianna.enums import GeometryType
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
+import scivianna.utils
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -140,6 +141,8 @@ You can also hide/show the axes on the plot and force a plot update.
             self.range_updated = True
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
         self.w_inp.param.watch(update_w, "value")
 
         # 
@@ -177,6 +180,8 @@ You can also hide/show the axes on the plot and force a plot update.
             self.axes_updated = True
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
         # Attach the CB to the button
         self.xplus = pmui.Button(name="X+", button_type="success", width=50)
@@ -195,6 +200,8 @@ You can also hide/show the axes on the plot and force a plot update.
             self.axes_updated = True
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
         # Attach the CB to the button
         self.yplus = pmui.Button(name="Y+", button_type="success", width=50)
@@ -213,6 +220,8 @@ You can also hide/show the axes on the plot and force a plot update.
             self.axes_updated = True
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
         # Attach the CB to the button
         self.zplus = pmui.Button(name="Z+", button_type="success", width=50)
@@ -308,6 +317,8 @@ You can also hide/show the axes on the plot and force a plot update.
             
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
     def on_frame_change(self, u_vector, v_vector):
         u, v = self.get_uv()
@@ -317,6 +328,8 @@ You can also hide/show the axes on the plot and force a plot update.
 
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
     async def async_update_data(self,):
         if self.__new_data != {}:

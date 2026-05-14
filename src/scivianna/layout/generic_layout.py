@@ -6,6 +6,7 @@ import panel as pn
 import panel_material_ui as pmui
 
 import scivianna
+import scivianna.utils
 from scivianna.enums import UpdateEvent
 from scivianna.extension.layout import LayoutExtension
 from scivianna.extension.coupling import CouplingExtension
@@ -291,6 +292,8 @@ class GenericLayout:
         """Periodically called function that requests calling async_update_data at the end of current tick."""
         if pn.state.curdoc is not None:
             pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+        elif scivianna.utils._testing:
+            self.async_update_data()
 
     @pn.io.hold()
     async def async_update_data(

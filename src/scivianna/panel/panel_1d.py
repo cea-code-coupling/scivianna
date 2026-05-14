@@ -9,6 +9,7 @@ from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_1d.bokeh_1d_plotter import BokehPlotter1D
 from scivianna.plotter_1d.generic_plotter import Plotter1D
 from scivianna.slave import ComputeSlave
+import scivianna.utils
 
 
 default_extensions = [LineSelector]
@@ -133,6 +134,8 @@ class Panel1D(VisualizationPanel):
 
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
     def __get_series(self, key: str):
         """Get the serie or series associated to the given key
@@ -219,6 +222,8 @@ class Panel1D(VisualizationPanel):
             self.__data_to_update = True
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
     def provide_field_change_callback(self, callback: Callable):
         """Stores a function to call everytime the displayed field is changed.

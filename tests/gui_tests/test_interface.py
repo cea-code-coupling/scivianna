@@ -1,20 +1,16 @@
-from logging import warning
-import os
 from pathlib import Path
-import sys
 from typing import Any, Dict, List, Tuple, Union, TYPE_CHECKING
 import numpy as np
 import multiprocessing as mp
 import panel as pn
 import panel_material_ui as pmui
-import pickle
-
-if TYPE_CHECKING:
-    from scivianna.panel.visualisation_panel import VisualizationPanel
-    from scivianna.slave import ComputeSlave
-    from scivianna.plotter_2d.generic_plotter import Plotter2D
+from bokeh.plotting import curdoc
 
 import scivianna
+from scivianna.panel.panel_2d import Panel2D
+from scivianna.slave import ComputeSlave
+from scivianna.plotter_2d.generic_plotter import Plotter2D
+
 from scivianna.extension.extension import Extension
 import scivianna.icon
 from scivianna.data.data2d import Data2D
@@ -35,7 +31,7 @@ class TestExtension(Extension):
         self,
         slave: "ComputeSlave",
         plotter: "Plotter2D",
-        panel: "VisualizationPanel"
+        panel: "Panel2D"
     ):
         """Constructor of the extension, saves the slave and the panel
 
@@ -45,7 +41,7 @@ class TestExtension(Extension):
             Slave computing the displayed data
         plotter : Plotter2D
             Figure plotter
-        panel : VisualizationPanel
+        panel : Panel2D
             Panel to which the extension is attached
         """
         super().__init__(
@@ -76,17 +72,14 @@ This extension allows defining the medcoupling field display parameters.
         )
 
 
-class TestInterface(Geometry2DPolygon, IcocoInterface):
-    """ Support mesh
-    """
+class TestInterface(Geometry2DPolygon):
     geometry_type: GeometryType = GeometryType._3D_INFINITE
     extensions = [TestExtension]
 
     def __init__(self):
-        """MEDCoupling interface constructor."""
         self.data: Data2D = None
-        """Past computed data"""
         self.file_path: Dict[str, str] = {}
+        self.current_field = None
 
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
@@ -196,6 +189,7 @@ class TestInterface(Geometry2DPolygon, IcocoInterface):
         Dict[Union[int,str], str]
             Field value for each requested cell names
         """
+        self.current_field = value_label
         if value_label == MESH:
             return {v: np.nan for v in cells}
         if value_label == MATERIAL:
@@ -236,3 +230,18 @@ class TestInterface(Geometry2DPolygon, IcocoInterface):
             List of (file label, description)
         """
         return [(GEOMETRY, "MED file."), (CSV, "CSV result file.")]
+    
+    def get_info(self,):
+        return self.data, self.last_computed_frame, self.file_path, self.current_field
+
+def make_panel_2d():
+    slave = ComputeSlave(TestInterface)
+    panel = Panel2D(slave)
+
+    return panel, {
+        e.__class__: e for e in panel.extensions
+    }
+
+def test_build_panel():
+    make_panel_2d()
+    assert True
