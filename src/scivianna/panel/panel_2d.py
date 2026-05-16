@@ -190,9 +190,13 @@ class Panel2D(VisualizationPanel):
         else:
             # If marked to recompute, a safe change was applied on a plot parameter, a recompute is requested async
             if self.marked_to_recompute:
-                self.recompute()
-                self.marked_to_recompute = False
-                self.async_update_data()
+                if not scivianna.utils._testing:
+                    self.recompute()
+                    self.marked_to_recompute = False
+                    self.async_update_data()
+                else:
+                    self.marked_to_recompute = False
+                    self.recompute()
 
         # this is necessary only in a notebook context where sometimes we have to force Panel/Bokeh to push an update to the browser
         pn.io.push_notebook(self.figure)
@@ -586,9 +590,16 @@ class Panel2D(VisualizationPanel):
 
         if update_axes or update_range:
             self.plotter.set_axes(self.u, self.v, self.w_value)
+            
+            for extension in self.extensions:
+                extension.on_frame_change(self.u, self.v)
+
             self.marked_to_recompute = True
+
             if pn.state.curdoc is not None:
-                cb = pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.async_update_data()
 
     def set_field(self, field_name: str):
         """Updates the plotted field
