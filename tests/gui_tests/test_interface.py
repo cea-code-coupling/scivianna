@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, TYPE_CHECKING
+from dataclasses import dataclass
 import numpy as np
 import multiprocessing as mp
 import panel as pn
@@ -19,13 +20,40 @@ from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 from scivianna.enums import GeometryType, VisualizationMode
 
 from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV
+from scivianna.constants import XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, GEOMETRY, EDGE_ALPHA, FILL_ALPHA
 
 with open(Path(scivianna.icon.__file__).parent / "salome.svg", "r") as f:
     icon_svg = f.read()
 
 
+@dataclass
+class FieldChangeEvent:
+    """Event recorded when a field change callback is triggered."""
+    field_name: str
+
+
+@dataclass
+class RangeChangeEvent:
+    """Event recorded when a range change callback is triggered."""
+    u_bounds: Tuple[float, float]
+    v_bounds: Tuple[float, float]
+    w_value: float
+
+
+@dataclass
+class FrameChangeEvent:
+    """Event recorded when a frame change callback is triggered."""
+    u_vector: Tuple[float, float, float]
+    v_vector: Tuple[float, float, float]
+
+
 class TestExtension(Extension):
-    """Extension to load files and send them to the slave."""
+    """Extension to load files and send them to the slave.
+
+    This extension overrides all Extension callback methods to track
+    when they are called by the Panel2D system. Tracking data is stored
+    in instance variables for test verification.
+    """
 
     def __init__(
         self,
@@ -45,7 +73,7 @@ class TestExtension(Extension):
             Panel to which the extension is attached
         """
         super().__init__(
-            "MEDCoupling",
+            "TestExtension",
             icon_svg,
             slave,
             plotter,
@@ -57,6 +85,17 @@ This extension allows defining the medcoupling field display parameters.
 """
 
         self.iconsize = "1.0em"
+
+        # Tracking variables for callback invocations
+        self._field_change_history: List[str] = []
+        self._range_change_history: List[RangeChangeEvent] = []
+        self._frame_change_history: List[FrameChangeEvent] = []
+        self._updated_data_history: List[Data2D] = []
+
+        self._on_field_change_called: bool = False
+        self._on_range_change_called: bool = False
+        self._on_frame_change_called: bool = False
+        self._on_updated_data_called: bool = False
 
     def make_gui(self,) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
@@ -70,6 +109,39 @@ This extension allows defining the medcoupling field display parameters.
             pmui.Typography("Test extension"),
             margin=0
         )
+
+    def on_field_change(self, field_name: str):
+        """Override to track field change events."""
+        self._field_change_history.append(field_name)
+        self._on_field_change_called = True
+
+    def on_range_change(
+        self,
+        u_bounds: Tuple[float, float],
+        v_bounds: Tuple[float, float],
+        w_value: float,
+    ):
+        """Override to track range change events."""
+        self._range_change_history.append(RangeChangeEvent(
+            u_bounds=u_bounds, v_bounds=v_bounds, w_value=w_value
+        ))
+        self._on_range_change_called = True
+
+    def on_frame_change(
+        self,
+        u_vector: Tuple[float, float, float],
+        v_vector: Tuple[float, float, float],
+    ):
+        """Override to track frame change events."""
+        self._frame_change_history.append(FrameChangeEvent(
+            u_vector=u_vector, v_vector=v_vector
+        ))
+        self._on_frame_change_called = True
+
+    def on_updated_data(self, data: Data2D):
+        """Override to track updated data events."""
+        self._updated_data_history.append(data)
+        self._on_updated_data_called = True
 
 
 class TestInterface(Geometry2DPolygon):
@@ -135,17 +207,19 @@ class TestInterface(Geometry2DPolygon):
         bool
             Were the polygons updated compared to the past call
         """
+        last_frame_key = (*u, *v, w_value)
         if (self.data is not None) and (
-            self.last_computed_frame == [*u, *v, w_value]
+            self.last_computed_frame == last_frame_key
         ):
             print("Skipping polygon computation.")
             return self.data, False
 
+        v_offset = v[1] + 10*w_value
         polygons = [
             PolygonElement(
                 exterior_polygon = PolygonCoords(
                     x_coords = [i, i, i+1, i+1],
-                    y_coords = [0, 1, 1, 0]
+                    y_coords = [0+v_offset, 1+v_offset, 1+v_offset, 0+v_offset]
                 ),
                 holes = [],
                 cell_id = i
@@ -153,7 +227,9 @@ class TestInterface(Geometry2DPolygon):
             for i in range(3)
         ]
 
-        self.last_computed_frame = [*u, *v, w_value]
+        print("Offset", v_offset)
+
+        self.last_computed_frame = last_frame_key
         self.data = Data2D.from_polygon_list(polygons)
         return self.data, True
 
@@ -241,6 +317,24 @@ def make_panel_2d():
     return panel, {
         e.__class__: e for e in panel.extensions
     }
+
+def get_polygons(panel: Panel2D):
+    return [
+        panel.plotter.source_polygons.data[XS],
+        panel.plotter.source_polygons.data[YS],
+    ]
+
+def get_colors(panel: Panel2D):
+    return panel.plotter.source_polygons.data[COLORS]
+
+def get_edge_colors(panel: Panel2D):
+    return panel.plotter.source_polygons.data[EDGE_COLORS]
+
+def get_cell_ids(panel: Panel2D):
+    return panel.plotter.source_polygons.data[CELL_NAMES]
+
+def get_cell_values(panel: Panel2D):
+    return panel.plotter.source_polygons.data[COMPO_NAMES]
 
 def test_build_panel():
     make_panel_2d()
