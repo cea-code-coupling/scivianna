@@ -591,9 +591,6 @@ class Panel2D(VisualizationPanel):
         if update_axes or update_range:
             self.plotter.set_axes(self.u, self.v, self.w_value)
             
-            for extension in self.extensions:
-                extension.on_frame_change(self.u, self.v)
-
             self.marked_to_recompute = True
 
             if pn.state.curdoc is not None:
