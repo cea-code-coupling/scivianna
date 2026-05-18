@@ -43,8 +43,8 @@ class Data1D(DataContainer):
         data_.line_ids = list(df.columns)
         data_.line_values = [df[key] for key in df.columns]
 
-        data_.line_colors = [None for _ in len(df.columns)]
-        data_.line_styles = [None for _ in len(df.columns)]
+        data_.line_colors = [None] * len(df.columns)
+        data_.line_styles = [None] * len(df.columns)
         
         return data_
 
@@ -68,8 +68,8 @@ class Data1D(DataContainer):
         data_.line_ids = list(series.keys())
         data_.line_values = list(series.values())
 
-        data_.line_colors = [None for _ in len(data_.line_ids)]
-        data_.line_styles = [None for _ in len(data_.line_ids)]
+        data_.line_colors = [None] * len(data_.line_ids)
+        data_.line_styles = [None] * len(data_.line_ids)
 
         return data_
     
