@@ -17,7 +17,7 @@ from scivianna.data.data2d import Data2D
 from scivianna.enums import VisualizationMode
 from scivianna.constants import OUTSIDE
 
-from test_interface import make_panel_2d, TestExtension
+from test_interface import make_panel_2d
 
 
 class TestFieldSelectorInitialization:

@@ -11,7 +11,7 @@ from scivianna.extension.extension import Extension
 from scivianna.data.data2d import Data2D
 from scivianna.constants import MESH, X, Y
 
-from test_interface import make_panel_2d, TestExtension
+from test_interface import make_panel_2d, DummyTestExtension
 
 import scivianna.utils
 scivianna.utils._testing = True
@@ -24,17 +24,17 @@ class TestExtensionDefaultFeatures:
         """Test that extension attributes are properly set by __init__."""
         panel, extensions_dict = make_panel_2d()
         try:
-            assert TestExtension in extensions_dict
-            test_ext = extensions_dict[TestExtension]
+            assert DummyTestExtension in extensions_dict
+            test_ext = extensions_dict[DummyTestExtension]
 
-            assert isinstance(test_ext, TestExtension)
+            assert isinstance(test_ext, DummyTestExtension)
         finally:
             panel.slave.terminate()
 
     def test_extension_initialization(self):
         """Test that extension attributes are properly set by __init__."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Title and icon set by constructor
@@ -58,7 +58,7 @@ This extension allows defining the medcoupling field display parameters.
     def test_make_gui_returns_viewable(self):
         """Test that make_gui returns a Panel viewable object."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             gui = test_ext.make_gui()
@@ -72,7 +72,7 @@ This extension allows defining the medcoupling field display parameters.
     def test_provide_options_default_returns_empty_dict(self):
         """Test that provide_options returns empty dict by default."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             options = test_ext.provide_options()
@@ -88,7 +88,7 @@ class TestExtensionCallbacksCalled:
     def test_on_field_change_called(self):
         """Test that on_field_change is called when set_field is called."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Reset tracking
@@ -110,7 +110,7 @@ class TestExtensionCallbacksCalled:
     def test_on_range_change_called(self):
         """Test that on_range_change is called when ranges are updated."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Reset tracking
@@ -132,7 +132,7 @@ class TestExtensionCallbacksCalled:
     def test_on_frame_change_called(self):
         """Test that on_frame_change is called when u/v vectors change."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Reset tracking
@@ -153,7 +153,7 @@ class TestExtensionCallbacksCalled:
     def test_on_updated_data_called(self):
         """Test that on_updated_data is called when data is recomputed."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Reset tracking
@@ -172,7 +172,7 @@ class TestExtensionCallbacksCalled:
     def test_on_file_load_default_no_error(self):
         """Test that on_file_load default implementation does nothing."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Default implementation should not raise
@@ -184,7 +184,7 @@ class TestExtensionCallbacksCalled:
     def test_on_mouse_move_default_no_error(self):
         """Test that on_mouse_move default implementation does nothing."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Default implementation should not raise
@@ -197,7 +197,7 @@ class TestExtensionCallbacksCalled:
     def test_on_mouse_click_default_no_error(self):
         """Test that on_mouse_clic default implementation does nothing."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Default implementation should not raise
@@ -214,7 +214,7 @@ class TestExtensionTrackingMechanism:
     def test_tracking_attributes_exist(self):
         """Test that TestExtension has all tracking attributes."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             assert hasattr(test_ext, '_field_change_history')
@@ -254,7 +254,7 @@ class TestExtensionCallbackSequence:
     def test_field_change_triggers_recompute_sequence(self):
         """Test that changing field triggers on_field_change then on_updated_data."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Reset tracking
@@ -276,7 +276,7 @@ class TestExtensionCallbackSequence:
     def test_coordinate_change_triggers_frame_then_range(self):
         """Test that coordinate changes trigger on_frame_change and on_range_change."""
         panel, extensions_dict = make_panel_2d()
-        test_ext = extensions_dict[TestExtension]
+        test_ext = extensions_dict[DummyTestExtension]
 
         try:
             # Reset tracking
