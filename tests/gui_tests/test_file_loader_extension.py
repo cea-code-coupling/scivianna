@@ -14,7 +14,7 @@ scivianna.utils._testing = True
 from scivianna.extension.file_loader import FileLoader
 from scivianna.constants import GEOMETRY
 
-from test_interface import make_panel_2d, TestExtension
+from test_interface import make_panel_2d
 
 
 class TestFileLoaderInitialization:

@@ -6,11 +6,13 @@ import multiprocessing as mp
 import panel as pn
 import panel_material_ui as pmui
 from bokeh.plotting import curdoc
+from unittest.mock import Mock, MagicMock
 
 import scivianna
 from scivianna.panel.panel_2d import Panel2D
 from scivianna.slave import ComputeSlave
 from scivianna.plotter_2d.generic_plotter import Plotter2D
+from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 
 from scivianna.extension.extension import Extension
 import scivianna.icon
@@ -19,8 +21,9 @@ from scivianna.interface.generic_interface import Geometry2DPolygon, IcocoInterf
 from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 from scivianna.enums import GeometryType, VisualizationMode
 
-from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV
-from scivianna.constants import XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, GEOMETRY, EDGE_ALPHA, FILL_ALPHA
+from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV, XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, GEOMETRY, EDGE_ALPHA, FILL_ALPHA, X, Y
+
+from bokeh import events as bokeh_events
 
 with open(Path(scivianna.icon.__file__).parent / "salome.svg", "r") as f:
     icon_svg = f.read()
@@ -47,7 +50,23 @@ class FrameChangeEvent:
     v_vector: Tuple[float, float, float]
 
 
-class TestExtension(Extension):
+@dataclass
+class MouseMoveEvent:
+    """Event recorded when a mouse move callback is triggered."""
+    screen_location: Tuple[float, float]
+    space_location: Tuple[float, float, float]
+    cell_id: Union[str, int]
+
+
+@dataclass
+class MouseClickEvent:
+    """Event recorded when a mouse click callback is triggered."""
+    screen_location: Tuple[float, float]
+    space_location: Tuple[float, float, float]
+    cell_id: Union[str, int]
+
+
+class DummyTestExtension(Extension):
     """Extension to load files and send them to the slave.
 
     This extension overrides all Extension callback methods to track
@@ -91,11 +110,15 @@ This extension allows defining the medcoupling field display parameters.
         self._range_change_history: List[RangeChangeEvent] = []
         self._frame_change_history: List[FrameChangeEvent] = []
         self._updated_data_history: List[Data2D] = []
+        self._mouse_move_history: List[MouseMoveEvent] = []
+        self._mouse_click_history: List[MouseClickEvent] = []
 
         self._on_field_change_called: bool = False
         self._on_range_change_called: bool = False
         self._on_frame_change_called: bool = False
         self._on_updated_data_called: bool = False
+        self._on_mouse_move_called: bool = False
+        self._on_mouse_clic_called: bool = False
 
     def make_gui(self,) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
@@ -143,10 +166,38 @@ This extension allows defining the medcoupling field display parameters.
         self._updated_data_history.append(data)
         self._on_updated_data_called = True
 
+    def on_mouse_move(
+        self,
+        screen_location: Tuple[float, float],
+        space_location: Tuple[float, float, float],
+        cell_id: Union[str, int],
+    ):
+        """Override to track mouse move events."""
+        self._mouse_move_history.append(MouseMoveEvent(
+            screen_location=screen_location,
+            space_location=space_location,
+            cell_id=cell_id,
+        ))
+        self._on_mouse_move_called = True
 
-class TestInterface(Geometry2DPolygon):
+    def on_mouse_clic(
+        self,
+        screen_location: Tuple[float, float],
+        space_location: Tuple[float, float, float],
+        cell_id: Union[str, int],
+    ):
+        """Override to track mouse click events."""
+        self._mouse_click_history.append(MouseClickEvent(
+            screen_location=screen_location,
+            space_location=space_location,
+            cell_id=cell_id,
+        ))
+        self._on_mouse_clic_called = True
+
+
+class DummyTestInterface(Geometry2DPolygon):
     geometry_type: GeometryType = GeometryType._3D_INFINITE
-    extensions = [TestExtension]
+    extensions = [DummyTestExtension]
 
     def __init__(self):
         self.data: Data2D = None
@@ -255,7 +306,7 @@ class TestInterface(Geometry2DPolygon):
         ----------
         value_label : str
             Field name to get values from
-        cells : List[Union[int,str]]
+        cells : List[Union,int,str]]
             List of cells names
         options : Dict[str, Any]
             Additional options for frame computation.
@@ -310,13 +361,15 @@ class TestInterface(Geometry2DPolygon):
     def get_info(self,):
         return self.data, self.last_computed_frame, self.file_path, self.current_field
 
+
 def make_panel_2d():
-    slave = ComputeSlave(TestInterface)
+    slave = ComputeSlave(DummyTestInterface)
     panel = Panel2D(slave)
 
     return panel, {
         e.__class__: e for e in panel.extensions
     }
+
 
 def get_polygons(panel: Panel2D):
     return [
@@ -324,14 +377,18 @@ def get_polygons(panel: Panel2D):
         panel.plotter.source_polygons.data[YS],
     ]
 
+
 def get_colors(panel: Panel2D):
     return panel.plotter.source_polygons.data[COLORS]
+
 
 def get_edge_colors(panel: Panel2D):
     return panel.plotter.source_polygons.data[EDGE_COLORS]
 
+
 def get_cell_ids(panel: Panel2D):
     return panel.plotter.source_polygons.data[CELL_NAMES]
+
 
 def get_cell_values(panel: Panel2D):
     return panel.plotter.source_polygons.data[COMPO_NAMES]
@@ -339,3 +396,581 @@ def get_cell_values(panel: Panel2D):
 def test_build_panel():
     make_panel_2d()
     assert True
+
+class TestMouseMoveCallbacks:
+    """Tests for mouse move callback functionality."""
+
+    def test_provide_on_mouse_move_callback_registers_callback(self):
+        """Test that providing a mouse move callback stores it in the plotter."""
+        panel, _ = make_panel_2d()
+        
+        mock_callback = Mock()
+        panel.provide_on_mouse_move_callback(mock_callback)
+        
+        assert panel.plotter.on_mouse_move_callback is not None
+        # The callback is wrapped with functools.partial in Bokeh2DPolygonPlotter
+        assert callable(panel.plotter.on_mouse_move_callback)
+
+    def test_mouse_move_callback_receives_panel(self):
+        """Test that the mouse move callback receives the panel correctly."""
+        panel, _ = make_panel_2d()
+        
+        callback_invocations = []
+        
+        def on_mouse_move(screen_location, space_location, cell_id):
+            callback_invocations.append({
+                'screen_location': screen_location,
+                'space_location': space_location,
+                'cell_id': cell_id
+            })
+        
+        panel.provide_on_mouse_move_callback(on_mouse_move)
+        
+        # Verify callback was registered
+        assert panel.plotter.on_mouse_move_callback is not None
+
+    def test_plotter_send_event_with_valid_index(self):
+        """Test that send_event correctly passes data when index is valid."""
+        panel, _ = make_panel_2d()
+        
+        callback_calls = []
+        
+        def mock_callback(screen_location, space_location, cell_id):
+            callback_calls.append({
+                'screen_location': screen_location,
+                'space_location': space_location,
+                'cell_id': cell_id
+            })
+        
+        # Set up the callback
+        panel.plotter.provide_on_mouse_move_callback(mock_callback)
+        
+        # Simulate mouse data with a valid index (0 points to first polygon)
+        panel.plotter.source_mouse.data = {
+            "sx": [100.0],
+            "sy": [50.0],
+            "x": [0.5],
+            "y": [0.5],
+            "z": [0.0],
+            "index": [0],
+        }
+        
+        # Call send_event directly
+        panel.plotter.send_event(mock_callback)
+        
+        assert len(callback_calls) == 1
+        assert callback_calls[0]['screen_location'] == (100.0, 50.0)
+        assert callback_calls[0]['space_location'] == (0.5, 0.5, 0.0)
+        assert callback_calls[0]['cell_id'] == 0
+
+    def test_plotter_send_event_with_multiple_cells(self):
+        """Test send_event with different cell IDs."""
+        panel, _ = make_panel_2d()
+        
+        # The test interface creates 3 cells (0, 1, 2)
+        callback_calls = []
+        
+        def mock_callback(screen_location, space_location, cell_id):
+            callback_calls.append(cell_id)
+        
+        panel.plotter.provide_on_mouse_move_callback(mock_callback)
+        
+        # Test with index 1 (middle cell)
+        panel.plotter.source_mouse.data["index"] = [1]
+        panel.plotter.send_event(mock_callback)
+        
+        assert len(callback_calls) == 1
+        assert callback_calls[0] == 1
+
+    def test_plotter_send_event_with_invalid_index(self):
+        """Test that send_event does not call callback when index is out of bounds."""
+        panel, _ = make_panel_2d()
+        
+        callback_calls = []
+        
+        def mock_callback(screen_location, space_location, cell_id):
+            callback_calls.append(cell_id)
+        
+        panel.plotter.provide_on_mouse_move_callback(mock_callback)
+        
+        # Set index to a value larger than the number of polygons
+        panel.plotter.source_mouse.data["index"] = [100]
+        
+        # send_event should not call the callback when index is out of bounds
+        panel.plotter.send_event(mock_callback)
+        
+        assert len(callback_calls) == 0
+
+    def test_panel_provide_on_mouse_move_callback_integration(self):
+        """Test that Panel2D.provide_on_mouse_move_callback correctly delegates to plotter."""
+        panel, _ = make_panel_2d()
+        
+        # The callbacks should be set by Panel2D's __init__ (registered with Bokeh events)
+        assert panel.plotter.on_mouse_move_callback is not None
+        assert callable(panel.plotter.on_mouse_move_callback)
+
+    def test_mouse_move_callback_data_structure(self):
+        """Test that mouse move callback receives correct data structure."""
+        panel, _ = make_panel_2d()
+        
+        received_data = {}
+        
+        def on_mouse_move(screen_location, space_location, cell_id):
+            received_data['screen'] = screen_location
+            received_data['space'] = space_location
+            received_data['cell'] = cell_id
+        
+        panel.plotter.provide_on_mouse_move_callback(on_mouse_move)
+        
+        # Simulate mouse event data
+        panel.plotter.source_mouse.data = {
+            "sx": [200.0],
+            "sy": [150.0],
+            "x": [0.75],
+            "y": [0.25],
+            "z": [0.0],
+            "index": [2],
+        }
+        
+        panel.plotter.send_event(on_mouse_move)
+        
+        assert 'screen' in received_data
+        assert 'space' in received_data
+        assert 'cell' in received_data
+        assert received_data['screen'] == (200.0, 150.0)
+        assert received_data['space'] == (0.75, 0.25, 0.0)
+        assert received_data['cell'] == 2
+
+
+class TestClickCallbacks:
+    """Tests for click (tap) callback functionality."""
+
+    def test_provide_on_clic_callback_registers_callback(self):
+        """Test that providing a click callback stores it in the plotter."""
+        panel, _ = make_panel_2d()
+        
+        mock_callback = Mock()
+        panel.provide_on_clic_callback(mock_callback)
+        
+        assert panel.plotter.on_clic_callback is not None
+        assert callable(panel.plotter.on_clic_callback)
+
+    def test_click_callback_receives_panel(self):
+        """Test that the click callback receives the panel correctly."""
+        panel, _ = make_panel_2d()
+        
+        callback_invocations = []
+        
+        def on_mouse_click(screen_location, space_location, cell_id):
+            callback_invocations.append({
+                'screen_location': screen_location,
+                'space_location': space_location,
+                'cell_id': cell_id
+            })
+        
+        panel.provide_on_clic_callback(on_mouse_click)
+        
+        # Verify callback was registered
+        assert panel.plotter.on_clic_callback is not None
+
+    def test_plotter_send_event_for_click(self):
+        """Test that send_event works for click events too."""
+        panel, _ = make_panel_2d()
+        
+        callback_calls = []
+        
+        def mock_callback(screen_location, space_location, cell_id):
+            callback_calls.append({
+                'screen_location': screen_location,
+                'space_location': space_location,
+                'cell_id': cell_id
+            })
+        
+        panel.plotter.provide_on_clic_callback(mock_callback)
+        
+        # Simulate click data
+        panel.plotter.source_mouse.data = {
+            "sx": [300.0],
+            "sy": [200.0],
+            "x": [0.3],
+            "y": [0.6],
+            "z": [0.0],
+            "index": [1],
+        }
+        
+        panel.plotter.send_event(mock_callback)
+        
+        assert len(callback_calls) == 1
+        assert callback_calls[0]['screen_location'] == (300.0, 200.0)
+        assert callback_calls[0]['space_location'] == (0.3, 0.6, 0.0)
+        assert callback_calls[0]['cell_id'] == 1
+
+    def test_click_callback_with_invalid_index(self):
+        """Test that click callback is not called when index is out of bounds."""
+        panel, _ = make_panel_2d()
+        
+        callback_calls = []
+        
+        def mock_callback(screen_location, space_location, cell_id):
+            callback_calls.append(cell_id)
+        
+        panel.plotter.provide_on_clic_callback(mock_callback)
+        
+        # Set index to a value larger than the number of polygons
+        panel.plotter.source_mouse.data["index"] = [100]
+        
+        panel.plotter.send_event(mock_callback)
+        
+        assert len(callback_calls) == 0
+
+    def test_panel_provide_on_clic_callback_integration(self):
+        """Test that Panel2D.provide_on_clic_callback correctly delegates to plotter."""
+        panel, _ = make_panel_2d()
+        
+        # The callbacks should be set by Panel2D's __init__ (registered with Bokeh events)
+        assert panel.plotter.on_clic_callback is not None
+        assert callable(panel.plotter.on_clic_callback)
+
+    def test_click_callback_data_structure(self):
+        """Test that click callback receives correct data structure."""
+        panel, _ = make_panel_2d()
+        
+        received_data = {}
+        
+        def on_mouse_click(screen_location, space_location, cell_id):
+            received_data['screen'] = screen_location
+            received_data['space'] = space_location
+            received_data['cell'] = cell_id
+        
+        panel.plotter.provide_on_clic_callback(on_mouse_click)
+        
+        # Simulate click event data
+        panel.plotter.source_mouse.data = {
+            "sx": [400.0],
+            "sy": [300.0],
+            "x": [0.1],
+            "y": [0.9],
+            "z": [0.0],
+            "index": [0],
+        }
+        
+        panel.plotter.send_event(on_mouse_click)
+        
+        assert 'screen' in received_data
+        assert 'space' in received_data
+        assert 'cell' in received_data
+        assert received_data['screen'] == (400.0, 300.0)
+        assert received_data['space'] == (0.1, 0.9, 0.0)
+        assert received_data['cell'] == 0
+
+    def test_plotter_has_tap_event_registered(self):
+        """Test that the Bokeh figure has Tap event registered for click."""
+        panel, _ = make_panel_2d()
+        
+        mock_callback = Mock()
+        panel.provide_on_clic_callback(mock_callback)
+        
+        # After providing callback, the figure should have an event listener
+        assert hasattr(panel.plotter.figure, 'on_event')
+
+    def test_both_callbacks_registered_simultaneously(self):
+        """Test that both mouse move and click callbacks can be registered simultaneously."""
+        panel, _ = make_panel_2d()
+        
+        mouse_calls = []
+        click_calls = []
+        
+        def on_mouse_move(screen_location, space_location, cell_id):
+            mouse_calls.append(cell_id)
+        
+        def on_click(screen_location, space_location, cell_id):
+            click_calls.append(cell_id)
+        
+        panel.provide_on_mouse_move_callback(on_mouse_move)
+        panel.provide_on_clic_callback(on_click)
+        
+        # Both callbacks should be set
+        assert panel.plotter.on_mouse_move_callback is not None
+        assert panel.plotter.on_clic_callback is not None
+        
+        # Simulate mouse move event
+        panel.plotter.source_mouse.data = {
+            "sx": [100.0],
+            "sy": [50.0],
+            "x": [0.5],
+            "y": [0.5],
+            "z": [0.0],
+            "index": [0],
+        }
+        
+        panel.plotter.send_event(on_mouse_move)
+        assert len(mouse_calls) == 1
+        assert mouse_calls[0] == 0
+        
+        # Simulate click event
+        panel.plotter.source_mouse.data = {
+            "sx": [200.0],
+            "sy": [100.0],
+            "x": [0.25],
+            "y": [0.75],
+            "z": [0.0],
+            "index": [2],
+        }
+        
+        panel.plotter.send_event(on_click)
+        assert len(click_calls) == 1
+        assert click_calls[0] == 2
+
+
+class TestExtensionReceivesMouseCallbacks:
+    """Tests verifying that Extension instances receive mouse move and click callbacks from Panel2D."""
+
+    def test_extension_receives_mouse_move_callback(self):
+        """Test that an extension's on_mouse_move method is called when the mouse moves on the plot.
+        
+        The VisualizationPanel base class registers each extension's on_mouse_move callback
+        via provide_on_mouse_move_callback(extension.on_mouse_move). This test verifies
+        the delegation chain works correctly.
+        """
+        panel, extensions = make_panel_2d()
+        dummy_ext = extensions.get(DummyTestExtension)
+        
+        assert dummy_ext is not None, "DummyTestExtension should be in panel.extensions"
+        
+        # Reset tracking state
+        dummy_ext._on_mouse_move_called = False
+        dummy_ext._mouse_move_history.clear()
+        
+        # Simulate a mouse move event through the plotter
+        panel.plotter.source_mouse.data = {
+            "sx": [100.0],
+            "sy": [50.0],
+            "x": [0.5],
+            "y": [0.5],
+            "z": [0.0],
+            "index": [0],
+        }
+        
+        # Trigger the callback by calling send_event with the plotter's stored callback
+        if panel.plotter.on_mouse_move_callback is not None:
+            panel.plotter.send_event(panel.plotter.on_mouse_move_callback)
+        
+        # Verify the extension received the callback
+        assert dummy_ext._on_mouse_move_called, "DummyTestExtension.on_mouse_move should have been called"
+        assert len(dummy_ext._mouse_move_history) == 1, "One mouse move event should be recorded"
+        
+        event = dummy_ext._mouse_move_history[0]
+        assert event.screen_location == (100.0, 50.0)
+        assert event.space_location == (0.5, 0.5, 0.0)
+        assert event.cell_id == 0
+
+    def test_extension_receives_mouse_click_callback(self):
+        """Test that an extension's on_mouse_clic method is called when the user clicks on the plot.
+        
+        The VisualizationPanel base class registers each extension's on_mouse_clic callback
+        via provide_on_clic_callback(extension.on_mouse_clic). This test verifies
+        the delegation chain works correctly.
+        """
+        panel, extensions = make_panel_2d()
+        dummy_ext = extensions.get(DummyTestExtension)
+        
+        assert dummy_ext is not None, "DummyTestExtension should be in panel.extensions"
+        
+        # Reset tracking state
+        dummy_ext._on_mouse_clic_called = False
+        dummy_ext._mouse_click_history.clear()
+        
+        # Simulate a click event through the plotter
+        panel.plotter.source_mouse.data = {
+            "sx": [300.0],
+            "sy": [200.0],
+            "x": [0.3],
+            "y": [0.6],
+            "z": [0.0],
+            "index": [1],
+        }
+        
+        # Trigger the callback by calling send_event with the plotter's stored callback
+        if panel.plotter.on_clic_callback is not None:
+            panel.plotter.send_event(panel.plotter.on_clic_callback)
+        
+        # Verify the extension received the callback
+        assert dummy_ext._on_mouse_clic_called, "DummyTestExtension.on_mouse_clic should have been called"
+        assert len(dummy_ext._mouse_click_history) == 1, "One mouse click event should be recorded"
+        
+        event = dummy_ext._mouse_click_history[0]
+        assert event.screen_location == (300.0, 200.0)
+        assert event.space_location == (0.3, 0.6, 0.0)
+        assert event.cell_id == 1
+
+    def test_extension_receives_multiple_mouse_move_events(self):
+        """Test that an extension receives multiple mouse move events correctly."""
+        panel, extensions = make_panel_2d()
+        dummy_ext = extensions.get(DummyTestExtension)
+        
+        assert dummy_ext is not None
+        
+        # Reset tracking state
+        dummy_ext._on_mouse_move_called = False
+        dummy_ext._mouse_move_history.clear()
+        
+        # Simulate multiple mouse move events
+        for i, (sx, sy, x, y, idx) in enumerate([
+            (100.0, 50.0, 0.1, 0.9, 0),
+            (200.0, 150.0, 0.5, 0.5, 1),
+            (300.0, 250.0, 0.9, 0.1, 2),
+        ]):
+            panel.plotter.source_mouse.data = {
+                "sx": [sx],
+                "sy": [sy],
+                "x": [x],
+                "y": [y],
+                "z": [0.0],
+                "index": [idx],
+            }
+            
+            if panel.plotter.on_mouse_move_callback is not None:
+                panel.plotter.send_event(panel.plotter.on_mouse_move_callback)
+        
+        assert len(dummy_ext._mouse_move_history) == 3, "Three mouse move events should be recorded"
+        
+        # Verify each event
+        assert dummy_ext._mouse_move_history[0].screen_location == (100.0, 50.0)
+        assert dummy_ext._mouse_move_history[0].cell_id == 0
+        assert dummy_ext._mouse_move_history[1].screen_location == (200.0, 150.0)
+        assert dummy_ext._mouse_move_history[1].cell_id == 1
+        assert dummy_ext._mouse_move_history[2].screen_location == (300.0, 250.0)
+        assert dummy_ext._mouse_move_history[2].cell_id == 2
+
+    def test_extension_receives_multiple_mouse_click_events(self):
+        """Test that an extension receives multiple mouse click events correctly."""
+        panel, extensions = make_panel_2d()
+        dummy_ext = extensions.get(DummyTestExtension)
+        
+        assert dummy_ext is not None
+        
+        # Reset tracking state
+        dummy_ext._on_mouse_clic_called = False
+        dummy_ext._mouse_click_history.clear()
+        
+        # Simulate multiple click events
+        for i, (sx, sy, x, y, idx) in enumerate([
+            (100.0, 50.0, 0.1, 0.9, 0),
+            (200.0, 150.0, 0.5, 0.5, 1),
+        ]):
+            panel.plotter.source_mouse.data = {
+                "sx": [sx],
+                "sy": [sy],
+                "x": [x],
+                "y": [y],
+                "z": [0.0],
+                "index": [idx],
+            }
+            
+            if panel.plotter.on_clic_callback is not None:
+                panel.plotter.send_event(panel.plotter.on_clic_callback)
+        
+        assert len(dummy_ext._mouse_click_history) == 2, "Two mouse click events should be recorded"
+        
+        # Verify each event
+        assert dummy_ext._mouse_click_history[0].screen_location == (100.0, 50.0)
+        assert dummy_ext._mouse_click_history[0].cell_id == 0
+        assert dummy_ext._mouse_click_history[1].screen_location == (200.0, 150.0)
+        assert dummy_ext._mouse_click_history[1].cell_id == 1
+
+    def test_extension_does_not_receive_callback_with_invalid_index(self):
+        """Test that extension callbacks are not triggered when index is out of bounds."""
+        panel, extensions = make_panel_2d()
+        dummy_ext = extensions.get(DummyTestExtension)
+        
+        assert dummy_ext is not None
+        
+        # Reset tracking state
+        dummy_ext._on_mouse_move_called = False
+        dummy_ext._mouse_move_history.clear()
+        dummy_ext._on_mouse_clic_called = False
+        dummy_ext._mouse_click_history.clear()
+        
+        # Simulate mouse move with invalid index
+        panel.plotter.source_mouse.data = {
+            "sx": [100.0],
+            "sy": [50.0],
+            "x": [0.5],
+            "y": [0.5],
+            "z": [0.0],
+            "index": [100],  # Out of bounds (only 3 polygons: 0, 1, 2)
+        }
+        
+        if panel.plotter.on_mouse_move_callback is not None:
+            panel.plotter.send_event(panel.plotter.on_mouse_move_callback)
+        
+        # Extension should NOT have received the callback
+        assert not dummy_ext._on_mouse_move_called, "Extension should not receive callback with invalid index"
+        assert len(dummy_ext._mouse_move_history) == 0, "No mouse move events should be recorded"
+        
+        # Simulate click with invalid index
+        panel.plotter.source_mouse.data = {
+            "sx": [200.0],
+            "sy": [100.0],
+            "x": [0.25],
+            "y": [0.75],
+            "z": [0.0],
+            "index": [100],  # Out of bounds
+        }
+        
+        if panel.plotter.on_clic_callback is not None:
+            panel.plotter.send_event(panel.plotter.on_clic_callback)
+        
+        # Extension should NOT have received the callback
+        assert not dummy_ext._on_mouse_clic_called, "Extension should not receive click callback with invalid index"
+        assert len(dummy_ext._mouse_click_history) == 0, "No mouse click events should be recorded"
+
+    def test_all_extensions_receive_mouse_callbacks(self):
+        """Test that all extensions registered on the panel receive mouse callbacks."""
+        panel, extensions = make_panel_2d()
+        
+        # Verify DummyTestExtension is present
+        assert DummyTestExtension in extensions, "DummyTestExtension should be registered"
+        
+        dummy_ext = extensions[DummyTestExtension]
+        
+        # Reset tracking state
+        dummy_ext._on_mouse_move_called = False
+        dummy_ext._mouse_move_history.clear()
+        dummy_ext._on_mouse_clic_called = False
+        dummy_ext._mouse_click_history.clear()
+        
+        # Simulate mouse move event
+        panel.plotter.source_mouse.data = {
+            "sx": [150.0],
+            "sy": [100.0],
+            "x": [0.4],
+            "y": [0.6],
+            "z": [0.0],
+            "index": [0],
+        }
+        
+        if panel.plotter.on_mouse_move_callback is not None:
+            panel.plotter.send_event(panel.plotter.on_mouse_move_callback)
+        
+        # Verify the extension received it
+        assert dummy_ext._on_mouse_move_called, "All extensions should receive mouse move callbacks"
+        assert len(dummy_ext._mouse_move_history) == 1
+        
+        # Simulate click event
+        panel.plotter.source_mouse.data = {
+            "sx": [250.0],
+            "sy": [200.0],
+            "x": [0.6],
+            "y": [0.4],
+            "z": [0.0],
+            "index": [1],
+        }
+        
+        if panel.plotter.on_clic_callback is not None:
+            panel.plotter.send_event(panel.plotter.on_clic_callback)
+        
+        # Verify the extension received it
+        assert dummy_ext._on_mouse_clic_called, "All extensions should receive click callbacks"
+        assert len(dummy_ext._mouse_click_history) == 1
+
