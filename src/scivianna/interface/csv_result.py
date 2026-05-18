@@ -20,7 +20,7 @@ class CSVInterface(ValueAtLocation):
         ValueError
             File not found
         ValueError
-            Neither cell nor materials in the file columns
+            Cell column not found in the file columns
         """
         path = Path(csv_file_path)
         self.basename = path.name.replace(".csv", "")
@@ -30,9 +30,9 @@ class CSVInterface(ValueAtLocation):
 
         self.df = pd.read_csv(path)
 
-        if not ("cell" in self.df.columns):
+        if "cell" not in self.df.columns:
             raise ValueError(
-                f"Neither material nor cell was found in the csv columns. Found: {self.df.columns}."
+                f"Cell column was not found in the csv columns. Found: {self.df.columns}."
             )
 
     def get_value(
@@ -42,7 +42,7 @@ class CSVInterface(ValueAtLocation):
         material_name: str,
         field: str,
     ):
-        """Provides the result value of a field from either the (x, y, z) position, the cell index, or the material name.
+        """Provides the result value of a field from either the (x, y, z) position or the cell index.
 
         Parameters
         ----------
@@ -51,13 +51,13 @@ class CSVInterface(ValueAtLocation):
         cell_index : str
             Index of the requested cell
         material_name : str
-            Name of the requested material
+            Name of the requested material (ignored for CSV interface)
         field : str
             Requested field name
 
         Returns
         -------
-        List[Union[str, float]]
+        Union[str, float]
             Field value
         """
         if field not in self.df.columns:
@@ -65,21 +65,9 @@ class CSVInterface(ValueAtLocation):
                 f"Field {field} not found in dataframe columns, found : {self.df.columns}."
             )
 
-        if "cell" in self.df.columns:
-            return self.df.set_index("cell").loc[field, cell_index]
-            look_column = self.df["cell"]
-            line_index = look_column[look_column == cell_index].index[0]
-
-        elif "material" in self.df.columns:
-            look_column = self.df["material"]
-            line_index = look_column[look_column == material_name].index[0]
-
-        else:
-            raise ValueError(
-                f"Neither material nor cell was found in the csv columns. Found: {self.df.columns}."
-            )
-
-        return self.df.loc[field, line_index]
+        look_column = self.df["cell"]
+        line_index = look_column[look_column == cell_index].index[0]
+        return self.df.loc[line_index, field]
 
     def get_values(
         self,
@@ -88,7 +76,7 @@ class CSVInterface(ValueAtLocation):
         material_names: List[str],
         field: str,
     ) -> List[Union[str, float]]:
-        """Provides the result values at different positions from either the (x, y, z) positions, the cell indexes, or the material names.
+        """Provides the result values at different positions from either the (x, y, z) positions or the cell indexes.
 
         Parameters
         ----------
@@ -97,7 +85,7 @@ class CSVInterface(ValueAtLocation):
         cell_indexes : List[str]
             Indexes of the requested cells
         material_names : List[str]
-            Names of the requested materials
+            Names of the requested materials (ignored for CSV interface)
         field : str
             Requested field name
 
@@ -106,48 +94,28 @@ class CSVInterface(ValueAtLocation):
         List[Union[str, float]]
             Field values
         """
-        field = field[len(self.basename) + 1:]
         if field not in self.df.columns:
             raise ValueError(
                 f"Field {field} not found in dataframe columns, found : {self.df.columns}."
             )
 
-        if "cell" in self.df.columns:
-            new_df = self.df.copy()
-            new_df["cell"] = new_df["cell"]
-            new_df = new_df.set_index("cell")
+        new_df = self.df.copy()
+        new_df["cell"] = new_df["cell"].astype(str)
+        new_df = new_df.set_index("cell")
 
-            if np.inf in cell_indexes:
-                list_cells = list(cell_indexes.copy())
-                list_cells.remove(np.inf)
-                vals = new_df[field][list_cells].to_list()
-                vals.insert(list(cell_indexes.copy()).index(np.inf), np.nan)
-
-                return vals
+        result = []
+        for idx in cell_indexes:
+            # Check for np.inf or float('inf')
+            if isinstance(idx, float) and np.isinf(idx):
+                result.append(np.nan)
             else:
-                return new_df[field][cell_indexes].to_list()
+                str_idx = str(idx)
+                if str_idx in new_df.index:
+                    result.append(new_df[field][str_idx])
+                else:
+                    result.append(np.nan)
 
-        elif "material" in self.df.columns:
-            new_df = self.df.copy()
-            new_df["material"] = new_df["material"].astype(str)
-            new_df = new_df.set_index("material")
-
-            if "Out of geometry" in material_names:
-                list_materials = list(material_names.copy())
-                list_materials.remove("Out of geometry")
-                vals = new_df[field][list_materials].to_list()
-                vals.insert(
-                    list(material_names.copy()).index("Out of geometry"), np.nan
-                )
-
-                return vals
-            else:
-                return new_df[field][material_names].to_list()
-
-        else:
-            raise ValueError(
-                f"Neither material nor cell was found in the csv columns. Found: {self.df.columns}."
-            )
+        return result
 
     def get_fields(self) -> List[str]:
         """Returns the fields names providable.
@@ -160,5 +128,5 @@ class CSVInterface(ValueAtLocation):
         return [
             self.basename + "_" + c
             for c in self.df.columns
-            if c not in ["cell", "material"]
+            if c != "cell"
         ]
