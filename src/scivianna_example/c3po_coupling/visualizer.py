@@ -1,7 +1,8 @@
-
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Union
+
+from scivianna.coupling.problem_server import ServerManager, ProblemClient
 
 from scivianna.layout.gridstack import GridStackLayout
 from scivianna.panel.panel_1d import Panel1D
@@ -12,12 +13,16 @@ from scivianna.notebook_tools import get_med_panel
 
 from scivianna.coupling.icoco import GridStackProblem
 
-from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveFloat, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    NonNegativeFloat,
+    PositiveFloat,
+    model_validator,
+)
 
 import numpy as np
 import medcoupling as mc
-
-import scivianna_example.c3po_coupling.med_utils as med_utils
 
 
 class VisuPanel(BaseModel):
@@ -64,7 +69,7 @@ class VisualizerData(BaseModel):
 
     title: str
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check(self):
 
         found_names = set()
@@ -78,8 +83,9 @@ class VisualizerData(BaseModel):
         return self
 
 
-def get_serializable_data(visualiser_data: VisualizerData,
-                          working_directory: Path) -> VisualizerData:
+def get_serializable_data(
+    visualiser_data: VisualizerData, working_directory: Path
+) -> VisualizerData:
 
     serializable_grid: List[List] = []
     for line in visualiser_data.grid:
@@ -88,20 +94,25 @@ def get_serializable_data(visualiser_data: VisualizerData,
 
         for element in line:
 
-            if isinstance(element, (FieldPanel, FieldValuePanel)) and isinstance(element.mesh, mc.MEDCouplingMesh):
-                mesh_file = working_directory / f"mesh_{element.name.replace(' ', '_')}.med"
+            if isinstance(element, (FieldPanel, FieldValuePanel)) and isinstance(
+                element.mesh, mc.MEDCouplingMesh
+            ):
+                mesh_file = (
+                    working_directory / f"mesh_{element.name.replace(' ', '_')}.med"
+                )
                 mc.WriteMesh(str(mesh_file), element.mesh, True)
                 if isinstance(element, FieldPanel):
                     element = FieldPanel(name=element.name, mesh=mesh_file)
                 else:
-                    element = FieldValuePanel(name=element.name, mesh=mesh_file, reduction_type=element.reduction_type)
-
+                    element = FieldValuePanel(
+                        name=element.name,
+                        mesh=mesh_file,
+                        reduction_type=element.reduction_type,
+                    )
 
             serializable_grid[-1].append(element)
 
-
-    return VisualizerData(title=visualiser_data.title,
-                          grid=serializable_grid)
+    return VisualizerData(title=visualiser_data.title, grid=serializable_grid)
 
 
 class VisuProblem(GridStackProblem):
@@ -120,9 +131,12 @@ class VisuProblem(GridStackProblem):
 
     def initialize(self):
         import os
+
         print(f"server pid = {os.getpid()}")
 
-        data_to_view = VisualizerData.model_validate_json(Path(self.data_file_path).read_text())
+        data_to_view = VisualizerData.model_validate_json(
+            Path(self.data_file_path).read_text()
+        )
 
         np_x = 1
         for line in data_to_view.grid:
@@ -143,16 +157,16 @@ class VisuProblem(GridStackProblem):
                 name = element.name
                 if isinstance(element, ValuePanel):
                     slave_result = ComputeSlave(TimeDataFrame)
-                    
-                    slave_result.setTime(-1.)
+
+                    slave_result.setTime(-1.0)
                     slave_result.setInputDoubleValue(name, np.nan)
 
                     visualisation_panels[name] = Panel1D(slave_result, name)
 
                 elif isinstance(element, FieldValuePanel):
                     slave_result = ComputeSlave(TimeDataFrame)
-                    
-                    slave_result.setTime(-1.)
+
+                    slave_result.setTime(-1.0)
                     slave_result.setInputDoubleValue(name, np.nan)
 
                     visualisation_panels[name] = Panel1D(slave_result, name)
@@ -166,10 +180,14 @@ class VisuProblem(GridStackProblem):
                     mesh = mc.ReadMeshFromFile(str(element.mesh))
                     self._meshes[name] = mesh
 
-                    field = med_utils.get_field_template(mesh=mesh, name=name)
-                    field_path = self._working_directory / f"field_{name.replace(' ', '_')}.med"
+                    field = self.get_field_template(mesh=mesh, name=name)
+                    field_path = (
+                        self._working_directory / f"field_{name.replace(' ', '_')}.med"
+                    )
                     mc.WriteField(str(field_path), field, True)
-                    visualisation_panels[name] = get_med_panel(str(field_path), title=name)
+                    visualisation_panels[name] = get_med_panel(
+                        str(field_path), title=name
+                    )
                     visualisation_panels[name].set_field(name)
 
                 else:
@@ -182,8 +200,9 @@ class VisuProblem(GridStackProblem):
         # mfldsn
         #   Adding the run button to be able to start the synchronisation to the coupling
         self.gridstack = GridStackLayout(
-            visualisation_panels, bounds_x, bounds_y, add_run_button=True)
-        
+            visualisation_panels, bounds_x, bounds_y, add_run_button=True
+        )
+
         self.gridstack.add_time_widget()
 
         return super().initialize()
@@ -205,22 +224,24 @@ class VisuProblem(GridStackProblem):
             elif self._field_values[name] == ReductionType.SUM:
                 value = afield.accumulate()
             else:
-                raise ValueError(f"{name} not in {[member.name for member in ReductionType]}")
+                raise ValueError(
+                    f"{name} not in {[member.name for member in ReductionType]}"
+                )
 
             return self.setInputDoubleValue(name, value)
 
         long_name = f"{name}@{name}"
 
         if isinstance(afield, mc.DataArrayDouble):
-            afield = med_utils.get_field_template(array=afield,
-                                                  mesh=self._meshes[name],
-                                                  name=long_name)
+            afield = self.get_field_template(
+                array=afield, mesh=self._meshes[name], name=long_name
+            )
         print(f"-------> {long_name=}, {type(afield)=}")
         return super().setInputMEDDoubleField(long_name, afield)
 
     def getInputMEDDoubleFieldTemplate(self, name):
         if name in self._field_values:
-            return med_utils.get_field_template(mesh=self._meshes[name], name=name)
+            return self.get_field_template(mesh=self._meshes[name], name=name)
 
         name = f"{name}@{name}"
         return super().getInputMEDDoubleFieldTemplate(name)
@@ -229,16 +250,33 @@ class VisuProblem(GridStackProblem):
         name = f"{name}@{name}"
         return super().setInputDoubleValue(name, val)
 
+    def get_field_template(self, name: str,
+                        mesh: mc.MEDCouplingUMesh,
+                        array: Optional[mc.DataArrayDouble] = None,
+                        nature: Optional[int] = mc.IntensiveMaximum
+                        ) -> mc.MEDCouplingFieldDouble:
 
-from problem_server import ServerManager, ProblemClient
+        mcfield = mc.MEDCouplingFieldDouble(mc.ON_CELLS, mc.ONE_TIME)
+        mcfield.setName(name)
+        mcfield.setTime(0., 0, 0)
+        mcfield.setMesh(mesh)
+        if array is None:
+            array = mc.DataArrayDouble([0.] * mesh.getNumberOfCells())
+        mcfield.setArray(array)
+        if nature is not None:
+            mcfield.setNature(nature)
+        return mcfield
+
+
+
 
 class VisuClient(ProblemClient):
 
     def setInputMEDDoubleField(self, name, afield):
         return super().setInputMEDDoubleField(name, afield.getArray())
 
-def get_problem(working_directory: Path,
-                data_to_view: VisualizerData) -> VisuProblem:
+
+def get_problem(working_directory: Path, data_to_view: VisualizerData) -> VisuProblem:
     """Creates the visualisation objects from a working dir
 
     Parameters
@@ -254,16 +292,20 @@ def get_problem(working_directory: Path,
         Icoco problem for the visializer
     """
 
-    data_to_view = get_serializable_data(working_directory=working_directory,
-                                         visualiser_data=data_to_view)
-    data_file = (working_directory / "data_inputs_neutro.json")
-    data_file.write_text(data_to_view.model_dump_json(indent=4), encoding='utf-8')
+    data_to_view = get_serializable_data(
+        working_directory=working_directory, visualiser_data=data_to_view
+    )
+    data_file = working_directory / "data_inputs_neutro.json"
+    data_file.write_text(data_to_view.model_dump_json(indent=4), encoding="utf-8")
 
     typeid = ServerManager.register(VisuProblem)
 
     import os
+
     print(f"client pid = {os.getpid()}")
 
-    problem = VisuClient(typeid=typeid, working_directory=working_directory)  # pylint: disable=abstract-class-instantiated
+    problem = VisuClient(
+        typeid=typeid, working_directory=working_directory
+    )  # pylint: disable=abstract-class-instantiated
 
     return problem, data_file
