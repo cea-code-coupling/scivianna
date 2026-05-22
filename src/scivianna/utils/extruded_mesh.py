@@ -143,6 +143,27 @@ class ExtrudedStructuredMesh(Geometry2D):
         """
         self.grids[name] = grid
 
+        cell_ids = self.unstructured_mesh.cell_data["cell_id"]
+
+        # Build lookup arrays
+        keys = np.fromiter(grid.keys(), dtype=cell_ids.dtype)
+        values = np.fromiter(grid.values(), dtype=float)
+
+        # Map ids -> indices in `values`
+        sort_idx = np.argsort(keys)
+        sorted_keys = keys[sort_idx]
+        sorted_values = values[sort_idx]
+
+        idx = np.searchsorted(sorted_keys, cell_ids)
+
+        # Optional safety check
+        if not np.all(sorted_keys[idx] == cell_ids):
+            raise ValueError("Some cell_ids are missing from grid")
+
+        cell_values = sorted_values[idx]
+
+        self.unstructured_mesh.cell_data[name] = cell_values
+
     def get_cells_values(self, name:str, cell_ids:List[int]) -> np.ndarray:
         """Returns a field values for a list of cell indexes
 
