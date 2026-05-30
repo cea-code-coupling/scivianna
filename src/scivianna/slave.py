@@ -15,7 +15,7 @@ from scivianna.data.data2d import Data2D
 from scivianna.interface.generic_interface import (
     GenericInterface,
     Geometry2D,
-    IcocoInterface,
+    CouplingInterface,
     OverLine,
     ValueAtLocation,
     Value1DAtLocation
@@ -272,7 +272,7 @@ def worker(
                 #
                 #   ICOCOInterface functions
                 elif task == SlaveCommand.GET_INPUT_MED_DOUBLEFIELD_TEMPLATE:
-                    if not isinstance(code_, IcocoInterface):
+                    if not isinstance(code_, CouplingInterface):
                         raise TypeError(
                             f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
                         )
@@ -283,7 +283,7 @@ def worker(
                     q_returns.put(field_template)
 
                 elif task == SlaveCommand.SET_INPUT_MED_DOUBLEFIELD:
-                    if not isinstance(code_, IcocoInterface):
+                    if not isinstance(code_, CouplingInterface):
                         raise TypeError(
                             f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
                         )
@@ -293,16 +293,16 @@ def worker(
 
                 elif task == SlaveCommand.SET_TIME:
                     time_ = data[0]
-                    if not isinstance(code_, IcocoInterface):
+                    if not isinstance(code_, CouplingInterface):
                         raise TypeError(
                             f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
                         )
-                    set_return = code_.setTime(time=time_)
+                    set_return = code_.set_time(time=time_)
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.SET_INPUT_DOUBLE_VALUE:
                     name, val = data
-                    if not isinstance(code_, IcocoInterface):
+                    if not isinstance(code_, CouplingInterface):
                         raise TypeError(
                             f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
                         )

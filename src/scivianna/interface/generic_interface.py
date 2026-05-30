@@ -140,6 +140,11 @@ class GenericInterface:
         """
         raise NotImplementedError()
 
+    @classmethod
+    def get_slave(cls):
+        from scivianna.slave import ComputeSlave
+        return ComputeSlave(cls)
+
 
 class Geometry2D(GenericInterface):
     """ Interface parent class for classes that can compute geometry 2D slices.
@@ -372,77 +377,10 @@ class OverLine(GenericInterface):
         raise NotImplementedError()
 
 
-class IcocoInterface(GenericInterface):
+class CouplingInterface(GenericInterface):
     """ Interface parent class to implement the C3PO functions required for a code coupling visualization.
     """
-    def getInputMEDDoubleFieldTemplate(self, field_name: str) -> "medcoupling.MEDCouplingFieldDouble":
-        """(Optional) Retrieve an empty shell for an input field. This shell can be filled by the
-        caller and then be given to the code via setInputField(). The field has the MEDDoubleField
-        format.
-
-        The code uses this method to populate 'afield' with all the data that represents the context
-        of the field (i.e. its support mesh, its discretization -- on nodes, on elements, ...).
-        The remaining job for the caller of this method is to fill the actual values of the field
-        itself.
-        When this is done the field can be sent back to the code through the method setInputField().
-        This method is not mandatory but is useful to know the mesh, discretization... on which an
-        input field is expected.
-
-        See Problem documentation for more details on the time semantic of a field.
-
-        Parameters
-        ----------
-        name : str
-            name of the field for which we would like the empty shell
-
-        Returns
-        -------
-        medcoupling.MEDCouplingFieldDouble
-            field object (in MEDDoubleField format) that will be populated with all the contextual
-            information.
-            Any previous information in this object will be discarded.
-
-        Raises
-        ------
-        WrongContext
-            exception if called before initialize() or after terminate().
-        WrongArgument
-            exception if the field name is invalid.
-        """
-        raise NotImplementedError
-
-    def setInputMEDDoubleField(
-        self, field_name: str, field: "medcoupling.MEDCouplingFieldDouble"
-    ):
-        """(Optional) Provide the code with input data in the form of a MEDDoubleField.
-
-        The method getInputFieldTemplate(), if implemented, may be used first to prepare an empty
-        shell of the field to pass to the code.
-
-        See Problem documentation for more details on the time semantic of a field.
-
-        Parameters
-        ----------
-        name : str
-            name of the field that is given to the code.
-        field : medcoupling.MEDCouplingFieldDouble
-            field object (in MEDDoubleField format) containing the input data to be read by the
-            code. The name of the field set on this instance (with the Field::setName() method)
-            should not be checked. However its time value should be to ensure it is within the
-            proper time interval ]t, t+dt].
-
-        Raises
-        ------
-        WrongContext
-            exception if called before initialize() or after terminate().
-        WrongArgument
-            exception if the field name ('name' parameter) is invalid.
-            exception if the time property of 'afield' does not belong to the currently computed
-            time step ]t, t + dt]
-        """
-        raise NotImplementedError
-
-    def setTime(self, time: float):
+    def set_time(self, time: float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.
 
         Parameters
@@ -452,23 +390,73 @@ class IcocoInterface(GenericInterface):
         """
         raise NotImplementedError
 
-    def setInputDoubleValue(self, name: str, val: float) -> None:
-        """(Optional) Provide the code with a scalar double data.
+    def update_data(self, key: str, data: Any):
+        """Replaces the interface data by the current value
 
-        See Problem documentation for more details on the time semantic of a scalar value.
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        raise NotImplementedError()
+
+    def append_data(self, key: str, data: Any):
+        """Stores the data and associates it to the current time.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        raise NotImplementedError()
+
+    def update_mesh(self, key: str, data: Any):
+        """Replaces the interface data and mesh by the current value
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        raise NotImplementedError()
+
+    def append_mesh(self, key: str, data: Any):
+        """Stores the data and mesh and associate them to the current time.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        raise NotImplementedError()
+
+    def get_template(self, name: str):
+        """Returns the template for the C3PO getOutputxxxFieldTemplate functions
 
         Parameters
         ----------
         name : str
-            name of the scalar value that is given to the code.
-        val : float
-            value passed to the code.
-
-        Raises
-        ------
-        WrongArgument
-            exception if the scalar name ('name' parameter) is invalid.
-        WrongContext
-            exception if called before initialize() or after terminate().
+            Field name
         """
-        raise NotImplementedError
+        raise NotImplementedError(f"get_template function not implemented for class {__class__.__name__}")
+
+    def set_template(self, name: str, template: Any):
+        """Sets the template returned by C3PO getOutputxxxFieldTemplate functions
+
+        Parameters
+        ----------
+        name : str
+            Field name
+        template : Any
+            Object to set as template
+        """
+        pass
+        

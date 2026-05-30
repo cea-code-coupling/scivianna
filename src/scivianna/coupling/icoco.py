@@ -21,7 +21,7 @@ The process threads structure of a coupling with the visualiser works as follow:
             For each Visualization panel, a new process is created with a slave that will provide the data to the visualizer (1 in this example)
 
         *
-            GridStackDriver initialisation
+            LayoutDriver initialisation
         *   ------------------->    *
             pn.serve() -> creation of the visualizer thread
                                     *   ----------->    *
@@ -53,8 +53,8 @@ from icoco.problem import Problem, ValueType
 import panel as pn
 import socket
 
-from scivianna.interface.generic_interface import IcocoInterface
-from scivianna.layout.gridstack import GridStackLayout
+from scivianna.interface.generic_interface import CouplingInterface
+from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.panel_1d import Panel1D
 
 
@@ -64,13 +64,15 @@ class Value:
     """Int value to define the update frequency (done 1/UPDATE_RATE calls to solveTimeStep)"""
 
 
-class GridStackProblem(Problem):
-    panel: GridStackLayout
+class LayoutProblem(Problem):
+    panel: GenericLayout
 
     def __init__(
-        self, grid_stack: GridStackLayout, title="C3PO Coupling visualizer"
+        self, 
+        layout: GenericLayout, 
+        title="C3PO Coupling visualizer"
     ):
-        self.gridstack = grid_stack
+        self.layout = layout
 
         self.time = 0.0
         self._dt: float = -1.0
@@ -121,29 +123,6 @@ class GridStackProblem(Problem):
             exception if called multiple times or after initialize().
         """
         print("\n\nVisualizer initializing\n\n")
-        # if self.data_file_path is not None:
-        #     with open(self.data_file_path, "r") as f:
-        #         data = json.load(f)
-
-        #         for panel_name in data:
-        #             if not panel_name in self.gridstack.visualisation_panels:
-        #                 raise ValueError(f"Datafile panel name {panel_name} not present in the provided GridStack. Available keys: {list(self.gridstack.visualisation_panels.keys())}")
-
-        #             key, file_path = data[panel_name]
-        #             panel = self.gridstack.get_panel(panel_name)
-
-        #             slave = panel.get_slave()
-        #             slave.reset()
-        #             slave.read_file(file_path, key)
-
-        #             new_panel = VisualizationPanel(slave, name=panel.panel_name)
-        #             self.gridstack.set_panel(panel_name, new_panel)
-        #             new_panel.field_color_selector.options = list(set(slave.get_labels()))
-        #             new_panel.field_color_selector.value = [new_panel.field_color_selector.options[-1]]
-        #             new_panel.recompute()
-
-        # self.gridstack.make_grid_stack()
-
         ip_adress = socket.gethostbyname(socket.gethostname())
 
         """
@@ -155,7 +134,7 @@ class GridStackProblem(Problem):
         sock.close()
 
         pn.serve(
-            self.gridstack.main_frame,
+            self.layout.main_frame,
             address=ip_adress,
             websocket_origin=f"{ip_adress}:{port}",
             port=port,
@@ -310,7 +289,7 @@ class GridStackProblem(Problem):
         """
         if self._up_skipped == self._up_rate:
             # here we should transfer data and update the visu
-            self.gridstack.mark_to_recompute(self.panels_to_recompute)
+            self.layout.mark_to_recompute(self.panels_to_recompute)
             self.panels_to_recompute.clear()
 
         return True
@@ -447,7 +426,7 @@ class GridStackProblem(Problem):
         """
         visualization_panel, field_name = name.split("@")
 
-        slave = self.gridstack.get_panel(visualization_panel).get_slave()
+        slave = self.layout.get_panel(visualization_panel).get_slave()
 
         if field_name not in slave.get_labels():
             raise ValueError(
@@ -489,7 +468,7 @@ class GridStackProblem(Problem):
         print("setting fields...")
         visualization_panel, field_name = name.split("@")
 
-        panel = self.gridstack.get_panel(visualization_panel)
+        panel = self.layout.get_panel(visualization_panel)
         slave = panel.get_slave()
 
         if field_name not in slave.get_labels():
@@ -527,7 +506,7 @@ class GridStackProblem(Problem):
 
         visualization_panel, field_name = name.split("@")
 
-        panel = self.gridstack.get_panel(visualization_panel)
+        panel = self.layout.get_panel(visualization_panel)
         slave = panel.get_slave()
 
         #   The time is set before the field

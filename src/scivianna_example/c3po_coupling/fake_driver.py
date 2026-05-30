@@ -5,7 +5,6 @@ import medcoupling  # type: ignore
 from icoco.exception import WrongContext, WrongArgument
 from icoco.problem import Problem, ValueType
 
-import time
 
 class DecreasingFieldProblem(Problem):
     def __init__(

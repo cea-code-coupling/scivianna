@@ -33,7 +33,7 @@ class CSVInterface(ValueAtLocation):
 
         if "cell" not in self.df.columns:
             raise ValueError(
-                f"Cell column was not found in the csv columns. Found: {self.df.columns}."
+                f"cell column was not found in the csv columns. Found: {self.df.columns}."
             )
 
     def get_value(

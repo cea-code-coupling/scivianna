@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class VisualizationMode(Enum):
@@ -70,3 +70,24 @@ class UpdateEvent(int, Enum):
     RANGE_CHANGE = 5
     """ The plot is updated when the (u, v) ranges change
     """
+
+class UpdatePolicy(Enum):
+    """This enum lets the user define how the code interface manages its fields update with time."""
+    APPEND_DATA = auto()
+    """If applicable, the supporting mesh is keep constant during the simulation. 
+    The data is stored and associated to the current time."""
+    UPDATE_DATA = auto()
+    """If applicable, the supporting mesh is keep constant during the simulation. 
+    The data is stored and replaces the last data."""
+
+    APPEND_MESH = auto()
+    """If applicable, the supporting mesh is changes during the simulation: 
+    The data and its mesh are stored and associated to the current time.
+    otherwise, the behavior is equivalent to APPEND_DATA.
+    """
+    UPDATE_MESH = auto()
+    """If applicable, the supporting mesh is changes during the simulation: 
+    The data and its mesh are stored and replace the last data.
+    Without mesh, the behavior is equivalent to UPDATE_DATA.
+    """
+    
