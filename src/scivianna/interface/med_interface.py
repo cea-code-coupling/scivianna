@@ -20,7 +20,7 @@ import scivianna
 from scivianna.extension.extension import Extension
 import scivianna.icon
 from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2DPolygon, IcocoInterface
+from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface
 from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 from scivianna.enums import GeometryType, VisualizationMode
 
@@ -289,7 +289,7 @@ This extension allows defining the medcoupling field display parameters.
         )
 
 
-class MEDInterface(Geometry2DPolygon, IcocoInterface):
+class MEDInterface(Geometry2DPolygon, CouplingInterface):
 
     polygons: List[PolygonElement]
     """Polygons computed at the previous iteration"""
@@ -696,7 +696,7 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
 
         self.field_doubles[field_name] = field
 
-    def setTime(self, time_: float):
+    def set_time(self, time_: float):
         pass
 
     def get_iterations(self,) -> Dict[str, List[Tuple[int, int]]]:

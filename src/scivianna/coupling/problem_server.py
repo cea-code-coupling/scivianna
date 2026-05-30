@@ -1,5 +1,6 @@
 """
-This module contains a functional client-server implementation of ICoCo ``Problem``.
+This module contains a functional client-server implementation of ICoCo ``Problem``. 
+It helps moving scivianna on another process to prevent it to slow down the ongoing simulation.
 
 Warning
 -------

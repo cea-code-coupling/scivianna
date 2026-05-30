@@ -3,16 +3,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from typing import List, Tuple, Union
-from scivianna.interface.generic_interface import Value1DAtLocation, IcocoInterface
+
+from scivianna.enums import UpdatePolicy
+from scivianna.interface.generic_interface import Value1DAtLocation, CouplingInterface
 
 
-class TimeDataFrame(Value1DAtLocation, IcocoInterface):
+class TimeDataFrame(Value1DAtLocation, CouplingInterface):
     def __init__(self, ):
         """Interface hosting a dataframe that is filled along a coupling
 
         """
         self.df = pd.DataFrame()
         self.time = 0.
+        self.update_policy = UpdatePolicy.APPEND_DATA
 
     def get_labels(self) -> List[str]:
         """Returns the fields names providable.
@@ -54,7 +57,7 @@ class TimeDataFrame(Value1DAtLocation, IcocoInterface):
         else:
             raise ValueError(f"Field {field} not found, dataframe contains {self.df.columns.tolist()}")
     
-    def setTime(self, time:float):
+    def set_time(self, time:float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.
 
         Parameters
@@ -72,27 +75,17 @@ class TimeDataFrame(Value1DAtLocation, IcocoInterface):
                 }, index = [self.time])
             ])
 
-    def setInputDoubleValue(self, name: str, val: float) -> None:
-        """(Optional) Provide the code with a scalar double data.
-
-        See Problem documentation for more details on the time semantic of a scalar value.
+    def append_data(self, name: str, value: float):
+        """Replaces the interface data by the current value
 
         Parameters
         ----------
-        name : str
-            name of the scalar value that is given to the code.
-        val : float
-            value passed to the code.
-
-        Raises
-        ------
-        WrongArgument
-            exception if the scalar name ('name' parameter) is invalid.
-        WrongContext
-            exception if called before initialize() or after terminate().
+        key : str
+            Data associated key
+        data : Any
+            New value
         """
-        if not name in self.df.columns:
-            self.df.loc[:,name] = pd.Series([np.nan]*len(self.df), index=self.df.index)
-
-        self.df.loc[self.time, name] = val
-
+        if name not in self.df.columns:
+            self.df[name] = np.nan
+            
+        self.df.loc[len(df), name] = val

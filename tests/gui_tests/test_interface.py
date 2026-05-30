@@ -17,7 +17,7 @@ from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 from scivianna.extension.extension import Extension
 import scivianna.icon
 from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2DPolygon, IcocoInterface
+from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface
 from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 from scivianna.enums import GeometryType, VisualizationMode
 
