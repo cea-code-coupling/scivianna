@@ -10,7 +10,7 @@ from scivianna.notebook_tools import (
 import panel as pn
 
 
-def get_panel():
+def get_panel(_, return_slaves = False):
     visualisation_panels: Dict[str, VisualizationPanel] = {}
 
     med_1 = get_med_panel(geo=None, title="MEDCoupling visualizer XY")
@@ -44,11 +44,15 @@ def get_panel():
         "MEDCoupling visualizer XZ": (0, 10),
     }
 
-    return GridStackLayout(visualisation_panels, bounds_y, bounds_x)
+    if return_slaves:
+        return GridStackLayout(visualisation_panels, bounds_y, bounds_x), [med_1.get_slave(), med_2.get_slave(), med_3.get_slave()]
+    else:   
+        return GridStackLayout(visualisation_panels, bounds_y, bounds_x)
+
 
 
 def get_template():
-    panel = get_panel()
+    panel = get_panel(None)
     return panel.main_frame
 
 
@@ -73,12 +77,3 @@ if __name__ == "__main__":
         port=port,
         threaded=True,
     )
-else:
-    panel = get_panel()
-    #   Providing servable panel, file executed with a command : "python -m panel serve my_file.py"
-
-    pn.Column(
-        panel.main_frame,
-        sizing_mode="stretch_both",
-        margin=0,
-    ).servable(target="main")

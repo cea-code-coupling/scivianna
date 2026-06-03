@@ -3,6 +3,8 @@ from typing import Dict, List, Tuple, Type, Union
 import panel as pn
 import holoviews as hv
 
+from pathlib import Path
+
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.visualisation_panel import ComputeSlave, VisualizationPanel
@@ -10,6 +12,10 @@ from scivianna.utils.interface_tools import (
     GenericInterfaceEnum,
 )
 from scivianna.component.gridstack_component import CustomGridStack
+from scivianna.utils.serialization import (
+    save_gridstack_to_zip,
+    load_gridstack_from_zip,
+)
 
 pn.extension()
 hv.extension("bokeh")
@@ -306,4 +312,65 @@ class GridStackLayout(GenericLayout):
 
         self.set_to_frame(self.current_frame)
         self.change_current_frame()
+
+    def save_to_zip(
+        self,
+        file_path: Union[str, Path],
+        include_files: bool = True
+    ) -> Path:
+        """
+        Saves the GridStackLayout configuration and slave data to a zip file.
+        
+        The zip file contains:
+        - layout.json: JSON file describing the layout structure, current frame, 
+          bounds, and for each panel: slave info and associated interface name
+        - data/: Folder containing serialized data for each slave
+        
+        Parameters
+        ----------
+        file_path : Union[str, Path]
+            Path to the output zip file
+        include_files : bool = True
+            If True, includes loaded files in the slave serialization
+            
+        Returns
+        -------
+        Path
+            Path to the saved zip file
+        """
+        return save_gridstack_to_zip(self, file_path, include_files=include_files)
+
+    @classmethod
+    def restore_from_zip(
+        cls,
+        file_path: Union[str, Path],
+        include_files: bool = True,
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
+        add_run_button: bool = False
+    ) -> "GridStackLayout":
+        """
+        Restores a GridStackLayout from a zip file.
+        
+        Parameters
+        ----------
+        file_path : Union[str, Path]
+            Path to the input zip file
+        include_files : bool = True
+            If True, includes loaded files in the slave deserialization
+        additional_interfaces : Dict = {}
+            Additional interfaces to register
+        add_run_button : bool = False
+            Whether to add a run button for coupling simulations
+            
+        Returns
+        -------
+        GridStackLayout
+            Restored GridStackLayout instance
+        """
+        return load_gridstack_from_zip(
+            file_path,
+            include_files=include_files,
+            additional_interfaces=additional_interfaces,
+            add_run_button=add_run_button
+        )
             

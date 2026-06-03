@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 import numpy as np
 import multiprocessing as mp
 
@@ -16,6 +16,9 @@ from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
 
 from scivianna.interface.generic_interface import Geometry2DPolygon
+
+if TYPE_CHECKING:
+    from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.interface import csv_result
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 from scivianna.enums import GeometryType, VisualizationMode

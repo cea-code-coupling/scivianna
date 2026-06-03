@@ -20,6 +20,12 @@ import os
 from pathlib import Path
 from typing import Dict, List, Tuple, Type, Union, TYPE_CHECKING, Optional, Any
 
+if TYPE_CHECKING:
+    from scivianna.panel.panel_2d import Panel2D
+    from scivianna.panel.panel_1d import Panel1D
+    from scivianna.panel.visualisation_panel import VisualizationPanel
+    from scivianna.layout.split import SplitLayout, SplitItem
+
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.interface import INTERFACES, register_interface
 from scivianna.slave import ComputeSlave
@@ -835,3 +841,212 @@ def restore_extensions_state(
             if ext_class_name in extensions_data:
                 ext_state = extensions_data[ext_class_name]
                 ext.from_json(ext, ext_state)
+
+
+# =============================================================================
+# GRIDSTACK LAYOUT SERIALIZATION
+# =============================================================================
+
+def save_gridstack_to_zip(
+    layout: "GridStackLayout",
+    file_path: Union[str, Path],
+    include_files: bool = True
+) -> Path:
+    """
+    Saves the GridStackLayout configuration and slave data to a zip file.
+    
+    The zip file contains:
+    - layout.json: JSON file describing the layout structure, current frame, 
+      bounds, and for each panel: slave info and associated interface name
+    - data/: Folder containing serialized data for each slave
+    
+    Parameters
+    ----------
+    layout : GridStackLayout
+        The layout to save
+    file_path : Union[str, Path]
+        Path to the output zip file
+    include_files : bool = True
+        If True, includes loaded files in the slave serialization
+        
+    Returns
+    -------
+    Path
+        Path to the saved zip file
+    """
+    from scivianna.panel.panel_2d import Panel2D
+    
+    file_path = Path(file_path)
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Build layout metadata
+        layout_data = {
+            "current_frame": layout.current_frame,
+            "bounds_x": {k: list(v) for k, v in layout.bounds_x.items()},
+            "bounds_y": {k: list(v) for k, v in layout.bounds_y.items()},
+            "panels": {}
+        }
+        
+        # Collect panel and slave information
+        for panel_name, panel in layout.visualisation_panels.items():
+            slave = panel.get_slave()
+            interface_class = slave.code_interface
+            
+            # Find the key for this interface in INTERFACES dict
+            interface_key = None
+            for key, iface_class in INTERFACES.items():
+                if iface_class == interface_class:
+                    interface_key = key if isinstance(key, str) else key.value
+                    break
+            
+            # If not found in built-in interfaces, use class name as fallback
+            if interface_key is None:
+                interface_key = interface_class.__name__
+            
+            # Determine panel type
+            panel_type = "Panel2D" if isinstance(panel, Panel2D) else "Panel1D"
+            
+            layout_data["panels"][panel_name] = {
+                "panel_type": panel_type,
+                "slave_name": slave.code_interface.__name__,
+                "interface_key": interface_key,
+                "sync_field": panel.sync_field,
+                "update_event": panel.update_event,
+                "data_file": f"slave_data/{panel_name}.pkl",
+                "current_data": f"data/{panel_name}.pkl" if isinstance(panel, Panel2D) else None
+            }
+            
+            # Save slave data to individual pickle file
+            slave_data_path = temp_path / "slave_data" / f"{panel_name}.pkl"
+            slave_data_path.parent.mkdir(parents=True, exist_ok=True)
+            slave.save(slave_data_path, include_files=include_files)
+            
+            # Save current_data for Panel2D
+            if isinstance(panel, Panel2D):
+                data_path = temp_path / "data" / f"{panel_name}.pkl"
+                data_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(data_path, "wb") as f:
+                    pickle.dump(panel.current_data, f)
+        
+        # Write layout.json
+        layout_json_path = temp_path / "layout.json"
+        with open(layout_json_path, "w") as f:
+            json.dump(layout_data, f, indent=2)
+        
+        # Create the zip file
+        zip_path = file_path.with_suffix(".zip") if not file_path.suffix == ".zip" else file_path
+        
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, dirs, files in os.walk(temp_path):
+                for file in files:
+                    file_path_inside = Path(root) / file
+                    arcname = file_path_inside.relative_to(temp_path)
+                    zf.write(file_path_inside, arcname)
+    
+    return zip_path
+
+
+def load_gridstack_from_zip(
+    file_path: Union[str, Path],
+    include_files: bool = True,
+    additional_interfaces: Dict[Union[str, Any], Type[GenericInterface]] = {},
+    add_run_button: bool = False
+) -> "GridStackLayout":
+    """
+    Restores a GridStackLayout from a zip file.
+    
+    Parameters
+    ----------
+    file_path : Union[str, Path]
+        Path to the input zip file
+    include_files : bool = True
+        If True, includes loaded files in the slave deserialization
+    additional_interfaces : Dict = {}
+        Additional interfaces to register
+    add_run_button : bool = False
+        Whether to add a run button for coupling simulations
+        
+    Returns
+    -------
+    GridStackLayout
+        Restored GridStackLayout instance
+    """
+    from scivianna.layout.gridstack import GridStackLayout
+    from scivianna.panel.panel_2d import Panel2D
+    from scivianna.panel.panel_1d import Panel1D
+    
+    file_path = Path(file_path)
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        with zipfile.ZipFile(file_path, "r") as zf:
+            zf.extractall(temp_path)
+        
+        # Read layout.json
+        layout_json_path = temp_path / "layout.json"
+        with open(layout_json_path, "r") as f:
+            layout_data = json.load(f)
+        
+        # Register additional interfaces first
+        from scivianna.interface import INTERFACES as IFACE_DICT
+        for key, iface_class in additional_interfaces.items():
+            register_interface(key, iface_class)
+        
+        # Rebuild panels with their loaded data
+        restored_panels = {}
+        bounds_x = {}
+        bounds_y = {}
+        
+        for panel_name, panel_info in layout_data["panels"].items():
+            # Get the interface class from the INTERFACES dictionary using the interface_key
+            interface_key = panel_info["interface_key"]
+            interface = INTERFACES.get(interface_key)
+            
+            if interface is None:
+                raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
+            
+            # Create slave and load data
+            slave = ComputeSlave(interface)
+            slave_data_path = temp_path / panel_info["data_file"]
+            if slave_data_path.exists():
+                slave.load(slave_data_path, include_files=include_files)
+            
+            # Determine panel type from saved JSON data
+            panel_type = panel_info.get("panel_type", "Panel2D")
+            
+            # Load current_data for Panel2D
+            current_data = None
+            if panel_type == "Panel2D" and panel_info.get("current_data"):
+                data_path = temp_path / panel_info["current_data"]
+                if data_path.exists():
+                    with open(data_path, "rb") as f:
+                        current_data = pickle.load(f)
+            
+            # Create the panel - Panel2D needs data, Panel1D doesn't
+            if panel_type == "Panel2D":
+                panel = Panel2D(slave, name=panel_name, data=current_data)
+            else:
+                panel = Panel1D(slave, name=panel_name)
+            
+            restored_panels[panel_name] = panel
+            bounds_x[panel_name] = tuple(layout_data["bounds_x"][panel_name])
+            bounds_y[panel_name] = tuple(layout_data["bounds_y"][panel_name])
+        
+        # Create the layout instance
+        layout = GridStackLayout(
+            visualisation_panels=restored_panels,
+            bounds_x=bounds_x,
+            bounds_y=bounds_y,
+            additional_interfaces=additional_interfaces,
+            add_run_button=add_run_button
+        )
+        
+        # Set the current frame
+        layout.set_to_frame(layout_data["current_frame"])
+        
+        return layout
+
+

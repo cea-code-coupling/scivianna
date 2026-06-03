@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
+
 import panel as pn
 import panel_material_ui as pmui
 
@@ -8,6 +10,9 @@ from scivianna.component.server_file_browser import ServerFileBrowser
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
+
+if TYPE_CHECKING:
+    from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 class SaveLoadExtension(Extension):
