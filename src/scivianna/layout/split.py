@@ -1,20 +1,30 @@
 import functools
+import pickle
 from typing import Dict, List, Tuple, Type, Union
 import panel as pn
 import panel_material_ui as pmui
 from enum import Enum
 from dataclasses import dataclass
 
+from pathlib import Path
+
 from scivianna.interface.generic_interface import GenericInterface
+from scivianna.utils.interface_tools import GenericInterfaceEnum
+from scivianna.interface import INTERFACES, register_interface
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.visualisation_panel import ComputeSlave, VisualizationPanel
 from scivianna.panel.panel_1d import Panel1D
-from scivianna.utils.interface_tools import (
-    GenericInterfaceEnum,
-)
+from scivianna.panel.panel_2d import Panel2D
 from scivianna.component.splitjs_component import (
     SplitJSVertical,
     SplitJSHorizontal,
+)
+from scivianna.utils.serialization import (
+    save_layout_to_zip,
+    load_layout_from_zip,
+    _serialize_split_item,
+    _deserialize_split_item,
+    restore_extensions_state,
 )
 
 card_style = {}
@@ -329,3 +339,62 @@ class SplitLayout(GenericLayout):
             raise ValueError(f"Unexpected split index {split_index}")
 
         self.reset_interface()
+
+    #
+    #   Save/Restore functionality
+    #   These methods now delegate to scivianna.utils.serialization module
+    #
+    def save_to_zip(self, file_path: Union[str, Path], include_files: bool = True):
+        """Saves the layout configuration and slave data to a zip file.
+        
+        The zip file contains:
+        - layout.json: JSON file describing the layout structure, current frame, 
+          and for each slave: panel name, slave info, and associated interface name
+        - data/: Folder containing serialized data for each slave
+        
+        Parameters
+        ----------
+        file_path : Union[str, Path]
+            Path to the zip file to create
+        include_files : bool = True
+            If True, includes loaded files in the slave serialization
+            
+        Returns
+        -------
+        Path
+            Path to the created zip file
+        """
+        return save_layout_to_zip(self, file_path, include_files)
+
+    @classmethod
+    def restore_from_zip(
+        cls, 
+        file_path: Union[str, Path], 
+        include_files: bool = True,
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
+        add_run_button: bool = False
+    ) -> "SplitLayout":
+        """Restores a SplitLayout from a zip file.
+        
+        Parameters
+        ----------
+        file_path : Union[str, Path]
+            Path to the zip file to restore from
+        include_files : bool = True
+            If True, includes loaded files in the slave deserialization
+        additional_interfaces : Dict = {}
+            Additional interfaces to register
+        add_run_button : bool = False
+            Whether to add a run button for coupling simulations
+            
+        Returns
+        -------
+        SplitLayout
+            Restored SplitLayout instance
+        """
+        return load_layout_from_zip(
+            file_path, 
+            include_files, 
+            additional_interfaces, 
+            add_run_button
+        )

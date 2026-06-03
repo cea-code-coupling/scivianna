@@ -189,7 +189,7 @@ def plot_frame_in_axes(
             edge_color_list /= 255.0
 
             for compo in compos:
-                location = compo_list.index(compo)
+                location = list(compo_list).index(compo)
 
                 add_in_legend = True
 

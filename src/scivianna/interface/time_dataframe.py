@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import pickle
 import numpy as np
 import pandas as pd
 from typing import List, Tuple, Union
@@ -95,4 +96,47 @@ class TimeDataFrame(Value1DAtLocation, IcocoInterface):
             self.df.loc[:,name] = pd.Series([np.nan]*len(self.df), index=self.df.index)
 
         self.df.loc[self.time, name] = val
+
+    def save(self, file_path: Path, include_files: bool):
+        """Pickle saves the slave content to a file, allows slave state reload.
+
+        Two modes are available:
+            -   If **include_files** is at True, all loaded data are saved, the pickled file can be loaded on its own to recover last session.
+            -   If **include_files** is at False, only the computed data are loaded, enabling faster first computation allowing a smaller pickle file size.
+
+        Parameters
+        ----------
+        file_path : Path
+            File in which save the file
+        include_files : bool
+            Included loaded file
+        """
+        os.makedirs(Path(file_path).parent, exist_ok=True)
+
+        with open(file_path, "wb") as f:
+            data = self.df, self.time
+
+            pickle.dump(data, f)
+
+    def load(self, file_path: Path, include_files: bool):
+        """Pickle loads the slave content to a file, allows slave state reload
+
+        Two modes are available:
+            -   If **include_files** is at True, all loaded data are saved, the pickled file can be loaded on its own to recover last session.
+            -   If **include_files** is at False, only the computed data are loaded, enabling faster first computation allowing a smaller pickle file size.
+
+        Parameters
+        ----------
+        file_path : Path
+            File from which load the slave
+        include_files : bool
+            Included loaded file
+        """
+        if not os.path.isfile(file_path):
+            raise ValueError(f"Provided path {file_path} does not exist")
+
+        with open(file_path, "rb") as f:
+            data = pickle.load(f)
+
+            self.df, self.time = data
 

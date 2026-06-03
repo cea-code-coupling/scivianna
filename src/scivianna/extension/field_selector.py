@@ -10,18 +10,18 @@ from scivianna.data.data2d import Data2D
 from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.slave import ComputeSlave
 from scivianna.utils.color_tools import beautiful_color_maps, get_edges_colors, interpolate_cmap_at_values
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
+    from scivianna.slave import ComputeSlave
 
 profile_time = False
 
 
 def set_colors_list(
     data: Data2D,
-    slave: ComputeSlave,
+    slave: "ComputeSlave",
     coloring_label: str,
     color_map: str,
     center_colormap_on_zero: bool,
@@ -161,7 +161,7 @@ class FieldSelector(Extension):
 
     def __init__(
         self,
-        slave: ComputeSlave,
+        slave: "ComputeSlave",
         plotter: Plotter2D,
         panel: "VisualizationPanel"
     ):
@@ -222,24 +222,32 @@ If a color bar is used, you can decide to center it on zero.
     def trigger_field_change(self, *args, **kwargs):
         """Trigger a field change in the visualization panel
         """
+        if self._restoring:
+            return
         self.center_colormap_on_zero_tick.visible = self.slave.get_label_coloring_mode(self.field_color_selector.value) == VisualizationMode.FROM_VALUE
         self.panel.set_field(self.field_color_selector.value)
 
     def receive_colormap_change(self, *args, **kwargs):
         """Receive a field change from the visualization panel
         """
+        if self._restoring:
+            return
         if self.panel.colormap != self.color_map_selector.value_name:
             self.color_map_selector.value_name = self.panel.colormap
 
     def trigger_colormap_change(self, *args, **kwargs):
         """Trigger a field change in the visualization panel
         """
+        if self._restoring:
+            return
         self.panel.set_colormap(self.color_map_selector.value_name)
         self.panel.recompute()
 
     def trigger_update(self, *args, **kwargs):
         """Trigger a color map change in the visualization panel
         """
+        if self._restoring:
+            return
         self.panel.recompute()
 
     @pn.io.hold()
@@ -298,3 +306,45 @@ If a color bar is used, you can decide to center it on zero.
             Name of the new displayed field
         """
         self.field_color_selector.value = field_name
+    
+    def to_json(self) -> dict:
+        """Returns a dictionary with the information required to rebuild the extension.
+        
+        Returns
+        -------
+        dict
+            Information dictionary
+        """
+        return {
+            "field": self.field_color_selector.value,
+            "colormap": self.color_map_selector.value_name,
+            "center_colormap_on_zero": self.center_colormap_on_zero_tick.value,
+        }
+    
+    @classmethod
+    def from_json(cls, extension: "FieldSelector", info_dict: dict) -> "FieldSelector":
+        """Restores the extension from its information dict.
+        
+        Parameters
+        ----------
+        extension : FieldSelector
+            Extension instance to restore
+        info_dict : dict
+            Dictionary containing extension state information
+            
+        Returns
+        -------
+        FieldSelector
+            Restored extension
+        """
+        extension._restoring = True
+        
+        if info_dict.get("field") is not None:
+            extension.field_color_selector.value = info_dict["field"]
+        
+        extension.color_map_selector.value_name = info_dict.get("colormap", "BuRd")
+        extension.center_colormap_on_zero_tick.value = info_dict.get("center_colormap_on_zero", False)
+        
+        extension._restoring = False
+        
+        return extension

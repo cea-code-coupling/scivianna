@@ -9,8 +9,6 @@ import panel as pn
 import panel_material_ui as pmui
 import pickle
 
-from scivianna.extension.save_load_extension import SaveLoadExtension
-
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.slave import ComputeSlave
@@ -152,6 +150,8 @@ This extension allows defining the medcoupling field display parameters.
     def on_slider_change(self, event):
         """Updates the panel w coordinate on slider change
         """
+        if self._restoring:
+            return
         if self.slider_w.value != self.w:
             self.panel.set_coordinates(w=self.slider_w.value)
 
@@ -160,6 +160,9 @@ This extension allows defining the medcoupling field display parameters.
         """Update slider bounds based on the mesh bounding box
         """
         bounding_box = self.slave.call_custom_function("get_bounding_box", {})
+        if bounding_box is None:
+            return
+        
         if len(bounding_box) == 2:
             # 2D geometry
             x_range, y_range = bounding_box
@@ -268,6 +271,8 @@ This extension allows defining the medcoupling field display parameters.
     def recompute(self, *args, **kwargs):
         """Recompute event on intinput changes
         """
+        if self._restoring:
+            return
         self.check_int_inputs()
         if self.valid:
             self.panel.recompute()
@@ -287,6 +292,63 @@ This extension allows defining the medcoupling field display parameters.
             self.slider_w,
             margin=0
         )
+
+    def to_json(self) -> dict:
+        """Returns a dictionary with the information required to rebuild the extension.
+
+        Returns
+        -------
+        dict
+            Information dictionary
+        """
+        return {
+            "field_name": self.field_name,
+            "iteration": self.iteration_input.value,
+            "order": self.order_input.value,
+            "u_bounds": self.u_bounds,
+            "v_bounds": self.v_bounds,
+            "w": self.w,
+        }
+
+    @classmethod
+    def from_json(cls, extension: "MEDCouplingExtension", info_dict: dict) -> "MEDCouplingExtension":
+        """Restores the extension from its information dict.
+
+        Parameters
+        ----------
+        extension : MEDCouplingExtension
+            Extension instance to restore
+        info_dict : dict
+            Dictionary containing extension state information
+
+        Returns
+        -------
+        MEDCouplingExtension
+            Restored extension
+        """
+        extension._restoring = True
+
+        if info_dict.get("field_name") is not None:
+            extension.field_name = info_dict["field_name"]
+
+        if info_dict.get("iteration") is not None:
+            extension.iteration_input.value = info_dict["iteration"]
+
+        if info_dict.get("order") is not None:
+            extension.order_input.value = info_dict["order"]
+
+        if info_dict.get("u_bounds") is not None:
+            extension.u_bounds = info_dict["u_bounds"]
+
+        if info_dict.get("v_bounds") is not None:
+            extension.v_bounds = info_dict["v_bounds"]
+
+        if info_dict.get("w") is not None:
+            extension.w = info_dict["w"]
+
+        extension._restoring = False
+
+        return extension
 
 
 class MEDInterface(Geometry2DPolygon, IcocoInterface):
@@ -321,7 +383,7 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
     """ Support mesh
     """
     geometry_type: GeometryType = GeometryType._3D_INFINITE
-    extensions = [MEDCouplingExtension, SaveLoadExtension]
+    extensions = [MEDCouplingExtension]
 
     def __init__(self):
         """MEDCoupling interface constructor."""

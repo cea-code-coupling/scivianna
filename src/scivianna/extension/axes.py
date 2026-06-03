@@ -5,11 +5,11 @@ import panel_material_ui as pmui
 from scivianna.enums import GeometryType
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.slave import ComputeSlave
 import scivianna.utils
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
+    from scivianna.slave import ComputeSlave
 
 icon_svg = """
 <svg
@@ -39,7 +39,7 @@ class Axes(Extension):
 
     def __init__(
         self,
-        slave: ComputeSlave,
+        slave: "ComputeSlave",
         plotter: Plotter2D,
         panel: "VisualizationPanel"
     ):
@@ -136,6 +136,8 @@ You can also hide/show the axes on the plot and force a plot update.
             margin=0
         )
         def update_w(*args, **kwargs):
+            if self._restoring:
+                return
             to_update = {"w": self.w_inp.value}
             self.__new_data = {**self.__new_data, **to_update}
             self.range_updated = True
@@ -175,6 +177,8 @@ You can also hide/show the axes on the plot and force a plot update.
             event : Any
                 Argument to make the function linkable to a button.
             """
+            if self._restoring:
+                return
             to_update = {"u0": 0, "u1": 1, "u2": 0, "v0": 0, "v1": 0, "v2": 1}
             self.__new_data = {**self.__new_data, **to_update}
             self.axes_updated = True
@@ -195,6 +199,8 @@ You can also hide/show the axes on the plot and force a plot update.
             event : Any
                 Argument to make the function linkable to a button.
             """
+            if self._restoring:
+                return
             to_update = {"u0": 1, "u1": 0, "u2": 0, "v0": 0, "v1": 0, "v2": 1}
             self.__new_data = {**self.__new_data, **to_update}
             self.axes_updated = True
@@ -215,6 +221,8 @@ You can also hide/show the axes on the plot and force a plot update.
             event : Any
                 Argument to make the function linkable to a button.
             """
+            if self._restoring:
+                return
             to_update = {"u0": 1, "u1": 0, "u2": 0, "v0": 0, "v1": 1, "v2": 0}
             self.__new_data = {**self.__new_data, **to_update}
             self.axes_updated = True
@@ -381,16 +389,18 @@ You can also hide/show the axes on the plot and force a plot update.
         self.w_inp.visible = geom_type in [GeometryType._3D, GeometryType._3D_INFINITE]
             
     def trigger_update(self, *args, **kwargs):
-            u, v = self.get_uv()
-            self.panel.set_coordinates(
-                u,
-                v,
-                self.x0_inp.value,
-                self.x1_inp.value,
-                self.y0_inp.value,
-                self.y1_inp.value,
-                float(self.w_inp.value),
-            )
+        if self._restoring:
+            return
+        u, v = self.get_uv()
+        self.panel.set_coordinates(
+            u,
+            v,
+            self.x0_inp.value,
+            self.x1_inp.value,
+            self.y0_inp.value,
+            self.y1_inp.value,
+            float(self.w_inp.value),
+        )
 
     def get_uv(
         self,
@@ -409,3 +419,64 @@ You can also hide/show the axes on the plot and force a plot update.
         v = v / np.linalg.norm(v)
 
         return u, v
+    
+    def to_json(self) -> dict:
+        """Returns a dictionary with the information required to rebuild the extension.
+        
+        Returns
+        -------
+        dict
+            Information dictionary
+        """
+        return {
+            "borders_displayed": self.borders_displayed,
+            "u_vector": [self.u0_inp.value, self.u1_inp.value, self.u2_inp.value],
+            "v_vector": [self.v0_inp.value, self.v1_inp.value, self.v2_inp.value],
+            "u_bounds": [self.x0_inp.value, self.x1_inp.value],
+            "v_bounds": [self.y0_inp.value, self.y1_inp.value],
+            "w_value": self.w_inp.value,
+        }
+    
+    @classmethod
+    def from_json(cls, extension: "Axes", info_dict: dict) -> "Axes":
+        """Restores the extension from its information dict.
+        
+        Parameters
+        ----------
+        extension : Axes
+            Extension instance to restore
+        info_dict : dict
+            Dictionary containing extension state information
+            
+        Returns
+        -------
+        Axes
+            Restored extension
+        """
+        extension._restoring = True
+
+        extension.borders_displayed = info_dict.get("borders_displayed", False)
+        print(info_dict)
+        
+        u_vector = info_dict.get("u_vector", [1, 0, 0])
+        extension.u0_inp.value = u_vector[0]
+        extension.u1_inp.value = u_vector[1]
+        extension.u2_inp.value = u_vector[2]
+        
+        v_vector = info_dict.get("v_vector", [0, 1, 0])
+        extension.v0_inp.value = v_vector[0]
+        extension.v1_inp.value = v_vector[1]
+        extension.v2_inp.value = v_vector[2]
+        
+        u_bounds = info_dict.get("u_bounds", [0, 1])
+        extension.x0_inp.value = u_bounds[0]
+        extension.x1_inp.value = u_bounds[1]
+        
+        v_bounds = info_dict.get("v_bounds", [0, 1])
+        extension.y0_inp.value = v_bounds[0]
+        extension.y1_inp.value = v_bounds[1]
+        
+        extension.w_inp.value = info_dict.get("w_value", 0.5)
+        
+        extension._restoring = False
+        return extension

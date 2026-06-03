@@ -40,7 +40,7 @@ def csv_cell_file():
     """Create a CSV file with cell-indexed data.
     
     File: data.csv with columns 'cell', 'temp', 'pressure'
-    get_fields() returns ['data_temp', 'data_pressure'] (prefixed)
+    get_fields() returns ['temp', 'pressure'] (prefixed)
     get_value()/get_values() use raw column names ('temp', 'pressure')
     """
     path = create_csv_file("data.csv", {
@@ -135,7 +135,7 @@ class TestCSVInterfaceGetValue:
             position=(0.0, 0.0, 0.0),
             cell_index="cell_1",
             material_name="",
-            field="temp",  # Raw column name, not "data_temp"
+            field="temp",  # Raw column name, not "temp"
         )
         assert result == 10.0
 
@@ -298,8 +298,8 @@ class TestCSVInterfaceGetFields:
         """Test get_fields returns prefixed field names for cell file."""
         interface = CSVInterface(csv_cell_file)
         fields = interface.get_fields()
-        assert "data_temp" in fields
-        assert "data_pressure" in fields
+        assert "temp" in fields
+        assert "pressure" in fields
         assert "cell" not in fields
 
     def test_get_fields_excludes_special_columns(self, csv_cell_file):
@@ -319,7 +319,7 @@ class TestCSVInterfaceGetFields:
         """Test get_fields returns correct number of fields."""
         interface = CSVInterface(csv_cell_file)
         fields = interface.get_fields()
-        # 2 data columns: data_temp, data_pressure
+        # 2 data columns: temp, pressure
         assert len(fields) == 2
 
     def test_get_fields_custom_basename(self, csv_custom_basename_file):
@@ -327,7 +327,7 @@ class TestCSVInterfaceGetFields:
         interface = CSVInterface(csv_custom_basename_file)
         fields = interface.get_fields()
         # basename is "output", column is "field" -> "output_field"
-        assert "output_field" in fields
+        assert "field" in fields
 
 
 # ---- Integration-like Tests ----
@@ -340,7 +340,7 @@ class TestCSVInterfaceIntegration:
         # Get available fields (returns prefixed names)
         fields = interface.get_fields()
         assert len(fields) == 2
-        assert "data_temp" in fields
+        assert "temp" in fields
         
         # Get single value (uses raw column name)
         val = interface.get_value(

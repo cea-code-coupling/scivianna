@@ -1,7 +1,8 @@
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Type, Union
 import panel as pn
 import pandas as pd
 
+from scivianna.data.data1d import Data1D
 from scivianna.enums import UpdateEvent
 from scivianna.extension.extension import Extension
 from scivianna.extension.line_selector import LineSelector
@@ -267,3 +268,55 @@ class Panel1D(VisualizationPanel):
             Color map name
         """
         pass
+
+    def to_json(self) -> Dict:
+        """Returns a dictionnary with the information required to rebuild the visualization panel
+
+        Returns
+        -------
+        Dict
+            Information dict
+        """
+        return {
+            "name": self.panel_name,
+            "position": self.position,
+            "cell_id": self.cell_id,
+            "field_names": self.field_color_selector.value,
+            "sync_field": self.sync_field,
+            "update_event": self.update_event,
+        }
+
+    @classmethod
+    def from_json(
+        cls, 
+        info_dict: Dict, 
+        slave: ComputeSlave,
+        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
+    ) -> "Panel1D":
+        """Restores the visualization panel from its information dict
+
+        Parameters
+        ----------
+        info_dict : Dict
+            Dictionnary containing all required information to restore the panel
+        slave : ComputeSlave
+            Panel associated slave
+        extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
+            GUI extensions, can be extension classes or tuples of (class, state_dict)
+
+        Returns
+        -------
+        Panel1D
+            Restored panel
+        """
+        panel = Panel1D(
+            slave,
+            info_dict["name"],
+            extensions
+        )
+        panel.position = info_dict["position"]
+        panel.cell_id = info_dict["cell_id"]
+        panel.set_field(info_dict["field_names"])
+        panel.sync_field = info_dict["sync_field"]
+        panel.update_event = info_dict["update_event"]
+        return panel

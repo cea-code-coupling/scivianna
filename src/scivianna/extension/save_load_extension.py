@@ -6,7 +6,6 @@ import panel_material_ui as pmui
 import scivianna
 from scivianna.component.server_file_browser import ServerFileBrowser
 from scivianna.extension.extension import Extension
-from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
 

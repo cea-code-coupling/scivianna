@@ -14,7 +14,6 @@ from scivianna.slave import ComputeSlave
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
 from scivianna.data.data2d import Data2D
-from scivianna.interface.option_element import IntOption, OptionElement
 from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
 
 
@@ -75,9 +74,27 @@ This extension allows defining the medcoupling field display parameters.
         )
         
 
-        self.u_step_input.param.watch(self.panel.recompute, "value")
-        self.v_step_input.param.watch(self.panel.recompute, "value")
-        self.max_iter_input.param.watch(self.panel.recompute, "value")
+        self.u_step_input.param.watch(self._on_u_steps_change, "value")
+        self.v_step_input.param.watch(self._on_v_steps_change, "value")
+        self.max_iter_input.param.watch(self._on_max_iter_change, "value")
+
+    def _on_u_steps_change(self, event):
+        """Callback for u_steps input change."""
+        if self._restoring:
+            return
+        self.panel.recompute()
+
+    def _on_v_steps_change(self, event):
+        """Callback for v_steps input change."""
+        if self._restoring:
+            return
+        self.panel.recompute()
+
+    def _on_max_iter_change(self, event):
+        """Callback for max_iter input change."""
+        if self._restoring:
+            return
+        self.panel.recompute()
 
     def provide_options(self):
         return {
@@ -100,6 +117,51 @@ This extension allows defining the medcoupling field display parameters.
             self.max_iter_input,
             margin=0
         )
+
+    def to_json(self) -> dict:
+        """Returns a dictionary with the information required to rebuild the extension.
+
+        Returns
+        -------
+        dict
+            Information dictionary
+        """
+        return {
+            "u_steps": self.u_step_input.value,
+            "v_steps": self.v_step_input.value,
+            "max_iter": self.max_iter_input.value,
+        }
+
+    @classmethod
+    def from_json(cls, extension: "MandelbrotExtension", info_dict: dict) -> "MandelbrotExtension":
+        """Restores the extension from its information dict.
+
+        Parameters
+        ----------
+        extension : MandelbrotExtension
+            Extension instance to restore
+        info_dict : dict
+            Dictionary containing extension state information
+
+        Returns
+        -------
+        MandelbrotExtension
+            Restored extension
+        """
+        extension._restoring = True
+
+        if info_dict.get("u_steps") is not None:
+            extension.u_step_input.value = info_dict["u_steps"]
+
+        if info_dict.get("v_steps") is not None:
+            extension.v_step_input.value = info_dict["v_steps"]
+
+        if info_dict.get("max_iter") is not None:
+            extension.max_iter_input.value = info_dict["max_iter"]
+
+        extension._restoring = False
+
+        return extension
 
 
 

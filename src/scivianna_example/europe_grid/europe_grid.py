@@ -280,6 +280,65 @@ class EuropeGridInterface(Geometry2DPolygon):
             (CSV, "CSV result file."),
         ]
 
+    def save(self, file_path: Path, include_files: bool):
+        """Pickle saves the slave content to a file, allows slave state reload.
+
+        Parameters
+        ----------
+        file_path : Path
+            File in which save the file
+        include_files : bool
+            Included loaded files (not used for this interface)
+        """
+        import pickle
+        from pathlib import Path as PathLib
+
+        file_path = PathLib(file_path)
+
+        # Serialize all interface state
+        state = {
+            'polygons': self.polygons,
+            'results': self.results,
+            'data': getattr(self, 'data', None),
+            'country_id': getattr(self, 'country_id', None),
+            'polygons_per_country': getattr(self, 'polygons_per_country', None),
+            'xs': getattr(self, 'xs', None),
+            'ys': getattr(self, 'ys', None),
+            'country_list': getattr(self, 'country_list', None),
+            'europe': getattr(self, 'europe', None),
+        }
+
+        with open(file_path, 'wb') as f:
+            pickle.dump(state, f)
+
+    def load(self, file_path: Path, include_files: bool):
+        """Pickle loads the slave content from a file, allows slave state reload.
+
+        Parameters
+        ----------
+        file_path : Path
+            File from which load the slave
+        include_files : bool
+            Included loaded files (not used for this interface)
+        """
+        import pickle
+        from pathlib import Path as PathLib
+
+        file_path = PathLib(file_path)
+
+        with open(file_path, 'rb') as f:
+            state = pickle.load(f)
+
+        self.polygons = state.get('polygons')
+        self.results = state.get('results', {})
+        self.data = state.get('data')
+        self.country_id = state.get('country_id')
+        self.polygons_per_country = state.get('polygons_per_country', {})
+        self.xs = state.get('xs')
+        self.ys = state.get('ys')
+        self.country_list = state.get('country_list')
+        self.europe = state.get('europe')
+
 
 def make_europe_panel(_, return_slaves: bool = False) -> SplitLayout:
     slave = ComputeSlave(EuropeGridInterface)

@@ -14,7 +14,7 @@ def get_panel(_, return_slaves=False) -> SplitLayout:
     med_2 = get_med_panel(geo=None, title="MEDCoupling visualizer XZ")
     med_3 = get_med_panel(geo=None, title="MEDCoupling visualizer YZ")
 
-    med_1.set_field("TRUC")
+    med_1.set_field("INTEGRATED_POWER")
     med_2.set_field("INTEGRATED_POWER")
     med_3.set_field("INTEGRATED_POWER")
 

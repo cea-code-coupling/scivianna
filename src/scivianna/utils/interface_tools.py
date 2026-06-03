@@ -3,7 +3,6 @@ from enum import Enum
 from typing import Dict, Type, Union
 
 from scivianna.interface.generic_interface import GenericInterface
-from scivianna.notebook_tools import get_med_panel
 
 class GenericInterfaceEnum(Enum):
     MED="Medcoupling"
@@ -45,5 +44,6 @@ def get_interface_default_panel(interface:Union[GenericInterfaceEnum, str], titl
         Panel of the code interface, or None
     """
     if interface == GenericInterfaceEnum.MED:
+        from scivianna.notebook_tools import get_med_panel
         return get_med_panel(None, title=title)
     return None

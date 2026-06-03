@@ -12,7 +12,6 @@ import vtk
 
 import scivianna
 from scivianna.extension.extension import Extension
-from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
 
@@ -22,6 +21,8 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.constants import MESH, GEOMETRY, CSV
 from scivianna.data.data2d import Data2D
+
+
 
 
 with open(Path(scivianna.__file__).parent / "icon" / "vtk.svg", "r") as f:

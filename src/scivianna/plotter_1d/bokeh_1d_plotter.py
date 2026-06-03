@@ -5,7 +5,7 @@ from bokeh.plotting import figure
 from bokeh.models.renderers import GlyphRenderer
 from bokeh.models.annotations import Legend, LegendItem
 from bokeh.palettes import Viridis11 as palette
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, LinearScale, LogScale
 
 import numpy as np
 import pandas as pd
@@ -226,3 +226,23 @@ class BokehPlotter1D(Plotter1D):
             max_val = np.nanmax(x_maxs)
         
         return min_val, max_val
+    
+    def set_x_scale(self, scale: str):
+        """Sets the X axis scale to either log or lin
+
+        Parameters
+        ----------
+        scale : str
+            Scale to set
+        """
+        self.fig.x_scale = LogScale() if scale == "log" else LinearScale()
+    
+    def set_y_scale(self, scale: str):
+        """Sets the Y axis scale to either log or lin
+
+        Parameters
+        ----------
+        scale : str
+            Scale to set
+        """
+        self.fig.y_scale = LogScale() if scale == "log" else LinearScale()

@@ -1,5 +1,5 @@
 from logging import warning
-from typing import Callable, List, Tuple, Type
+from typing import Callable, Dict, List, Tuple, Type, Union
 import numpy as np
 import panel as pn
 import param
@@ -65,7 +65,15 @@ class Panel2D(VisualizationPanel):
         slave: ComputeSlave,
         name="",
         display_polygons: bool = True,
-        extensions: List[Extension] = default_extensions
+        extensions: List[Extension] = default_extensions,
+        data: Data2D = None,
+        displayed_field: str = MESH,
+        colormap: str = "BuRd",
+        u: Tuple[float, float, float] = X,
+        v: Tuple[float, float, float] = Y,
+        u_range: Tuple[float, float] = (0., 1.),
+        v_range: Tuple[float, float] = (0., 1.),
+        w_value: float = 0.5,
     ):
         """Visualization panel constructor
 
@@ -77,6 +85,24 @@ class Panel2D(VisualizationPanel):
             Name of the panel.
         display_polygons : bool
             Display as polygons or as a 2D grid.
+        extensions : List[Extension]
+            List of extensions to add to the gui.
+        data : Data2D
+            Data2D object with which the panel is initialized.
+        displayed_field : str
+            Name of the field to display initially, defaults to MESH.
+        colormap : str
+            Colormap name for coloring the data, defaults to "BuRd".
+        u : Tuple[float, float, float]
+            Direction vector for the horizontal axis, defaults to X.
+        v : Tuple[float, float, float]
+            Direction vector for the vertical axis, defaults to Y.
+        u_range : Tuple[float, float]
+            Range (min, max) for the horizontal axis, defaults to (0., 1.).
+        v_range : Tuple[float, float]
+            Range (min, max) for the vertical axis, defaults to (0., 1.).
+        w_value : float
+            Value along the u ^ v (normal) axis, defaults to 0.5.
         """
         code_interface: Type[Geometry2D] = slave.code_interface
         assert issubclass(
@@ -105,24 +131,35 @@ class Panel2D(VisualizationPanel):
 
         super().__init__(slave, name, extensions.copy())
 
-        self.u = X
-        self.v = Y
+        self.u = u
+        self.v = v
 
-        self.u_range = (0., 1.)
-        self.v_range = (0., 1.)
-        self.w_value = 0.5
+        self.u_range = u_range
+        self.v_range = v_range
+        self.w_value = w_value
 
         #
         #   First plot on XY basic range
         #
-        self.displayed_field = MESH
+        self.displayed_field = displayed_field
         for extension in self.extensions:
-            extension.on_field_change(MESH)
+            extension.on_field_change(displayed_field)
+            extension.on_frame_change(u, v)
+            extension.on_range_change(
+                u_range,
+                v_range,
+                w_value
+            )
 
-        self.colormap = "BuRd"
+        self.colormap = colormap
 
-        data_ = self.compute_fn(self.u, self.v, self.u_range[0], self.v_range[0], self.u_range[1], self.v_range[1], self.w_value)
-
+        if data is None:
+            data_ = self.compute_fn(self.u, self.v, self.u_range[0], self.v_range[0], self.u_range[1], self.v_range[1], self.w_value)
+        else:
+            print(f"Panel2D {self.panel_name} initialized initial Data2D object, restoring {len(data.cell_ids)} cells.")
+            data_ = data
+            self.update_polygons = True
+        
         self.plotter.set_axes(self.u, self.v, self.w_value)
         self.plotter.plot_2d_frame(data_)
 
@@ -614,7 +651,6 @@ class Panel2D(VisualizationPanel):
 
             else:
                 # Reseting indexes to prevent weird edges
-                print(pn.state.curdoc)
                 if pn.state.curdoc is not None:
                     pn.state.curdoc.add_next_tick_callback(self.polygon_sorter.reset_indexes)
                 elif scivianna.utils._testing:
@@ -647,3 +683,69 @@ class Panel2D(VisualizationPanel):
                 pn.state.curdoc.add_next_tick_callback(self.recompute)
             elif scivianna.utils._testing:
                 self.recompute()
+
+    def to_json(self) -> Dict:
+        """Returns a dictionnary with the information required to rebuild the visualization panel
+
+        Returns
+        -------
+        Dict
+            Information dict
+        """
+        return {
+            "name": self.panel_name,
+            "u": self.u,
+            "v": self.v,
+            "u_range": self.u_range,
+            "v_range": self.v_range,
+            "w_value": self.w_value,
+            "displayed_field": self.displayed_field,
+            "display_polygons": self.display_polygons,
+            "colormap": self.colormap,
+            "sync_field": self.sync_field,
+            "update_event": self.update_event,
+        }
+
+    @classmethod
+    def from_json(
+        cls, 
+        info_dict: Dict, 
+        slave: ComputeSlave,
+        data: Data2D,
+        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
+    ) -> "Panel2D":
+        """Restores the visualization panel from its information dict
+
+        Parameters
+        ----------
+        info_dict : Dict
+            Dictionnary containing all required information to restore the panel
+        slave : ComputeSlave
+            Panel associated slave
+        data : Data2D
+            Initial state Data2D
+        extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
+            GUI extensions, can be extension classes or tuples of (class, state_dict)
+
+        Returns
+        -------
+        Panel2D
+            Restored panel
+        """        
+        panel = Panel2D(
+            slave = slave,
+            name = info_dict["name"],
+            display_polygons = info_dict["display_polygons"],
+            extensions = extensions,
+            data = data,
+            displayed_field = info_dict["displayed_field"],
+            colormap = info_dict["colormap"],
+            u = info_dict["u"],
+            v = info_dict["v"],
+            u_range = info_dict["u_range"],
+            v_range = info_dict["v_range"],
+            w_value = info_dict["w_value"]
+        )
+        panel.sync_field = info_dict["sync_field"]
+        panel.update_event = info_dict["update_event"]
+        return panel

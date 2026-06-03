@@ -49,7 +49,7 @@ class DataType(Enum):
     POLYGONS = 1
     """Data are contained in a list of polygons"""
 
-class UpdateEvent(Enum):
+class UpdateEvent(int, Enum):
     """What triggers a plot update"""
 
     RECOMPUTE = 0

@@ -222,7 +222,7 @@ def worker(
 
                 #
                 #   OverLine functions
-                elif task == SlaveCommand.GET_1D_VALUE:
+                elif task == SlaveCommand.COMPUTE_1D_LINE_DATA:
                     if not isinstance(code_, OverLine):
                         raise TypeError(
                             f"The requested panel is not associated to an OverLine, found class {type(code_)}."
@@ -322,6 +322,7 @@ class ComputeSlave:
         print("RESETING SLAVE.")
         if self.p is not None:
             self.p.kill()
+            self.p.join()
 
         self.q_tasks = mp.Queue()
         self.q_returns = mp.Queue()
@@ -750,8 +751,9 @@ class ComputeSlave:
     ):
         """Terminates the subprocess"""
         self.running = False
-        if self.p is not None and not self.p._closed:
+        if self.p is not None and self.p.is_alive():
             self.p.terminate()
+            self.p.join(timeout=5)
 
     def get_result_or_error(self):
         """Gets the return value from the process. If an error was sent, raise the error instead.
@@ -766,7 +768,7 @@ class ComputeSlave:
         error
             Any error sent by the slave
         """
-        while (not self.p._closed) and (self.q_errors.empty() and self.q_returns.empty()):
+        while self.p.is_alive() and (self.q_errors.empty() and self.q_returns.empty()):
             time.sleep(.05)
 
         if not self.running:

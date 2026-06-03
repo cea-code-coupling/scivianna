@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, List, Tuple, Type, Union
+from typing import Callable, Dict, List, Tuple, Type, Union
 import panel as pn
 import panel_material_ui as pmui
 
@@ -46,14 +46,14 @@ class VisualizationPanel(pn.viewable.Viewer):
     """ On what event does the panel recompute itself
     """
     sync_field: bool = False
-    """ On what event does the panel recompute itself
+    """ The panel updates its field if another panel did
     """
 
     def __init__(
             self, 
             slave: ComputeSlave, 
             name="", 
-            extensions: List[Extension] = []
+            extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
         ):
         """Visualization panel constructor
 
@@ -61,10 +61,10 @@ class VisualizationPanel(pn.viewable.Viewer):
         ----------
         slave : ComputeSlave
             ComputeSlave object to which request the plots.
-         : str
-             of the panel.
-        extensions : List[Extension]
-            List of extensions loaded with the visualizer.
+        name : str
+            Name of the panel.
+        extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
+            List of extensions loaded with the visualizer. Can be either extension classes or tuples of (class, state_dict).
         """
         #         
         #   Initializing attributes
@@ -94,7 +94,19 @@ class VisualizationPanel(pn.viewable.Viewer):
         # 
         #   Extensions creation
         #         
-        self.extension_classes = extensions.copy()
+        self.extension_classes = []
+        extension_states = {}
+        
+        # Process extensions - can be classes or (class, state) tuples
+        for ext in extensions:
+            if isinstance(ext, tuple):
+                ext_class, ext_state = ext
+                self.extension_classes.append(ext_class)
+                extension_states[ext_class.__name__] = ext_state
+            else:
+                self.extension_classes.append(ext)
+        
+        # Add interface extensions
         for extension in code_interface.extensions:
             if not issubclass(extension, Extension):
                 raise TypeError(f"Extension {extension} declared in {code_interface.extensions} extensions is not a subclass of {Extension}")
@@ -104,14 +116,13 @@ class VisualizationPanel(pn.viewable.Viewer):
         # 
         #   Building layout
         #         
-        self.extensions = [
-            e(
-                self.slave,
-                self.plotter,
-                self
-            )
-            for e in self.extension_classes
-        ]
+        self.extensions = []
+        for e in self.extension_classes:
+            ext = e(self.slave, self.plotter, self)
+            # Apply saved state if available
+            if e.__name__ in extension_states:
+                e.from_json(ext, extension_states[e.__name__])
+            self.extensions.append(ext)
 
         self.gui = GUI(
             self.extensions
@@ -296,3 +307,29 @@ class VisualizationPanel(pn.viewable.Viewer):
     def trigger_on_file_load(self, file_path: str, file_label: str):
         for extension in self.extensions:
             extension.on_file_load(file_path, file_label)
+
+    def to_json(self) -> Dict:
+        """Returns a dictionnary with the information required to rebuild the visualization panel
+
+        Returns
+        -------
+        Dict
+            Information dict
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def from_json(self, info_dict: Dict, data: DataContainer) -> "VisualizationPanel":
+        """Restores the visualization panel from its information dict
+
+        Parameters
+        ----------
+        info_dict : Dict
+            Dictionnary containing all required information to restore the panel
+
+        Returns
+        -------
+        VisualizationPanel
+            Dict defined visualization panel
+        """
+        raise NotImplementedError()

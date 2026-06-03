@@ -2,8 +2,10 @@ import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import pickle
 from typing import List, Tuple, Union
 from scivianna.interface.generic_interface import ValueAtLocation, Value1DAtLocation
+from scivianna.enums import VisualizationMode
 
 
 class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
@@ -179,3 +181,62 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
             Fields names
         """
         return self.fields
+
+    def get_label_coloring_mode(self, label: str) -> VisualizationMode:
+        """Returns the coloring mode of the field.
+
+        Parameters
+        ----------
+        label : str
+            Field name
+
+        Returns
+        -------
+        VisualizationMode
+            Coloring mode
+        """
+        return VisualizationMode.FLOAT
+
+    def get_file_input_list(self) -> List[Tuple[str, str]]:
+        """Returns a list of file label and its description for the GUI.
+
+        Returns
+        -------
+        List[Tuple[str, str]]
+            List of (file label, description)
+        """
+        return [("csv", "CSV data file")] if hasattr(self, 'df') else []
+
+    def save(self, file_path: Path, include_files: bool):
+        """Pickle saves the slave content to a file.
+
+        Parameters
+        ----------
+        file_path : Path
+            File in which save the file
+        include_files : bool
+            Not used for this interface (CSV data is already in df)
+        """
+        state = {
+            'df': self.df,
+            'country_codes': self.country_codes,
+            'fields': self.fields,
+        }
+        with open(file_path, 'wb') as f:
+            pickle.dump(state, f)
+
+    def load(self, file_path: Path, include_files: bool):
+        """Pickle loads the slave content from a file.
+
+        Parameters
+        ----------
+        file_path : Path
+            File from which load the slave
+        include_files : bool
+            Not used for this interface (CSV data is already in df)
+        """
+        with open(file_path, 'rb') as f:
+            state = pickle.load(f)
+        self.df = state['df']
+        self.country_codes = state['country_codes']
+        self.fields = state['fields']

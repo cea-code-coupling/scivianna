@@ -61,3 +61,23 @@ class Plotter1D:
 
     def make_panel(self,):
         raise NotImplementedError()
+    
+    def set_x_scale(self, scale: str):
+        """Sets the X axis scale to either log or lin
+
+        Parameters
+        ----------
+        scale : str
+            Scale to set
+        """
+        raise NotImplementedError()
+    
+    def set_y_scale(self, scale: str):
+        """Sets the Y axis scale to either log or lin
+
+        Parameters
+        ----------
+        scale : str
+            Scale to set
+        """
+        raise NotImplementedError()
