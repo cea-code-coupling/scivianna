@@ -31,14 +31,14 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 class StructuredMesh:
     """Generic structured mesh class built to help used to define their own structured mesh based geometries/results
     """
-    mesh: pv.StructuredGrid
-    """Pyvista structured grid"""
     grids: Dict[str, np.ndarray]
     """Numpy array allocating values to cells, coordinates (x, y, z) are expected."""
 
     def __init__(self):
         """Initializing the grids object
         """
+        self.mesh: pv.StructuredGrid = None
+        """Pyvista structured grid"""
         self.grids = {}
 
     def set_values(self, name:str, grid:np.ndarray):
