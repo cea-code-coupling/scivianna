@@ -18,17 +18,195 @@ import zipfile
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Type, Union, TYPE_CHECKING, Optional, Any
+from typing import Dict, Type, Union, TYPE_CHECKING, Optional, Any
 
 if TYPE_CHECKING:
     from scivianna.panel.panel_2d import Panel2D
     from scivianna.panel.panel_1d import Panel1D
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.layout.split import SplitLayout, SplitItem
+    from scivianna.layout.gridstack import GridStackLayout
 
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.interface import INTERFACES, register_interface
 from scivianna.slave import ComputeSlave
+
+# =============================================================================
+# UTILITY FUNCTIONS FOR EXTENSIONS AND DATA
+# =============================================================================
+
+def _get_extension_class(ext_name: str, interface: Type[GenericInterface], panel_type: str) -> Optional[Type]:
+    """
+    Helper method to find an extension class by name.
+    
+    Searches in the following order:
+    1. interface.extensions
+    2. Panel's default_extensions
+    
+    Parameters
+    ----------
+    ext_name : str
+        Name of the extension class to find
+    interface : Type[GenericInterface]
+        Interface class to search in first
+    panel_type : str
+        Type of panel ("Panel1D" or "Panel2D")
+        
+    Returns
+    -------
+    Type
+        Extension class if found, None otherwise
+    """
+    # First, try to find in interface.extensions
+    for iface_ext in interface.extensions:
+        if iface_ext.__name__ == ext_name:
+            return iface_ext
+    
+    # Then try panel's default_extensions
+    if panel_type == "Panel1D":
+        from scivianna.panel.panel_1d import default_extensions as panel1d_default_extensions
+        for ext in panel1d_default_extensions:
+            if ext.__name__ == ext_name:
+                return ext
+    elif panel_type == "Panel2D":
+        from scivianna.panel.panel_2d import default_extensions as panel2d_default_extensions
+        for ext in panel2d_default_extensions:
+            if ext.__name__ == ext_name:
+                return ext
+    
+    return None
+
+
+def _get_panel1d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
+    """Helper method to find a Panel1D extension class by name."""
+    return _get_extension_class(ext_name, interface, "Panel1D")
+
+
+def _get_panel2d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
+    """Helper method to find a Panel2D extension class by name."""
+    return _get_extension_class(ext_name, interface, "Panel2D")
+
+
+def _save_current_data(current_data: Any, temp_path: Path, panel_name: str) -> str:
+    """
+    Save current_data (Data2D) to a pickle file.
+    
+    Parameters
+    ----------
+    current_data : Any
+        The data to save (typically Data2D)
+    temp_path : Path
+        Temporary directory path
+    panel_name : str
+        Name of the panel (used for filename)
+        
+    Returns
+    -------
+    str
+        Relative path to the saved file
+    """
+    data_path = temp_path / "data" / f"{panel_name}.pkl"
+    data_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(data_path, "wb") as f:
+        pickle.dump(current_data, f)
+    return str(data_path.relative_to(temp_path))
+
+
+def _load_current_data(temp_path: Path, relative_path: str) -> Optional[Any]:
+    """
+    Load current_data (Data2D) from a pickle file.
+    
+    Parameters
+    ----------
+    temp_path : Path
+        Temporary directory path containing extracted zip contents
+    relative_path : str
+        Relative path to the data file
+        
+    Returns
+    -------
+    Optional[Any]
+        Loaded data or None if file doesn't exist
+    """
+    data_path = temp_path / relative_path
+    if data_path.exists():
+        with open(data_path, "rb") as f:
+            return pickle.load(f)
+    return None
+
+
+def _build_panel_metadata(
+    panel_type: str,
+    panel: Union["Panel1D", "Panel2D"],
+    interface_key: str
+) -> Dict:
+    """
+    Build panel metadata dictionary for JSON serialization.
+    
+    Parameters
+    ----------
+    panel_type : str
+        Type of panel ("Panel1D" or "Panel2D")
+    panel : Union[Panel1D, Panel2D]
+        Panel instance to serialize
+    interface_key : str
+        Interface key string
+        
+    Returns
+    -------
+    Dict
+        Metadata dictionary
+    """
+    base_metadata = {
+        "panel_type": panel_type,
+        "panel_json": panel.to_json(),
+        "extensions": [e.__class__.__name__ for e in panel.extensions],
+        "extensions_data": {e.__class__.__name__: e.to_json() for e in panel.extensions},
+        "interface_key": interface_key,
+        "slave_file": "slave.pkl"
+    }
+    
+    if panel_type == "Panel2D":
+        base_metadata["current_data_file"] = "current_data.pkl"
+    
+    return base_metadata
+
+
+def _restore_extensions(
+    extensions_data: Dict[str, Dict],
+    saved_extensions: list,
+    interface: Type[GenericInterface],
+    panel_type: str
+) -> list:
+    """
+    Restore extension classes with their saved state.
+    
+    Parameters
+    ----------
+    extensions_data : Dict[str, Dict]
+        Dictionary mapping extension names to their state dicts
+    saved_extensions : list
+        List of extension names to restore
+    interface : Type[GenericInterface]
+        Interface class to search for extensions
+    panel_type : str
+        Type of panel ("Panel1D" or "Panel2D")
+        
+    Returns
+    -------
+    list
+        List of (extension_class, state_dict) tuples
+    """
+    extensions = []
+    for ext_name in saved_extensions:
+        ext_state = extensions_data.get(ext_name, {})
+        ext_class = _get_extension_class(ext_name, interface, panel_type)
+        
+        if ext_class is not None:
+            extensions.append((ext_class, ext_state))
+    
+    return extensions
+
 
 # =============================================================================
 # SLAVE ONLY SERIALIZATION
@@ -83,8 +261,6 @@ def load_slave_from_file(
     ComputeSlave
         The loaded slave
     """
-    from scivianna.panel.visualisation_panel import ComputeSlave
-    
     file_path = Path(file_path)
     slave = ComputeSlave(interface_class)
     slave.load(file_path, include_files=include_files)
@@ -144,24 +320,16 @@ def save_panel2d_to_file(
         if interface_key is None:
             interface_key = interface_class.__name__
         
-        # Save panel configuration as JSON
-        panel_data = {
-            "panel_type": "Panel2D",
-            "panel_json": panel.to_json(),
-            "extensions": [e.__class__.__name__ for e in panel.extensions],
-            "extensions_data": {e.__class__.__name__: e.to_json() for e in panel.extensions},
-            "interface_key": interface_key,
-            "slave_file": "slave.pkl",
-            "current_data_file": "current_data.pkl"
-        }
+        # Save panel configuration as JSON using the utility function
+        panel_data = _build_panel_metadata("Panel2D", panel, interface_key)
         
         panel_json_path = temp_path / "panel.json"
         with open(panel_json_path, "w") as f:
             json.dump(panel_data, f, indent=2)
         
-        # Save slave data
+        # Save slave data using the slave serialization function
         slave_data_path = temp_path / "slave.pkl"
-        slave.save(slave_data_path, include_files=include_files)
+        save_slave_to_file(slave, slave_data_path, include_files=include_files)
         
         # Also save current_data
         current_data_path = temp_path / "current_data.pkl"
@@ -201,7 +369,6 @@ def load_panel2d_from_file(
         The loaded panel with its associated slave
     """
     from scivianna.panel.panel_2d import Panel2D
-    from scivianna.panel.visualisation_panel import ComputeSlave
     
     file_path = Path(file_path)
     zip_path = file_path.with_suffix(".zip") if not file_path.suffix == ".zip" else file_path
@@ -224,13 +391,12 @@ def load_panel2d_from_file(
         if interface is None:
             raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
         
-        # Create slave and load data
-        slave = ComputeSlave(interface)
-        
-        # Load slave data from the pickle file
-        slave_data_path = temp_path / panel_data.get("slave_file", "slave.pkl")
-        if slave_data_path.exists():
-            slave.load(slave_data_path, include_files=include_files)
+        # Create slave and load data using the slave serialization function
+        slave = load_slave_from_file(
+            temp_path / panel_data.get("slave_file", "slave.pkl"),
+            interface,
+            include_files=include_files
+        )
         
         # Load current_data
         current_data = None
@@ -239,17 +405,10 @@ def load_panel2d_from_file(
             with open(current_data_path, "rb") as f:
                 current_data = pickle.load(f)
         
-        # Rebuild extensions with their state
-        extensions = []
+        # Rebuild extensions with their state using the utility function
         extensions_data = panel_data.get("extensions_data", {})
         saved_extensions = panel_data.get("extensions", [])
-        
-        for ext_name in saved_extensions:
-            ext_state = extensions_data.get(ext_name, {})
-            ext_class = _get_panel2d_extension_class(ext_name, interface)
-            
-            if ext_class is not None:
-                extensions.append((ext_class, ext_state))
+        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel2D")
 
         # Restore panel from json with the loaded data
         panel = Panel2D.from_json(panel_data["panel_json"], slave, current_data, extensions)
@@ -259,18 +418,7 @@ def load_panel2d_from_file(
 
 def _get_panel2d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
     """Helper method to find a Panel2D extension class by name."""
-    # First, try to find in interface.extensions
-    for iface_ext in interface.extensions:
-        if iface_ext.__name__ == ext_name:
-            return iface_ext
-    
-    # Then try panel's default_extensions
-    from scivianna.panel.panel_2d import default_extensions as panel2d_default_extensions
-    for ext in panel2d_default_extensions:
-        if ext.__name__ == ext_name:
-            return ext
-    
-    return None
+    return _get_extension_class(ext_name, interface, "Panel2D")
 
 
 # =============================================================================
@@ -325,23 +473,16 @@ def save_panel1d_to_file(
         if interface_key is None:
             interface_key = interface_class.__name__
         
-        # Save panel configuration as JSON
-        panel_data = {
-            "panel_type": "Panel1D",
-            "panel_json": panel.to_json(),
-            "extensions": [e.__class__.__name__ for e in panel.extensions],
-            "extensions_data": {e.__class__.__name__: e.to_json() for e in panel.extensions},
-            "interface_key": interface_key,
-            "slave_file": "slave.pkl"
-        }
+        # Save panel configuration as JSON using the utility function
+        panel_data = _build_panel_metadata("Panel1D", panel, interface_key)
         
         panel_json_path = temp_path / "panel.json"
         with open(panel_json_path, "w") as f:
             json.dump(panel_data, f, indent=2)
         
-        # Save slave data
+        # Save slave data using the slave serialization function
         slave_data_path = temp_path / "slave.pkl"
-        slave.save(slave_data_path, include_files=include_files)
+        save_slave_to_file(slave, slave_data_path, include_files=include_files)
         
         # Create the zip file
         zip_path = file_path.with_suffix(".zip") if not file_path.suffix == ".zip" else file_path
@@ -376,7 +517,6 @@ def load_panel1d_from_file(
         The loaded panel with its associated slave
     """
     from scivianna.panel.panel_1d import Panel1D
-    from scivianna.panel.visualisation_panel import ComputeSlave
     
     file_path = Path(file_path)
     
@@ -398,25 +538,17 @@ def load_panel1d_from_file(
         if interface is None:
             raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
         
-        # Create slave and load data
-        slave = ComputeSlave(interface)
+        # Create slave and load data using the slave serialization function
+        slave = load_slave_from_file(
+            temp_path / panel_data.get("slave_file", "slave.pkl"),
+            interface,
+            include_files=include_files
+        )
         
-        # Load slave data from the pickle file
-        slave_data_path = temp_path / panel_data.get("slave_file", "slave.pkl")
-        if slave_data_path.exists():
-            slave.load(slave_data_path, include_files=include_files)
-        
-        # Rebuild extensions with their state
-        extensions = []
+        # Rebuild extensions with their state using the utility function
         extensions_data = panel_data.get("extensions_data", {})
         saved_extensions = panel_data.get("extensions", [])
-        
-        for ext_name in saved_extensions:
-            ext_state = extensions_data.get(ext_name, {})
-            ext_class = _get_panel1d_extension_class(ext_name, interface)
-            
-            if ext_class is not None:
-                extensions.append((ext_class, ext_state))
+        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel1D")
         
         # Restore panel from json
         panel = Panel1D.from_json(panel_data["panel_json"], slave, extensions)
@@ -426,18 +558,7 @@ def load_panel1d_from_file(
 
 def _get_panel1d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
     """Helper method to find a Panel1D extension class by name."""
-    # First, try to find in interface.extensions
-    for iface_ext in interface.extensions:
-        if iface_ext.__name__ == ext_name:
-            return iface_ext
-    
-    # Then try panel's default_extensions
-    from scivianna.panel.panel_1d import default_extensions as panel1d_default_extensions
-    for ext in panel1d_default_extensions:
-        if ext.__name__ == ext_name:
-            return ext
-    
-    return None
+    return _get_extension_class(ext_name, interface, "Panel1D")
 
 
 # =============================================================================
@@ -510,17 +631,14 @@ def save_layout_to_zip(
                 "current_data": f"data/{panel_name}.pkl"
             }
             
-            # Save slave data to individual pickle file
+            # Save slave data to individual pickle file using the slave serialization function
             slave_data_path = temp_path / "slave_data" / f"{panel_name}.pkl"
             slave_data_path.parent.mkdir(parents=True, exist_ok=True)
-            slave.save(slave_data_path, include_files=include_files)
+            save_slave_to_file(slave, slave_data_path, include_files=include_files)
             
-            # Save current_data for Panel2D
+            # Save current_data for Panel2D using the utility function
             if isinstance(panel, Panel2D):
-                data_path = temp_path / "data" / f"{panel_name}.pkl"
-                data_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(data_path, "wb") as f:
-                    pickle.dump(panel.current_data, f)
+                _save_current_data(panel.current_data, temp_path, panel_name)
         
         # Write layout.json
         layout_json_path = temp_path / "layout.json"
@@ -663,7 +781,6 @@ def _deserialize_split_item(
         Deserialized item
     """
     from scivianna.layout.split import SplitItem, SplitDirection
-    from scivianna.panel.visualisation_panel import ComputeSlave
     from scivianna.panel.panel_1d import Panel1D
     from scivianna.panel.panel_2d import Panel2D
     
@@ -686,27 +803,17 @@ def _deserialize_split_item(
         if interface is None:
             raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
         
-        # Create slave and load data first (before panel creation)
-        slave = ComputeSlave(interface)
+        # Create slave and load data first (before panel creation) using the slave serialization function
+        slave = load_slave_from_file(
+            temp_path / panel_info["data_file"],
+            interface,
+            include_files=include_files
+        )
         
-        # Load slave data from the pickle file BEFORE creating the panel
-        if temp_path:
-            slave_data_path = temp_path / panel_info["data_file"]
-            if slave_data_path.exists():
-                slave.load(slave_data_path, include_files=include_files)
-        
-        # Get all saved extensions and their states
-        extensions = []
+        # Get all saved extensions and their states using the utility function
         extensions_data = data.get("extensions_data", {})
         saved_extensions = data.get("extensions", [])
-        
-        for ext_name in saved_extensions:
-            ext_state = extensions_data.get(ext_name, {})
-            ext_class = _get_extension_class(ext_name, interface, "Panel1D")
-            
-            # If found, add it with its state
-            if ext_class is not None:
-                extensions.append((ext_class, ext_state))
+        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel1D")
         
         # Restore panel from json, passing extensions with their state
         panel = Panel1D.from_json(panel_json_data, slave, extensions)
@@ -727,35 +834,20 @@ def _deserialize_split_item(
         if interface is None:
             raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
         
-        # Create slave and load data first (before panel creation)
-        slave = ComputeSlave(interface)
+        # Create slave and load data first (before panel creation) using the slave serialization function
+        slave = load_slave_from_file(
+            temp_path / panel_info["data_file"],
+            interface,
+            include_files=include_files
+        )
         
-        # Load slave data from the pickle file BEFORE creating the panel
-        if temp_path:
-            slave_data_path = temp_path / panel_info["data_file"]
-            if slave_data_path.exists():
-                slave.load(slave_data_path, include_files=include_files)
+        # Load current_data from pickle file for Panel2D using the utility function
+        current_data = _load_current_data(temp_path, panel_info["current_data"])
         
-        # Load current_data from pickle file for Panel2D
-        current_data = None
-        if temp_path:
-            data_path = temp_path / panel_info["current_data"]
-            if data_path.exists():
-                with open(data_path, "rb") as f:
-                    current_data = pickle.load(f)
-        
-        # Get all saved extensions and their states
-        extensions = []
+        # Get all saved extensions and their states using the utility function
         extensions_data = data.get("extensions_data", {})
         saved_extensions = data.get("extensions", [])
-        
-        for ext_name in saved_extensions:
-            ext_state = extensions_data.get(ext_name, {})
-            ext_class = _get_extension_class(ext_name, interface, "Panel2D")
-            
-            # If found, add it with its state
-            if ext_class is not None:
-                extensions.append((ext_class, ext_state))
+        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel2D")
         
         # Restore panel from json with the loaded data
         panel = Panel2D.from_json(panel_json_data, slave, current_data, extensions)
@@ -764,48 +856,6 @@ def _deserialize_split_item(
         
     else:
         raise ValueError(f"Unknown item type: {data['type']}")
-
-
-def _get_extension_class(ext_name: str, interface: Type[GenericInterface], panel_type: str) -> Optional[Type]:
-    """
-    Helper method to find an extension class by name.
-    
-    Searches in the following order:
-    1. interface.extensions
-    2. Panel's default_extensions
-    
-    Parameters
-    ----------
-    ext_name : str
-        Name of the extension class to find
-    interface : Type[GenericInterface]
-        Interface class to search in first
-    panel_type : str
-        Type of panel ("Panel1D" or "Panel2D")
-        
-    Returns
-    -------
-    Type
-        Extension class if found, None otherwise
-    """
-    # First, try to find in interface.extensions
-    for iface_ext in interface.extensions:
-        if iface_ext.__name__ == ext_name:
-            return iface_ext
-    
-    # Then try panel's default_extensions
-    if panel_type == "Panel1D":
-        from scivianna.panel.panel_1d import default_extensions as panel1d_default_extensions
-        for ext in panel1d_default_extensions:
-            if ext.__name__ == ext_name:
-                return ext
-    elif panel_type == "Panel2D":
-        from scivianna.panel.panel_2d import default_extensions as panel2d_default_extensions
-        for ext in panel2d_default_extensions:
-            if ext.__name__ == ext_name:
-                return ext
-    
-    return None
 
 
 # =============================================================================
@@ -918,17 +968,14 @@ def save_gridstack_to_zip(
                 "current_data": f"data/{panel_name}.pkl" if isinstance(panel, Panel2D) else None
             }
             
-            # Save slave data to individual pickle file
+            # Save slave data to individual pickle file using the slave serialization function
             slave_data_path = temp_path / "slave_data" / f"{panel_name}.pkl"
             slave_data_path.parent.mkdir(parents=True, exist_ok=True)
-            slave.save(slave_data_path, include_files=include_files)
+            save_slave_to_file(slave, slave_data_path, include_files=include_files)
             
-            # Save current_data for Panel2D
+            # Save current_data for Panel2D using the utility function
             if isinstance(panel, Panel2D):
-                data_path = temp_path / "data" / f"{panel_name}.pkl"
-                data_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(data_path, "wb") as f:
-                    pickle.dump(panel.current_data, f)
+                _save_current_data(panel.current_data, temp_path, panel_name)
         
         # Write layout.json
         layout_json_path = temp_path / "layout.json"
@@ -1008,22 +1055,18 @@ def load_gridstack_from_zip(
             if interface is None:
                 raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
             
-            # Create slave and load data
-            slave = ComputeSlave(interface)
-            slave_data_path = temp_path / panel_info["data_file"]
-            if slave_data_path.exists():
-                slave.load(slave_data_path, include_files=include_files)
+            # Create slave and load data using the slave serialization function
+            slave = load_slave_from_file(
+                temp_path / panel_info["data_file"],
+                interface,
+                include_files=include_files
+            )
             
             # Determine panel type from saved JSON data
             panel_type = panel_info.get("panel_type", "Panel2D")
             
-            # Load current_data for Panel2D
-            current_data = None
-            if panel_type == "Panel2D" and panel_info.get("current_data"):
-                data_path = temp_path / panel_info["current_data"]
-                if data_path.exists():
-                    with open(data_path, "rb") as f:
-                        current_data = pickle.load(f)
+            # Load current_data for Panel2D using the utility function
+            current_data = _load_current_data(temp_path, panel_info["current_data"]) if panel_info.get("current_data") else None
             
             # Create the panel - Panel2D needs data, Panel1D doesn't
             if panel_type == "Panel2D":
