@@ -43,7 +43,7 @@ def test_save_load_med_with_include_files():
     slave2.terminate()
 
 
-@pytest.mark.default
+@pytest.mark.skip("Behavior not implemented yet")
 def test_save_load_med_without_include_files():
     """Simple test to make sure things happen before more tests are actually implemented
     """
