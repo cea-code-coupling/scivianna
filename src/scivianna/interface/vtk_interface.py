@@ -7,8 +7,15 @@ import multiprocessing as mp
 
 import panel_material_ui as pmui
 import panel as pn
-import pyvista as pv
-import vtk
+
+try:
+    import pyvista as pv
+    import vtk
+    _PYVISTA_AVAILABLE = True
+except ImportError:
+    pv = None  # type: ignore[assignment]
+    vtk = None  # type: ignore[assignment]
+    _PYVISTA_AVAILABLE = False
 
 import scivianna
 from scivianna.extension.extension import Extension
@@ -31,6 +38,21 @@ from scivianna.data.data2d import Data2D
 with open(Path(scivianna.__file__).parent / "icon" / "vtk.svg", "r") as f:
     icon_svg = f.read()
 
+class _PyVistaUnavailableError(RuntimeError):
+    """Raised when pyvista is required but not available."""
+    def __init__(self):
+        super().__init__(
+            "pyvista (and VTK) are required for this functionality but are not installed. "
+            "Install them with: pip install pyvista vtk"
+        )
+
+
+def _require_pyvista():
+    """Raise an error if pyvista is not available."""
+    if not _PYVISTA_AVAILABLE:
+        raise _PyVistaUnavailableError()
+
+
 class VTKExtension(Extension):
     """Extension to load files and send them to the slave."""
 
@@ -40,6 +62,7 @@ class VTKExtension(Extension):
         plotter: "Plotter2D",
         panel: "VisualizationPanel"
     ):
+        _require_pyvista()
         """Constructor of the extension, saves the slave and the panel
 
         Parameters
@@ -108,6 +131,7 @@ This extension allows defining the VTK plot parameters.
         )
 
 def extract_unstructured(dataset):
+    """Extract an UnstructuredGrid from a pyvista dataset."""
     if isinstance(dataset, pv.UnstructuredGrid):
         return dataset
     elif isinstance(dataset, pv.MultiBlock):
@@ -131,9 +155,10 @@ class VTKInterface(Geometry2DPolygon):
         self,
     ):
         """VTK interface constructor."""
+        _require_pyvista()
         self.data: Data2D = None
-        self.reader: pv.BaseReader = None
-        self.mesh: pv.MultiBlock = None
+        self.reader: Any = None
+        self.mesh: Any = None
         self.times: List[float] = []
         self.results: Dict[str, Any] = {}
         self.last_computed_frame: List[float] = []
@@ -149,8 +174,9 @@ class VTKInterface(Geometry2DPolygon):
         file_label : str
             Label to define the file type
         """
+        _require_pyvista()
         if file_label == GEOMETRY:
-            self.reader: pv.PVDReader = pv.get_reader(file_path)
+            self.reader: Any = pv.get_reader(file_path)
             self.times = self.reader.time_values
             self.load_at_time(self.reader.time_values[-1])
 
@@ -203,6 +229,7 @@ class VTKInterface(Geometry2DPolygon):
         ValueError
             Provided time not in data
         """
+        _require_pyvista()
         if not time in self.times:
             raise ValueError(f"Provided time {time} does not exist, found : {self.times}.")
         
@@ -224,6 +251,7 @@ class VTKInterface(Geometry2DPolygon):
         q_tasks: mp.Queue,
         options: Dict[str, Any],
     ) -> Tuple[List[PolygonElement], bool]:
+        _require_pyvista()
         """Returns a list of polygons that defines the geometry in a given frame
 
         Parameters
@@ -406,7 +434,6 @@ class VTKInterface(Geometry2DPolygon):
             Loaded file time values
         """
         return self.times
-    
 
 if __name__ == "__main__":
     file_path = Path("/partage/spatial/Stages/2026_Manta_NTP/Results/Core/core.pvd")
