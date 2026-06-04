@@ -1,20 +1,36 @@
+# Build directories for Python packages and distributions
 build
 dist
 
+# Python compiled bytecode files
 *.pyc
+# Backup files created by editors
 *~
+# Image files (PNG, JPG)
 *.png
 *.jpg
 
+# Web-related files (HTML, JavaScript, Spec file)
 *.html
 *.js
 *.spec
+# Shared object files (compiled extensions)
 *.so
+# Virtual environment directory for t5
 env_t5
 
+# Python egg information (setuptools)
 *.egg-info
+# Garbage collection directory
 garbage
 
+# Python virtual environments (all variants: venv, .venv, venv3, etc.)
+.venv*
 venv*
 
+# Local virtual environment for utils module
 utils/.venv_utils
+# Python pickle files (binary serialized objects)
+*.pkl
+# Compressed archive files
+*.zip
