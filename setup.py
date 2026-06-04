@@ -72,5 +72,8 @@ setup(
         "pyvista": [
             "pyvista",
         ],
+        "test": [
+            "pytest-xdist"
+        ]
     },
 )

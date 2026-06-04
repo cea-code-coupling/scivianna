@@ -30,7 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install .[${{ matrix.deps }}]
         python -m pip install medcoupling
-        python -m pip install flake8 coverage pytest-cov nbmake 
+        python -m pip install flake8 coverage pytest-cov nbmake pytest-xdist
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -41,7 +41,7 @@ jobs:
     - name: Tests
       run: |
         # Run default tests
-        coverage run -a --source=scivianna -m pytest tests --tb=short -W ignore::DeprecationWarning -m default
+        coverage run -a --source=scivianna -m pytest -n 8 tests --tb=short -W ignore::DeprecationWarning -m default
 
         # Split deps string into array using PowerShell (works on Linux and Windows)
         $deps = "${{ matrix.deps }}"
@@ -50,7 +50,7 @@ jobs:
         # Run pytest for each tag
         foreach ($tag in $tags) {
           Write-Host "Running tests for tag: $tag"
-          coverage run -a --source=scivianna -m pytest tests --tb=short -W ignore::DeprecationWarning -m $tag
+          coverage run -a --source=scivianna -m pytest -n 8 tests --tb=short -W ignore::DeprecationWarning -m $tag
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
         }

@@ -10,20 +10,10 @@ except ImportError:
     core = None  # type: ignore[assignment]
     _PYVISTA_AVAILABLE = False
 
-
-class _PyVistaUnavailableError(RuntimeError):
-    """Raised when pyvista is required but not available."""
-    def __init__(self):
-        super().__init__(
-            "pyvista (and VTK) are required for this functionality but are not installed. "
-            "Install them with: pip install pyvista vtk"
-        )
-
-
 def _require_pyvista():
     """Raise an error if pyvista is not available."""
     if not _PYVISTA_AVAILABLE:
-        raise _PyVistaUnavailableError()
+        raise ImportError("Pyvista could not be imported, please pip install pyvista to use the vtk interface")
 
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 

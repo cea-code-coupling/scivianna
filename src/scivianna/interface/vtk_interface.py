@@ -19,14 +19,14 @@ except ImportError:
 
 import scivianna
 from scivianna.extension.extension import Extension
-from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.slave import ComputeSlave
 
 from scivianna.interface.generic_interface import Geometry2DPolygon
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
-from scivianna.interface import csv_result
+    from scivianna.plotter_2d.generic_plotter import Plotter2D
+    from scivianna.slave import ComputeSlave
+
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.constants import MESH, GEOMETRY, CSV
@@ -38,19 +38,10 @@ from scivianna.data.data2d import Data2D
 with open(Path(scivianna.__file__).parent / "icon" / "vtk.svg", "r") as f:
     icon_svg = f.read()
 
-class _PyVistaUnavailableError(RuntimeError):
-    """Raised when pyvista is required but not available."""
-    def __init__(self):
-        super().__init__(
-            "pyvista (and VTK) are required for this functionality but are not installed. "
-            "Install them with: pip install pyvista vtk"
-        )
-
-
 def _require_pyvista():
     """Raise an error if pyvista is not available."""
     if not _PYVISTA_AVAILABLE:
-        raise _PyVistaUnavailableError()
+        raise ImportError("Pyvista could not be imported, please pip install pyvista to use the vtk interface")
 
 
 class VTKExtension(Extension):
@@ -487,13 +478,13 @@ if __name__ == "__main__":
             dpi=500
         )
         print("Two plot time", time.time() - st)
-    else:
-        from scivianna.panel.panel_2d import Panel2D
-        slave = ComputeSlave(VTKInterface)
-        slave.read_file(file_path, GEOMETRY)
+    # else:
+    #     from scivianna.panel.panel_2d import Panel2D
+    #     slave = ComputeSlave(VTKInterface)
+    #     slave.read_file(file_path, GEOMETRY)
 
-        panel = Panel2D(slave, name="VTK")
-        panel.set_coordinates(
-            w = .5
-        )
-        panel.show()
+    #     panel = Panel2D(slave, name="VTK")
+    #     panel.set_coordinates(
+    #         w = .5
+    #     )
+    #     panel.show()
