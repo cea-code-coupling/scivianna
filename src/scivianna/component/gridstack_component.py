@@ -110,8 +110,4 @@ class CustomGridStack(GridStack):
         y_range : Tuple[int, int]
             Vertical range used to update the number of rows and columns
         """
-        print(f"Adding object : {id(obj)}")
-        # self.nrows = max(self.nrows, max(x_range))
-        # self.ncols = max(self.ncols, max(y_range))
-
         self.object_dict[str(id(obj))] = obj
