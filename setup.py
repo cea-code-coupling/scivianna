@@ -73,7 +73,11 @@ setup(
             "pyvista",
         ],
         "test": [
-            "pytest-xdist"
+            "pytest-xdist",
+            "flake8",
+            "coverage",
+            "pytest-cov",
+            "nbmake",
         ]
     },
 )

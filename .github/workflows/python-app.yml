@@ -41,7 +41,7 @@ jobs:
     - name: Tests
       run: |
         # Run default tests
-        coverage run -a --source=scivianna -m pytest -n 8 tests --tb=short -W ignore::DeprecationWarning -m default
+        python -m pytest --cov=scivianna --cov-append -n 8 tests --tb=short -W ignore::DeprecationWarning -m default
 
         # Split deps string into array using PowerShell (works on Linux and Windows)
         $deps = "${{ matrix.deps }}"
@@ -50,7 +50,7 @@ jobs:
         # Run pytest for each tag
         foreach ($tag in $tags) {
           Write-Host "Running tests for tag: $tag"
-          coverage run -a --source=scivianna -m pytest -n 8 tests --tb=short -W ignore::DeprecationWarning -m $tag
+          python -m pytest --cov=scivianna --cov-append -n 8 tests --tb=short -W ignore::DeprecationWarning -m $tag
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
         }
