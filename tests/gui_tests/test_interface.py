@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, TYPE_CHECKING
+from typing import Any, Dict, List, Tuple, Union, TYPE_CHECKING, Generator
 from dataclasses import dataclass
 import numpy as np
 import multiprocessing as mp
@@ -7,6 +7,9 @@ import panel as pn
 import panel_material_ui as pmui
 from bokeh.plotting import curdoc
 from unittest.mock import Mock, MagicMock
+import pytest
+import tempfile
+import zipfile
 
 import scivianna
 from scivianna.panel.panel_2d import Panel2D
@@ -21,7 +24,7 @@ from scivianna.interface.generic_interface import Geometry2DPolygon, IcocoInterf
 from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 from scivianna.enums import GeometryType, VisualizationMode
 
-from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV, XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, GEOMETRY, EDGE_ALPHA, FILL_ALPHA, X, Y
+from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV, XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA, X, Y
 
 from bokeh import events as bokeh_events
 
@@ -361,8 +364,54 @@ class DummyTestInterface(Geometry2DPolygon):
     def get_info(self,):
         return self.data, self.last_computed_frame, self.file_path, self.current_field
 
+    def save(self, file_path: str, include_files: bool = True):
+        """Save the interface state to a file.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the file to save to
+        include_files : bool = True
+            If True, includes loaded files in the serialization
+        """
+        import pickle
+        state = {
+            'file_path': self.file_path,
+            'current_field': self.current_field,
+            'last_computed_frame': self.last_computed_frame,
+        }
+        with open(file_path, 'wb') as f:
+            pickle.dump(state, f)
+
+    def load(self, file_path: str, include_files: bool = True):
+        """Load the interface state from a file.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the file to load from
+        include_files : bool = True
+            If True, includes loaded files in the deserialization
+        """
+        import pickle
+        with open(file_path, 'rb') as f:
+            state = pickle.load(f)
+        self.file_path = state.get('file_path', {})
+        self.current_field = state.get('current_field', None)
+        self.last_computed_frame = state.get('last_computed_frame', None)
+
 
 def make_panel_2d():
+    """Creates a Panel2D instance with DummyTestInterface.
+    
+    Returns
+    -------
+    tuple
+        (panel, extensions_dict, cleanup) where:
+        - panel: Panel2D instance
+        - extensions_dict: dict mapping extension class to extension instance
+        - cleanup: function to call to terminate the slave process
+    """
     slave = ComputeSlave(DummyTestInterface)
     panel = Panel2D(slave)
 
@@ -372,6 +421,81 @@ def make_panel_2d():
     return panel, {
         e.__class__: e for e in panel.extensions
     }, cleanup
+
+
+@pytest.fixture(scope="function", params=["direct", "deserialized"])
+def panel_fixture(request) -> Generator[Tuple[Panel2D, Dict[type, Extension], callable], None, None]:
+    """Pytest fixture that provides a Panel2D instance either directly or via deserialization.
+    
+    This fixture allows tests to run in two modes:
+    - "direct": Panel is created fresh using make_panel_2d()
+    - "deserialized": Panel is serialized to a zip file and restored from it
+    
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The fixture request object, used to get the parameter value
+        
+    Yields
+    ------
+    Tuple[Panel2D, Dict[type, Extension], callable]
+        (panel, extensions_dict, cleanup) tuple same as make_panel_2d()
+    """
+    from scivianna.utils.serialization import save_panel2d_to_file, load_panel2d_from_file
+    
+    mode = request.param
+    
+    if mode == "direct":
+        # Direct panel creation
+        panel, extensions_dict, cleanup = make_panel_2d()
+        yield panel, extensions_dict, cleanup
+        cleanup()
+    else:
+        # Deserialized panel - serialize then deserialize
+        import tempfile
+        from pathlib import Path
+        from scivianna.interface import register_interface
+        
+        # Create original panel
+        orig_panel, _, orig_cleanup = make_panel_2d()
+        
+        try:
+            # Save to a temporary zip file using Panel2D serialization
+            with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp_file:
+                zip_path = Path(tmp_file.name)
+            
+            # Save the panel directly using Panel2D serialization
+            save_panel2d_to_file(orig_panel, zip_path)
+            
+            # Terminate original slave
+            orig_cleanup()
+            
+            # Register the test interface before deserialization
+            register_interface("DummyTestInterface", DummyTestInterface)
+            
+            # Restore from zip using Panel2D deserialization
+            panel = load_panel2d_from_file(
+                zip_path,
+            )
+            
+            extensions_dict = {e.__class__: e for e in panel.extensions}
+            
+            def cleanup():
+                panel.get_slave().terminate()
+                if zip_path.exists():
+                    zip_path.unlink()
+            
+            yield panel, extensions_dict, cleanup
+            
+            # Cleanup is called after test completes
+            cleanup()
+            
+        except Exception as e:
+            # Clean up on error
+            orig_cleanup()
+            if 'zip_path' in locals() and zip_path.exists():
+                zip_path.unlink()
+            raise e
 
 
 def get_polygons(panel: Panel2D):

@@ -17,23 +17,23 @@ from scivianna.data.data2d import Data2D
 from scivianna.enums import VisualizationMode
 from scivianna.constants import OUTSIDE
 
-from test_interface import make_panel_2d
+from test_interface import make_panel_2d, panel_fixture
 
 
 class TestFieldSelectorInitialization:
     """Test suite for FieldSelector extension initialization."""
 
-    def test_field_selector_exists(self):
+    def test_field_selector_exists(self, panel_fixture):
         """Test that FieldSelector extension is properly registered."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         try:
             assert FieldSelector in extensions_dict
         finally:
             cleanup()
 
-    def test_field_selector_initialization(self):
+    def test_field_selector_initialization(self, panel_fixture):
         """Test that FieldSelector attributes are properly set by __init__."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -64,9 +64,9 @@ class TestFieldSelectorInitialization:
         finally:
             cleanup()
 
-    def test_field_color_selector_has_correct_options(self):
+    def test_field_color_selector_has_correct_options(self, panel_fixture):
         """Test that field_color_selector has options from the interface."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -78,9 +78,9 @@ class TestFieldSelectorInitialization:
         finally:
             cleanup()
 
-    def test_center_colormap_on_zero_tick_visibility(self):
+    def test_center_colormap_on_zero_tick_visibility(self, panel_fixture):
         """Test that center_colormap_on_zero_tick visibility depends on coloring mode."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -95,9 +95,9 @@ class TestFieldSelectorInitialization:
         finally:
             cleanup()
 
-    def test_color_map_selector_initial_value(self):
+    def test_color_map_selector_initial_value(self, panel_fixture):
         """Test that color_map_selector has correct initial value."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -111,9 +111,9 @@ class TestFieldSelectorInitialization:
 class TestFieldSelectorCallbacks:
     """Test suite for FieldSelector callback behaviors."""
 
-    def test_trigger_field_change(self):
+    def test_trigger_field_change(self, panel_fixture):
         """Test that trigger_field_change updates the panel field."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -131,9 +131,9 @@ class TestFieldSelectorCallbacks:
         finally:
             cleanup()
 
-    def test_receive_colormap_change(self):
+    def test_receive_colormap_change(self, panel_fixture):
         """Test that receive_colormap_change updates the color map selector."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -150,9 +150,9 @@ class TestFieldSelectorCallbacks:
         finally:
             cleanup()
 
-    def test_trigger_colormap_change(self):
+    def test_trigger_colormap_change(self, panel_fixture):
         """Test that trigger_colormap_change updates the panel colormap."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -169,9 +169,9 @@ class TestFieldSelectorCallbacks:
         finally:
             cleanup()
 
-    def test_trigger_update(self):
+    def test_trigger_update(self, panel_fixture):
         """Test that trigger_update triggers a recompute."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -183,9 +183,9 @@ class TestFieldSelectorCallbacks:
         finally:
             cleanup()
 
-    def test_on_field_change_updates_selector(self):
+    def test_on_field_change_updates_selector(self, panel_fixture):
         """Test that on_field_change updates the field_color_selector value."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -203,9 +203,9 @@ class TestFieldSelectorCallbacks:
         finally:
             cleanup()
 
-    def test_on_file_load_updates_options(self):
+    def test_on_file_load_updates_options(self, panel_fixture):
         """Test that on_file_load updates the field selector options."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -224,9 +224,9 @@ class TestFieldSelectorCallbacks:
         finally:
             cleanup()
 
-    def test_on_updated_data_calls_set_colors_list(self):
+    def test_on_updated_data_calls_set_colors_list(self, panel_fixture):
         """Test that on_updated_data calls set_colors_list with correct parameters."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -270,9 +270,9 @@ class TestFieldSelectorCallbacks:
 class TestFieldSelectorGUI:
     """Test suite for FieldSelector GUI rendering."""
 
-    def test_make_gui_returns_column(self):
+    def test_make_gui_returns_column(self, panel_fixture):
         """Test that make_gui returns a Panel column with expected components."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -286,9 +286,9 @@ class TestFieldSelectorGUI:
         finally:
             cleanup()
 
-    def test_gui_components_exist(self):
+    def test_gui_components_exist(self, panel_fixture):
         """Test that all GUI components are Panel widgets."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         field_sel = extensions_dict[FieldSelector]
 
         try:
@@ -306,9 +306,9 @@ class TestFieldSelectorGUI:
 class TestSetColorsList:
     """Test suite for set_colors_list utility function."""
 
-    def test_set_colors_list_from_string_mode(self):
+    def test_set_colors_list_from_string_mode(self, panel_fixture):
         """Test set_colors_list with FROM_STRING visualization mode."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         
         try:
             # Create mock Data2D with string values
@@ -351,9 +351,9 @@ class TestSetColorsList:
         finally:
             cleanup()
 
-    def test_set_colors_list_from_value_mode(self):
+    def test_set_colors_list_from_value_mode(self, panel_fixture):
         """Test set_colors_list with FROM_VALUE visualization mode."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         
         try:
             # Create mock Data2D with numeric values
@@ -397,9 +397,9 @@ class TestSetColorsList:
         finally:
             cleanup()
 
-    def test_set_colors_list_none_mode(self):
+    def test_set_colors_list_none_mode(self, panel_fixture):
         """Test set_colors_list with NONE visualization mode."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         
         try:
             # Create mock Data2D
@@ -448,9 +448,9 @@ class TestSetColorsList:
         finally:
             cleanup()
 
-    def test_set_colors_list_with_outside_cell(self):
+    def test_set_colors_list_with_outside_cell(self, panel_fixture):
         """Test set_colors_list handles OUTSIDE cells correctly."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
 
         try:
             # Create mock Data2D with OUTSIDE cell
@@ -506,9 +506,9 @@ class TestSetColorsList:
         finally:
             cleanup()
 
-    def test_set_colors_list_with_nan_values(self):
+    def test_set_colors_list_with_nan_values(self, panel_fixture):
         """Test set_colors_list handles NaN values correctly."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         
         try:
             # Create mock Data2D with NaN values

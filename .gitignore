@@ -1,6 +1,7 @@
 # Build directories for Python packages and distributions
 build
 dist
+.coverage
 
 # Python compiled bytecode files
 *.pyc

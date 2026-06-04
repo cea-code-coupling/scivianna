@@ -6,14 +6,14 @@ from scivianna.constants import MESH, MATERIAL, X, Y, XS, YS, COLORS, COMPO_NAME
 from scivianna.utils.color_tools import interpolate_cmap_at_values
 import scivianna.utils
 
-from test_interface import make_panel_2d, get_polygons, get_colors, get_cell_ids
+from test_interface import make_panel_2d, get_polygons, get_colors, get_cell_ids, panel_fixture
 
 scivianna.utils._testing = True
 
 
-def test_change_field():
+def test_change_field(panel_fixture):
     """Test switching between different fields."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
 
     slave = panel.slave
 
@@ -34,9 +34,9 @@ def test_change_field():
         cleanup()
 
 
-def test_get_uv():
+def test_get_uv(panel_fixture):
     """Test that get_uv returns normalized direction vectors."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -63,9 +63,9 @@ def test_get_uv():
         cleanup()
 
 
-def test_get_slave():
+def test_get_slave(panel_fixture):
     """Test that get_slave returns the correct slave."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
 
     try:
         slave = panel.get_slave()
@@ -77,9 +77,9 @@ def test_get_slave():
         cleanup()
 
 
-def test_set_colormap():
+def test_set_colormap(panel_fixture):
     """Test setting different colormaps and verifying colors reach the plotter."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -121,9 +121,9 @@ def test_set_colormap():
         cleanup()
 
 
-def test_set_coordinates_u():
+def test_set_coordinates_u(panel_fixture):
     """Test setting U axis direction vector and verifying plotter receives axes."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -157,9 +157,9 @@ def test_set_coordinates_u():
         cleanup()
 
 
-def test_set_coordinates_v():
+def test_set_coordinates_v(panel_fixture):
     """Test setting V axis direction vector and verifying plotter receives axes."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -196,15 +196,15 @@ def test_set_coordinates_v():
         cleanup()
 
 
-def test_set_coordinates_ranges():
+def test_set_coordinates_ranges(panel_fixture):
     """Test setting coordinate ranges (u_min, u_max, v_min, v_max) and verifying plotter."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
-        # Initial ranges
-        assert panel.u_range == (0., 1.), f"Expected initial u_range (0., 1.), got {panel.u_range}"
-        assert panel.v_range == (0., 1.), f"Expected initial v_range (0., 1.), got {panel.v_range}"
+        # Initial ranges - use tuple() to handle both list and tuple after deserialization
+        assert tuple(panel.u_range) == (0., 1.), f"Expected initial u_range (0., 1.), got {panel.u_range}"
+        assert tuple(panel.v_range) == (0., 1.), f"Expected initial v_range (0., 1.), got {panel.v_range}"
 
         # Verify initial plotter coordinate ranges
         source_coords = panel.plotter.source_coordinates.data
@@ -213,8 +213,8 @@ def test_set_coordinates_ranges():
 
         # Set new ranges
         panel.set_coordinates(u_min=0.5, u_max=2.0, v_min=-1.0, v_max=3.0)
-        assert panel.u_range == (0.5, 2.0), f"Expected u_range (0.5, 2.0), got {panel.u_range}"
-        assert panel.v_range == (-1.0, 3.0), f"Expected v_range (-1.0, 3.0), got {panel.v_range}"
+        assert tuple(panel.u_range) == (0.5, 2.0), f"Expected u_range (0.5, 2.0), got {panel.u_range}"
+        assert tuple(panel.v_range) == (-1.0, 3.0), f"Expected v_range (-1.0, 3.0), got {panel.v_range}"
 
         # Verify polygons exist and have expected cell IDs (test interface creates cells 0, 1, 2)
         cell_ids = get_cell_ids(panel)
@@ -225,9 +225,9 @@ def test_set_coordinates_ranges():
         cleanup()
 
 
-def test_set_coordinates_w():
+def test_set_coordinates_w(panel_fixture):
     """Test setting w value (normal axis location) and verifying plotter."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -256,9 +256,9 @@ def test_set_coordinates_w():
         cleanup()
 
 
-def test_set_coordinates_type_errors():
+def test_set_coordinates_type_errors(panel_fixture):
     """Test that set_coordinates raises appropriate errors for invalid types."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -287,9 +287,9 @@ def test_set_coordinates_type_errors():
         cleanup()
 
 
-def test_set_coordinates_combined():
+def test_set_coordinates_combined(panel_fixture):
     """Test setting multiple coordinates at once and verifying plotter."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -308,8 +308,8 @@ def test_set_coordinates_combined():
 
         assert np.allclose(panel.u, new_u), f"Expected U to be {new_u}, got {panel.u}"
         assert np.allclose(panel.v, new_v), f"Expected V to be {new_v}, got {panel.v}"
-        assert panel.u_range == (0.0, 5.0), f"Expected u_range (0.0, 5.0), got {panel.u_range}"
-        assert panel.v_range == (-2.0, 3.0), f"Expected v_range (-2.0, 3.0), got {panel.v_range}"
+        assert tuple(panel.u_range) == (0.0, 5.0), f"Expected u_range (0.0, 5.0), got {panel.u_range}"
+        assert tuple(panel.v_range) == (-2.0, 3.0), f"Expected v_range (-2.0, 3.0), got {panel.v_range}"
         assert panel.w_value == 0.7, f"Expected w_value 0.7, got {panel.w_value}"
 
         # Verify plotter axes source has all updated values
@@ -337,9 +337,9 @@ def test_set_coordinates_combined():
         cleanup()
 
 
-def test_duplicate():
+def test_duplicate(panel_fixture):
     """Test that duplicate creates a valid copy of the panel."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
 
     try:
         # Set some custom state
@@ -369,9 +369,9 @@ def test_duplicate():
         cleanup()
 
 
-def test_field_change_callback():
+def test_field_change_callback(panel_fixture):
     """Test that field change callback is stored and called."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -393,9 +393,9 @@ def test_field_change_callback():
         cleanup()
 
 
-def test_provide_callbacks():
+def test_provide_callbacks(panel_fixture):
     """Test that callback setters store the callbacks."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -418,9 +418,9 @@ def test_provide_callbacks():
         cleanup()
 
 
-def test_recompute():
+def test_recompute(panel_fixture):
     """Test that recompute triggers a data recomputation."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -440,9 +440,9 @@ def test_recompute():
         cleanup()
 
 
-def test_displayed_field_initial_state():
+def test_displayed_field_initial_state(panel_fixture):
     """Test that the panel starts with MESH as the displayed field."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -453,9 +453,9 @@ def test_displayed_field_initial_state():
         cleanup()
 
 
-def test_display_polygons_attribute():
+def test_display_polygons_attribute(panel_fixture):
     """Test that display_polygons attribute is correctly set."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -466,9 +466,9 @@ def test_display_polygons_attribute():
         cleanup()
 
 
-def test_update_polygons_attribute():
+def test_update_polygons_attribute(panel_fixture):
     """Test that update_polygons attribute exists and is boolean."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
@@ -479,9 +479,9 @@ def test_update_polygons_attribute():
         cleanup()
 
 
-def test_unavailable_field_warning():
+def test_unavailable_field_warning(panel_fixture):
     """Test that requesting an unavailable field shows a warning."""
-    panel, extensions, cleanup = make_panel_2d()
+    panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:

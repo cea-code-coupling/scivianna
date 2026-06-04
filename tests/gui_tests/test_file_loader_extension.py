@@ -14,23 +14,23 @@ scivianna.utils._testing = True
 from scivianna.extension.file_loader import FileLoader
 from scivianna.constants import GEOMETRY
 
-from test_interface import make_panel_2d
+from test_interface import make_panel_2d, panel_fixture
 
 
 class TestFileLoaderInitialization:
     """Test suite for FileLoader extension initialization."""
 
-    def test_file_loader_exists(self):
+    def test_file_loader_exists(self, panel_fixture):
         """Test that FileLoader extension is properly registered."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         try:
             assert FileLoader in extensions_dict
         finally:
             cleanup()
 
-    def test_file_loader_initialization(self):
+    def test_file_loader_initialization(self, panel_fixture):
         """Test that FileLoader attributes are properly set by __init__."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         file_loader = extensions_dict[FileLoader]
 
         try:
@@ -58,9 +58,9 @@ class TestFileLoaderInitialization:
         finally:
             cleanup()
 
-    def test_file_browsers_have_correct_names(self):
+    def test_file_browsers_have_correct_names(self, panel_fixture):
         """Test that file browsers have names matching the interface file input list."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         file_loader = extensions_dict[FileLoader]
 
         try:
@@ -73,9 +73,9 @@ class TestFileLoaderInitialization:
         finally:
             cleanup()
 
-    def test_file_loader_gui_returns_column(self):
+    def test_file_loader_gui_returns_column(self, panel_fixture):
         """Test that make_gui returns a Panel column with file browsers."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         file_loader = extensions_dict[FileLoader]
 
         try:
@@ -90,9 +90,9 @@ class TestFileLoaderInitialization:
 class TestFileLoaderCallbacks:
     """Test suite for FileLoader callback behaviors."""
 
-    def test_on_file_load_updates_options(self):
+    def test_on_file_load_updates_options(self, panel_fixture):
         """Test that on_file_load updates the file loader state."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         file_loader = extensions_dict[FileLoader]
 
         try:

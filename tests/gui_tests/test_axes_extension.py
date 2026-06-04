@@ -18,23 +18,25 @@ from scivianna.enums import GeometryType
 from scivianna.constants import XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA
 from scivianna.data.data2d import Data2D
 
-from test_interface import make_panel_2d
+from test_interface import make_panel_2d, panel_fixture
 
 
 class TestAxesInitialization:
     """Test suite for Axes initialization."""
 
-    def test_axes_extension_exists(self):
+    @pytest.mark.usefixtures("panel_fixture")
+    def test_axes_extension_exists(self, panel_fixture):
         """Test that Axes is properly registered."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         try:
             assert Axes in extensions_dict
         finally:
             cleanup()
 
-    def test_axes_extension_initialization(self):
+    @pytest.mark.usefixtures("panel_fixture")
+    def test_axes_extension_initialization(self, panel_fixture):
         """Test that Axes attributes are properly set by __init__."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -73,9 +75,10 @@ class TestAxesInitialization:
         finally:
             cleanup()
 
-    def test_axes_are_pmui_widgets(self):
+    @pytest.mark.usefixtures("panel_fixture")
+    def test_axes_are_pmui_widgets(self, panel_fixture):
         """Test that all axes inputs are Panel/PMUI widgets."""
-        panel, extensions_dict, cleanup = make_panel_2d()
+        panel, extensions_dict, cleanup = panel_fixture
         axes_ext = extensions_dict[Axes]
 
         try:
