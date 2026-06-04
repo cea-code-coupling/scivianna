@@ -114,8 +114,8 @@ class Panel1D(VisualizationPanel):
 
             self.__data_to_update = False
 
-            # this is necessary only in a notebook context where sometimes we have to force Panel/Bokeh to push an update to the browser
-            pn.io.push_notebook(self.figure)
+        # this is necessary only in a notebook context where sometimes we have to force Panel/Bokeh to push an update to the browser
+        pn.io.push_notebook(self.figure)
 
     def recompute(self, *args, **kwargs):
         """Recomputes the figure based on the new bounds and parameters.
