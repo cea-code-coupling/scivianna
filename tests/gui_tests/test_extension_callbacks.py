@@ -22,18 +22,18 @@ class TestExtensionDefaultFeatures:
 
     def test_extension_exists(self):
         """Test that extension attributes are properly set by __init__."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         try:
             assert DummyTestExtension in extensions_dict
             test_ext = extensions_dict[DummyTestExtension]
 
             assert isinstance(test_ext, DummyTestExtension)
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_extension_initialization(self):
         """Test that extension attributes are properly set by __init__."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -53,11 +53,11 @@ This extension allows defining the medcoupling field display parameters.
             assert test_ext.plotter is panel.plotter
             assert test_ext.panel is panel
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_make_gui_returns_viewable(self):
         """Test that make_gui returns a Panel viewable object."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -67,11 +67,11 @@ This extension allows defining the medcoupling field display parameters.
             import panel as pn
             assert isinstance(gui, pn.viewable.Viewable) or hasattr(gui, '__panel__')
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_provide_options_default_returns_empty_dict(self):
         """Test that provide_options returns empty dict by default."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -79,7 +79,7 @@ This extension allows defining the medcoupling field display parameters.
             assert isinstance(options, dict)
             assert len(options) == 0
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 class TestExtensionCallbacksCalled:
@@ -87,7 +87,7 @@ class TestExtensionCallbacksCalled:
 
     def test_on_field_change_called(self):
         """Test that on_field_change is called when set_field is called."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -105,11 +105,11 @@ class TestExtensionCallbacksCalled:
             panel.set_field(MESH)
             assert MESH in test_ext._field_change_history
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_range_change_called(self):
         """Test that on_range_change is called when ranges are updated."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -127,11 +127,11 @@ class TestExtensionCallbacksCalled:
             # w_value defaults to 0.5
             assert np.isclose(last_call.w_value, 0.5)
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_frame_change_called(self):
         """Test that on_frame_change is called when u/v vectors change."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -148,11 +148,11 @@ class TestExtensionCallbacksCalled:
             # V vector should still be default Y
             assert np.allclose(last_call.v_vector, [0.0, 1.0, 0.0])
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_updated_data_called(self):
         """Test that on_updated_data is called when data is recomputed."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -167,11 +167,11 @@ class TestExtensionCallbacksCalled:
             last_data = test_ext._updated_data_history[-1]
             assert isinstance(last_data, Data2D)
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_file_load_default_no_error(self):
         """Test that on_file_load default implementation does nothing."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -179,11 +179,11 @@ class TestExtensionCallbacksCalled:
             test_ext.on_file_load("/some/path.dat", "GEOMETRY")
             # Should complete without error
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_mouse_move_default_no_error(self):
         """Test that on_mouse_move default implementation does nothing."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -192,11 +192,11 @@ class TestExtensionCallbacksCalled:
             test_ext.on_mouse_move((50.0, 75.0), (0.25, 0.25, 0.5), 42)
             # Should complete without error
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_mouse_click_default_no_error(self):
         """Test that on_mouse_clic default implementation does nothing."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -205,7 +205,7 @@ class TestExtensionCallbacksCalled:
             test_ext.on_mouse_clic((50.0, 75.0), (0.25, 0.25, 0.5), 42)
             # Should complete without error
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 class TestExtensionTrackingMechanism:
@@ -213,7 +213,7 @@ class TestExtensionTrackingMechanism:
 
     def test_tracking_attributes_exist(self):
         """Test that TestExtension has all tracking attributes."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -226,7 +226,7 @@ class TestExtensionTrackingMechanism:
             assert hasattr(test_ext, '_on_frame_change_called')
             assert hasattr(test_ext, '_on_updated_data_called')
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_tracking_dataclass_fields(self):
         """Test that tracking dataclasses have correct fields."""
@@ -253,7 +253,7 @@ class TestExtensionCallbackSequence:
 
     def test_field_change_triggers_recompute_sequence(self):
         """Test that changing field triggers on_field_change then on_updated_data."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -271,11 +271,11 @@ class TestExtensionCallbackSequence:
                 # At minimum, verify both were called
                 assert test_ext._on_field_change_called is True
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_coordinate_change_triggers_frame_then_range(self):
         """Test that coordinate changes trigger on_frame_change and on_range_change."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         test_ext = extensions_dict[DummyTestExtension]
 
         try:
@@ -290,7 +290,7 @@ class TestExtensionCallbackSequence:
             assert len(test_ext._frame_change_history) > 0
             assert len(test_ext._range_change_history) > 0
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 class TestExtensionBaseClassMethods:

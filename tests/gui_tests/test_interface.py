@@ -366,9 +366,12 @@ def make_panel_2d():
     slave = ComputeSlave(DummyTestInterface)
     panel = Panel2D(slave)
 
+    def cleanup():
+        slave.terminate()
+
     return panel, {
         e.__class__: e for e in panel.extensions
-    }
+    }, cleanup
 
 
 def get_polygons(panel: Panel2D):
@@ -402,7 +405,8 @@ class TestMouseMoveCallbacks:
 
     def test_provide_on_mouse_move_callback_registers_callback(self):
         """Test that providing a mouse move callback stores it in the plotter."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         mock_callback = Mock()
         panel.provide_on_mouse_move_callback(mock_callback)
@@ -413,7 +417,8 @@ class TestMouseMoveCallbacks:
 
     def test_mouse_move_callback_receives_panel(self):
         """Test that the mouse move callback receives the panel correctly."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         callback_invocations = []
         
@@ -431,7 +436,8 @@ class TestMouseMoveCallbacks:
 
     def test_plotter_send_event_with_valid_index(self):
         """Test that send_event correctly passes data when index is valid."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         callback_calls = []
         
@@ -465,7 +471,8 @@ class TestMouseMoveCallbacks:
 
     def test_plotter_send_event_with_multiple_cells(self):
         """Test send_event with different cell IDs."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         # The test interface creates 3 cells (0, 1, 2)
         callback_calls = []
@@ -484,7 +491,8 @@ class TestMouseMoveCallbacks:
 
     def test_plotter_send_event_with_invalid_index(self):
         """Test that send_event does not call callback when index is out of bounds."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         callback_calls = []
         
@@ -503,7 +511,8 @@ class TestMouseMoveCallbacks:
 
     def test_panel_provide_on_mouse_move_callback_integration(self):
         """Test that Panel2D.provide_on_mouse_move_callback correctly delegates to plotter."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         # The callbacks should be set by Panel2D's __init__ (registered with Bokeh events)
         assert panel.plotter.on_mouse_move_callback is not None
@@ -511,7 +520,8 @@ class TestMouseMoveCallbacks:
 
     def test_mouse_move_callback_data_structure(self):
         """Test that mouse move callback receives correct data structure."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         received_data = {}
         
@@ -547,7 +557,8 @@ class TestClickCallbacks:
 
     def test_provide_on_clic_callback_registers_callback(self):
         """Test that providing a click callback stores it in the plotter."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         mock_callback = Mock()
         panel.provide_on_clic_callback(mock_callback)
@@ -557,7 +568,8 @@ class TestClickCallbacks:
 
     def test_click_callback_receives_panel(self):
         """Test that the click callback receives the panel correctly."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         callback_invocations = []
         
@@ -575,7 +587,8 @@ class TestClickCallbacks:
 
     def test_plotter_send_event_for_click(self):
         """Test that send_event works for click events too."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         callback_calls = []
         
@@ -607,7 +620,8 @@ class TestClickCallbacks:
 
     def test_click_callback_with_invalid_index(self):
         """Test that click callback is not called when index is out of bounds."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         callback_calls = []
         
@@ -625,7 +639,8 @@ class TestClickCallbacks:
 
     def test_panel_provide_on_clic_callback_integration(self):
         """Test that Panel2D.provide_on_clic_callback correctly delegates to plotter."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         # The callbacks should be set by Panel2D's __init__ (registered with Bokeh events)
         assert panel.plotter.on_clic_callback is not None
@@ -633,7 +648,8 @@ class TestClickCallbacks:
 
     def test_click_callback_data_structure(self):
         """Test that click callback receives correct data structure."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         received_data = {}
         
@@ -665,7 +681,8 @@ class TestClickCallbacks:
 
     def test_plotter_has_tap_event_registered(self):
         """Test that the Bokeh figure has Tap event registered for click."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         mock_callback = Mock()
         panel.provide_on_clic_callback(mock_callback)
@@ -675,7 +692,8 @@ class TestClickCallbacks:
 
     def test_both_callbacks_registered_simultaneously(self):
         """Test that both mouse move and click callbacks can be registered simultaneously."""
-        panel, _ = make_panel_2d()
+        panel, _, cleanup = make_panel_2d()
+        cleanup()
         
         mouse_calls = []
         click_calls = []
@@ -732,7 +750,8 @@ class TestExtensionReceivesMouseCallbacks:
         via provide_on_mouse_move_callback(extension.on_mouse_move). This test verifies
         the delegation chain works correctly.
         """
-        panel, extensions = make_panel_2d()
+        panel, extensions, cleanup = make_panel_2d()
+        cleanup()
         dummy_ext = extensions.get(DummyTestExtension)
         
         assert dummy_ext is not None, "DummyTestExtension should be in panel.extensions"
@@ -771,7 +790,8 @@ class TestExtensionReceivesMouseCallbacks:
         via provide_on_clic_callback(extension.on_mouse_clic). This test verifies
         the delegation chain works correctly.
         """
-        panel, extensions = make_panel_2d()
+        panel, extensions, cleanup = make_panel_2d()
+        cleanup()
         dummy_ext = extensions.get(DummyTestExtension)
         
         assert dummy_ext is not None, "DummyTestExtension should be in panel.extensions"
@@ -805,7 +825,8 @@ class TestExtensionReceivesMouseCallbacks:
 
     def test_extension_receives_multiple_mouse_move_events(self):
         """Test that an extension receives multiple mouse move events correctly."""
-        panel, extensions = make_panel_2d()
+        panel, extensions, cleanup = make_panel_2d()
+        cleanup()
         dummy_ext = extensions.get(DummyTestExtension)
         
         assert dummy_ext is not None
@@ -844,7 +865,8 @@ class TestExtensionReceivesMouseCallbacks:
 
     def test_extension_receives_multiple_mouse_click_events(self):
         """Test that an extension receives multiple mouse click events correctly."""
-        panel, extensions = make_panel_2d()
+        panel, extensions, cleanup = make_panel_2d()
+        cleanup()
         dummy_ext = extensions.get(DummyTestExtension)
         
         assert dummy_ext is not None
@@ -880,7 +902,8 @@ class TestExtensionReceivesMouseCallbacks:
 
     def test_extension_does_not_receive_callback_with_invalid_index(self):
         """Test that extension callbacks are not triggered when index is out of bounds."""
-        panel, extensions = make_panel_2d()
+        panel, extensions, cleanup = make_panel_2d()
+        cleanup()
         dummy_ext = extensions.get(DummyTestExtension)
         
         assert dummy_ext is not None
@@ -927,7 +950,8 @@ class TestExtensionReceivesMouseCallbacks:
 
     def test_all_extensions_receive_mouse_callbacks(self):
         """Test that all extensions registered on the panel receive mouse callbacks."""
-        panel, extensions = make_panel_2d()
+        panel, extensions, cleanup = make_panel_2d()
+        cleanup()
         
         # Verify DummyTestExtension is present
         assert DummyTestExtension in extensions, "DummyTestExtension should be registered"

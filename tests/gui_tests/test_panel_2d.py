@@ -13,7 +13,7 @@ scivianna.utils._testing = True
 
 def test_change_field():
     """Test switching between different fields."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
 
     slave = panel.slave
 
@@ -31,12 +31,12 @@ def test_change_field():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_get_uv():
     """Test that get_uv returns normalized direction vectors."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -60,12 +60,12 @@ def test_get_uv():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_get_slave():
     """Test that get_slave returns the correct slave."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
 
     try:
         slave = panel.get_slave()
@@ -74,12 +74,12 @@ def test_get_slave():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_set_colormap():
     """Test setting different colormaps and verifying colors reach the plotter."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -118,12 +118,12 @@ def test_set_colormap():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_set_coordinates_u():
     """Test setting U axis direction vector and verifying plotter receives axes."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -154,12 +154,12 @@ def test_set_coordinates_u():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_set_coordinates_v():
     """Test setting V axis direction vector and verifying plotter receives axes."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -193,12 +193,12 @@ def test_set_coordinates_v():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_set_coordinates_ranges():
     """Test setting coordinate ranges (u_min, u_max, v_min, v_max) and verifying plotter."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -222,12 +222,12 @@ def test_set_coordinates_ranges():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_set_coordinates_w():
     """Test setting w value (normal axis location) and verifying plotter."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -253,12 +253,12 @@ def test_set_coordinates_w():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_set_coordinates_type_errors():
     """Test that set_coordinates raises appropriate errors for invalid types."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -284,12 +284,12 @@ def test_set_coordinates_type_errors():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_set_coordinates_combined():
     """Test setting multiple coordinates at once and verifying plotter."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -334,12 +334,12 @@ def test_set_coordinates_combined():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_duplicate():
     """Test that duplicate creates a valid copy of the panel."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
 
     try:
         # Set some custom state
@@ -366,12 +366,12 @@ def test_duplicate():
     except Exception as e:
         raise e
     finally:
-        panel.slave.terminate()
+        cleanup()
 
 
 def test_field_change_callback():
     """Test that field change callback is stored and called."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -390,12 +390,12 @@ def test_field_change_callback():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_provide_callbacks():
     """Test that callback setters store the callbacks."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -415,12 +415,12 @@ def test_provide_callbacks():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_recompute():
     """Test that recompute triggers a data recomputation."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -437,12 +437,12 @@ def test_recompute():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_displayed_field_initial_state():
     """Test that the panel starts with MESH as the displayed field."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -450,12 +450,12 @@ def test_displayed_field_initial_state():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_display_polygons_attribute():
     """Test that display_polygons attribute is correctly set."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -463,12 +463,12 @@ def test_display_polygons_attribute():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_update_polygons_attribute():
     """Test that update_polygons attribute exists and is boolean."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -476,12 +476,12 @@ def test_update_polygons_attribute():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 def test_unavailable_field_warning():
     """Test that requesting an unavailable field shows a warning."""
-    panel, extensions = make_panel_2d()
+    panel, extensions, cleanup = make_panel_2d()
     slave = panel.slave
 
     try:
@@ -498,7 +498,7 @@ def test_unavailable_field_warning():
     except Exception as e:
         raise e
     finally:
-        slave.terminate()
+        cleanup()
 
 
 if __name__ == "__main__":

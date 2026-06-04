@@ -26,15 +26,15 @@ class TestAxesInitialization:
 
     def test_axes_extension_exists(self):
         """Test that Axes is properly registered."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         try:
             assert Axes in extensions_dict
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_axes_extension_initialization(self):
         """Test that Axes attributes are properly set by __init__."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -71,11 +71,11 @@ class TestAxesInitialization:
             assert hasattr(axes_ext, 'yplus')
             assert hasattr(axes_ext, 'zplus')
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_axes_are_pmui_widgets(self):
         """Test that all axes inputs are Panel/PMUI widgets."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -88,11 +88,11 @@ class TestAxesInitialization:
                 assert isinstance(widget, pmui.FloatInput), \
                     f"{attr} should be a PMUI FloatInput widget"
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_vector_inputs_initial_values(self):
         """Test that vector inputs have correct initial values."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -110,11 +110,11 @@ class TestAxesInitialization:
             # v2_inp should be initialized to 0
             assert axes_ext.v2_inp.value == 0
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_bound_inputs_initial_values(self):
         """Test that bound inputs have correct initial values."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -133,11 +133,11 @@ class TestAxesInitialization:
             # w_inp should be initialized to 0.5
             assert axes_ext.w_inp.value == 0.5
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_tracking_attributes_exist(self):
         """Test that Axes has all tracking attributes."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -151,11 +151,11 @@ class TestAxesInitialization:
             assert axes_ext.axes_updated is False
             assert axes_ext.range_updated is False
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_get_uv_returns_normalized_vectors(self):
         """Test that get_uv returns normalized vectors."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -177,11 +177,11 @@ class TestAxesInitialization:
             assert np.allclose(u, [1.0, 0.0, 0.0])
             assert np.allclose(v, [0.0, 1.0, 0.0])
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_get_uv_with_custom_values(self):
         """Test that get_uv handles custom vector values."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -207,7 +207,7 @@ class TestAxesInitialization:
             assert np.allclose(u, expected_u)
             assert np.allclose(v, expected_v)
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 class TestAxesCallbacks:
@@ -215,7 +215,7 @@ class TestAxesCallbacks:
 
     def test_toggle_axis_visibility_turns_on(self):
         """Test that toggle_axis_visibility turns borders on."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -230,11 +230,11 @@ class TestAxesCallbacks:
             # Check that plotter borders are displayed
             # (This depends on the plotter implementation)
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_toggle_axis_visibility_turns_off(self):
         """Test that toggle_axis_visibility turns borders off."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -247,11 +247,11 @@ class TestAxesCallbacks:
             
             assert axes_ext.borders_displayed is False
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_trigger_update_calls_panel_set_coordinates(self):
         """Test that trigger_update calls panel.set_coordinates with correct values."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -285,11 +285,11 @@ class TestAxesCallbacks:
             assert np.isclose(panel.v_range[0], -2.0)
             assert np.isclose(panel.v_range[1], 10.0)
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_w_input_triggers_range_update(self):
         """Test that changing w input triggers range update."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -302,11 +302,11 @@ class TestAxesCallbacks:
             # Range should be marked as updated
             assert axes_ext.range_updated is True
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_xplus_button_sets_y_z_vectors(self):
         """Test that X+ button sets U to Y and V to Z."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -319,11 +319,11 @@ class TestAxesCallbacks:
             # Axes should be marked as updated
             assert axes_ext.axes_updated is True
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_yplus_button_sets_x_z_vectors(self):
         """Test that Y+ button sets U to X and V to Z."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -336,11 +336,11 @@ class TestAxesCallbacks:
             # Axes should be marked as updated
             assert axes_ext.axes_updated is True
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_zplus_button_sets_x_y_vectors(self):
         """Test that Z+ button sets U to X and V to Y."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -353,11 +353,11 @@ class TestAxesCallbacks:
             # Axes should be marked as updated
             assert axes_ext.axes_updated is True
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_frame_change_updates_widget_values(self):
         """Test that on_frame_change updates widget values from new vectors."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -383,11 +383,11 @@ class TestAxesCallbacks:
             assert axes_ext.u2_inp.value == 0.0
             assert axes_ext.v2_inp.value == 0.5
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_on_range_change_updates_widget_values(self):
         """Test that on_range_change updates widget values from new bounds."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -412,11 +412,11 @@ class TestAxesCallbacks:
             assert axes_ext.y1_inp.value == 10.0
             assert axes_ext.w_inp.value == 0.75
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_update_widgets_visibility_hides_3d_elements_for_2d(self):
         """Test that update_widgets_visibility hides 3D elements for 2D geometry."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -436,11 +436,11 @@ class TestAxesCallbacks:
             # Restore original
             axes_ext.slave.get_geometry_type = original_get_geometry_type
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_update_widgets_visibility_shows_3d_elements_for_3d(self):
         """Test that update_widgets_visibility shows all elements for 3D geometry."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -460,7 +460,7 @@ class TestAxesCallbacks:
             # Restore original
             axes_ext.slave.get_geometry_type = original_get_geometry_type
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 class TestAxesGUI:
@@ -468,7 +468,7 @@ class TestAxesGUI:
 
     def test_make_gui_returns_viewable(self):
         """Test that make_gui returns a Panel viewable."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -478,11 +478,11 @@ class TestAxesGUI:
             # Should be a Panel layout
             assert hasattr(gui, '__panel__') or isinstance(gui, pn.viewable.Viewable)
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_make_gui_contains_expected_components(self):
         """Test that make_gui contains expected components."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -495,7 +495,7 @@ class TestAxesGUI:
             assert hasattr(axes_ext, 'bounds_card')
             assert hasattr(axes_ext, 'axes_card')
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 class TestAxesVectorOperations:
@@ -503,7 +503,7 @@ class TestAxesVectorOperations:
 
     def test_u_vector_can_be_set_to_any_direction(self):
         """Test that U vector can be set to any direction via inputs."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -516,11 +516,11 @@ class TestAxesVectorOperations:
             
             assert np.allclose(u, [0.0, 0.0, 1.0])
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_v_vector_can_be_set_to_any_direction(self):
         """Test that V vector can be set to any direction via inputs."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -533,11 +533,11 @@ class TestAxesVectorOperations:
             
             assert np.allclose(v, [0.0, 0.0, 1.0])
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_bounds_can_be_negative(self):
         """Test that bounds can be negative values."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -548,11 +548,11 @@ class TestAxesVectorOperations:
             assert axes_ext.x0_inp.value == -10.0
             assert axes_ext.y0_inp.value == -20.0
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_bounds_can_be_equal(self):
         """Test that bounds can be equal (zero range)."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         axes_ext = extensions_dict[Axes]
 
         try:
@@ -563,7 +563,7 @@ class TestAxesVectorOperations:
             assert axes_ext.x0_inp.value == 5.0
             assert axes_ext.x1_inp.value == 5.0
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-
 from typing import List, Tuple, Union
 
 import pytest
@@ -86,6 +85,8 @@ def test_runtime_error_allowed():
         assert False, "RuntimeError not caught"
     else:
         assert val is None
+    finally:
+        slave.terminate()
 
 @pytest.mark.default
 def test_value_error_allowed():
@@ -96,6 +97,8 @@ def test_value_error_allowed():
         assert False, "ValueError not caught"
     else:
         assert val is None
+    finally:
+        slave.terminate()
 
 @pytest.mark.default
 def test_notimplemented_error_allowed():
@@ -106,6 +109,8 @@ def test_notimplemented_error_allowed():
         assert False, "NotImplementedError not caught"
     else:
         assert val is None
+    finally:
+        slave.terminate()
 
 
 @pytest.mark.default
@@ -117,6 +122,8 @@ def test_runtime_error():
         assert True, "RuntimeError caught"
     else:
         assert False, "RuntimeError caught"
+    finally:
+        slave.terminate()
 
 @pytest.mark.default
 def test_value_error():
@@ -127,6 +134,8 @@ def test_value_error():
         assert True, "ValueError caught"
     else:
         assert False, "ValueError caught"
+    finally:
+        slave.terminate()
 
 @pytest.mark.default
 def test_notimplemented_error():
@@ -137,3 +146,5 @@ def test_notimplemented_error():
         assert True, "NotImplementedError caught"
     else:
         assert False, "NotImplementedError caught"
+    finally:
+        slave.terminate()

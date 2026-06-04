@@ -22,15 +22,15 @@ class TestFileLoaderInitialization:
 
     def test_file_loader_exists(self):
         """Test that FileLoader extension is properly registered."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         try:
             assert FileLoader in extensions_dict
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_file_loader_initialization(self):
         """Test that FileLoader attributes are properly set by __init__."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         file_loader = extensions_dict[FileLoader]
 
         try:
@@ -56,11 +56,11 @@ class TestFileLoaderInitialization:
             assert isinstance(file_loader.file_loader_list, list)
             assert len(file_loader.file_loader_list) > 0
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_file_browsers_have_correct_names(self):
         """Test that file browsers have names matching the interface file input list."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         file_loader = extensions_dict[FileLoader]
 
         try:
@@ -71,11 +71,11 @@ class TestFileLoaderInitialization:
             actual_names = set(file_loader.file_browsers.keys())
             assert actual_names == expected_names
         finally:
-            panel.slave.terminate()
+            cleanup()
 
     def test_file_loader_gui_returns_column(self):
         """Test that make_gui returns a Panel column with file browsers."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         file_loader = extensions_dict[FileLoader]
 
         try:
@@ -84,7 +84,7 @@ class TestFileLoaderInitialization:
             assert gui is not None
             assert isinstance(gui, pn.layout.Column) or hasattr(gui, '__panel__')
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 class TestFileLoaderCallbacks:
@@ -92,7 +92,7 @@ class TestFileLoaderCallbacks:
 
     def test_on_file_load_updates_options(self):
         """Test that on_file_load updates the file loader state."""
-        panel, extensions_dict = make_panel_2d()
+        panel, extensions_dict, cleanup = make_panel_2d()
         file_loader = extensions_dict[FileLoader]
 
         try:
@@ -102,7 +102,7 @@ class TestFileLoaderCallbacks:
             # If we get here without error, the test passes
             assert True
         finally:
-            panel.slave.terminate()
+            cleanup()
 
 
 if __name__ == "__main__":
