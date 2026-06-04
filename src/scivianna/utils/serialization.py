@@ -965,7 +965,10 @@ def save_gridstack_to_zip(
                 "sync_field": panel.sync_field,
                 "update_event": panel.update_event,
                 "data_file": f"slave_data/{panel_name}.pkl",
-                "current_data": f"data/{panel_name}.pkl" if isinstance(panel, Panel2D) else None
+                "current_data": f"data/{panel_name}.pkl" if isinstance(panel, Panel2D) else None,
+                "panel_json": panel.to_json(),
+                "extensions": [e.__class__.__name__ for e in panel.extensions],
+                "extensions_data": {e.__class__.__name__: e.to_json() for e in panel.extensions}
             }
             
             # Save slave data to individual pickle file using the slave serialization function
@@ -1068,11 +1071,19 @@ def load_gridstack_from_zip(
             # Load current_data for Panel2D using the utility function
             current_data = _load_current_data(temp_path, panel_info["current_data"]) if panel_info.get("current_data") else None
             
-            # Create the panel - Panel2D needs data, Panel1D doesn't
+            # Restore extensions with their saved state using the utility function
+            extensions_data = panel_info.get("extensions_data", {})
+            saved_extensions = panel_info.get("extensions", [])
+            extensions = _restore_extensions(extensions_data, saved_extensions, interface, panel_type)
+            
+            # Get the panel JSON configuration (saved by to_json())
+            panel_json = panel_info.get("panel_json")
+            
+            # Create the panel using from_json with full configuration and extensions
             if panel_type == "Panel2D":
-                panel = Panel2D(slave, name=panel_name, data=current_data)
+                panel = Panel2D.from_json(panel_json, slave, current_data, extensions)
             else:
-                panel = Panel1D(slave, name=panel_name)
+                panel = Panel1D.from_json(panel_json, slave, extensions)
             
             restored_panels[panel_name] = panel
             bounds_x[panel_name] = tuple(layout_data["bounds_x"][panel_name])
