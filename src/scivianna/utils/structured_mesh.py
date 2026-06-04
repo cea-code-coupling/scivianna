@@ -4,10 +4,26 @@ import numpy as np
 try:
     import pyvista as pv
     from pyvista import core
+    _PYVISTA_AVAILABLE = True
 except ImportError:
-    raise ImportError(
-        "Failed to import pyvista, install scivianna using the command pip install scivianna[pyvista]"
-    )
+    pv = None  # type: ignore[assignment]
+    core = None  # type: ignore[assignment]
+    _PYVISTA_AVAILABLE = False
+
+
+class _PyVistaUnavailableError(RuntimeError):
+    """Raised when pyvista is required but not available."""
+    def __init__(self):
+        super().__init__(
+            "pyvista (and VTK) are required for this functionality but are not installed. "
+            "Install them with: pip install pyvista vtk"
+        )
+
+
+def _require_pyvista():
+    """Raise an error if pyvista is not available."""
+    if not _PYVISTA_AVAILABLE:
+        raise _PyVistaUnavailableError()
 
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
@@ -93,6 +109,7 @@ class StructuredMesh:
         ValueError
             U and V are either parallel or one is of zero length.
         """
+        _require_pyvista()
         u = np.array(u)/np.linalg.norm(u)
         v = np.array(v)/np.linalg.norm(v)
         w = np.cross(u, v)
@@ -141,6 +158,7 @@ class CarthesianStructuredMesh(StructuredMesh):
         z_coords : np.ndarray
             Bins on the Z axis
         """
+        _require_pyvista()
         super().__init__()
         x, y, z = np.meshgrid(
             np.array(x_coords), np.array(y_coords), np.array(z_coords), indexing="ij"
@@ -166,6 +184,7 @@ class CylindricalStructuredMesh(StructuredMesh):
         z_coords : np.ndarray
             Bins on the Z axis
         """
+        _require_pyvista()
         super().__init__()
         assert r_coords.min() >= 0
 
@@ -200,6 +219,7 @@ class SphericalStructuredMesh(StructuredMesh):
         zphi_coords : np.ndarray
             Bins on the Phi axis
         """
+        _require_pyvista()
         super().__init__()
         # Create meshgrid in cylindrical coordinates
         R, THETA, PHI = np.meshgrid(r_coords, theta_coords, phi_coords, indexing="ij")
