@@ -47,8 +47,9 @@ class EuropeGridInterface(Geometry2DPolygon):
         results: Dict[str, GenericInterface] = {},
     ):
         """Antares interface constructor."""
-        self.polygons = None
+        self.polygons: Dict[str, Data2D] = {}
         self.results = results
+        self.last_computed_frame: Dict[str, List[float]] = {}
         if geometry_path != "":
             self.read_file(geometry_path, GEOMETRY)
 
@@ -129,7 +130,8 @@ class EuropeGridInterface(Geometry2DPolygon):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
-    ) -> Tuple[List[PolygonElement], bool]:
+        caller: str = "API",
+    ) -> Tuple[Data2D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
         Parameters
@@ -152,17 +154,22 @@ class EuropeGridInterface(Geometry2DPolygon):
             Queue from which get orders from the master.
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
-        List[PolygonElement]
-            List of polygons to display
+        Data2D
+            Geometry to display
         bool
             Were the polygons updated compared to the past call
         """
-        if self.polygons is not None:
+        last_frame_key = (*u, *v, w_value)
+        if (caller in self.last_computed_frame) and (
+            self.last_computed_frame[caller] == last_frame_key
+        ) and (caller in self.polygons):
             print("Skipping polygon computation.")
-            return self.polygons, False
+            return self.polygons[caller], False
 
         list_of_polygons = [
             PolygonElement(
@@ -180,11 +187,12 @@ class EuropeGridInterface(Geometry2DPolygon):
             for p in self.polygons_per_country[country]
         ]
 
-        self.polygons = Data2D.from_polygon_list(list_of_polygons)
-        return self.polygons, True
+        self.last_computed_frame[caller] = last_frame_key
+        self.polygons[caller] = Data2D.from_polygon_list(list_of_polygons)
+        return self.polygons[caller], True
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 

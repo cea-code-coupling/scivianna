@@ -42,6 +42,7 @@ class ColorTestInterface(Geometry2DPolygon):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[Data2D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
@@ -100,7 +101,7 @@ class ColorTestInterface(Geometry2DPolygon):
         return [MESH, "str", "float"]
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -192,7 +193,7 @@ def test_interpolate_cmap_blues():
 
 def test_color_list_none():
     interface = ColorTestInterface()
-    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {})
+    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
     set_colors_list(data2D, interface, MESH, "gray", False, {})
 
     np.testing.assert_equal(data2D.cell_colors, [(200, 200, 200, 0)] * 5)
@@ -201,7 +202,7 @@ def test_color_list_none():
 
 def test_color_list_str():
     interface = ColorTestInterface()
-    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {})
+    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
     set_colors_list(data2D, interface, "str", "gray", False, {})
 
     np.testing.assert_equal(
@@ -211,7 +212,7 @@ def test_color_list_str():
 
 def test_color_list_float():
     interface = ColorTestInterface()
-    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {})
+    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
 
     dict_value_per_cell = interface.get_value_dict("float", data2D.cell_ids, {})
 

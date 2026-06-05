@@ -203,9 +203,10 @@ class DummyTestInterface(Geometry2DPolygon):
     extensions = [DummyTestExtension]
 
     def __init__(self):
-        self.data: Data2D = None
+        self.data: Dict[str, Data2D] = {}
         self.file_path: Dict[str, str] = {}
         self.current_field = None
+        self.last_computed_frame: Dict[str, List[float]] = {}
 
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
@@ -230,6 +231,7 @@ class DummyTestInterface(Geometry2DPolygon):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[Data2D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
@@ -253,6 +255,8 @@ class DummyTestInterface(Geometry2DPolygon):
             Queue from which get orders from the master.
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
@@ -262,11 +266,11 @@ class DummyTestInterface(Geometry2DPolygon):
             Were the polygons updated compared to the past call
         """
         last_frame_key = (*u, *v, w_value)
-        if (self.data is not None) and (
-            self.last_computed_frame == last_frame_key
-        ):
+        if (caller in self.last_computed_frame) and (
+            self.last_computed_frame[caller] == last_frame_key
+        ) and (caller in self.data):
             print("Skipping polygon computation.")
-            return self.data, False
+            return self.data[caller], False
 
         v_offset = v[1] + 10*w_value
         polygons = [
@@ -283,9 +287,9 @@ class DummyTestInterface(Geometry2DPolygon):
 
         print("Offset", v_offset)
 
-        self.last_computed_frame = last_frame_key
-        self.data = Data2D.from_polygon_list(polygons)
-        return self.data, True
+        self.last_computed_frame[caller] = last_frame_key
+        self.data[caller] = Data2D.from_polygon_list(polygons)
+        return self.data[caller], True
 
     def get_labels(
         self,
@@ -301,7 +305,7 @@ class DummyTestInterface(Geometry2DPolygon):
         return labels
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 

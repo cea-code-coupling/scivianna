@@ -172,8 +172,8 @@ class MandelBrotInterface(Geometry2DGrid):
         self,
     ):
         """Antares interface constructor."""
-        self.data = None
-        self.last_computed_frame = []
+        self.data: Dict[str, Data2D] = {}
+        self.last_computed_frame: Dict[str, List[float]] = {}
 
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
@@ -198,6 +198,7 @@ class MandelBrotInterface(Geometry2DGrid):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[Data2D, bool]:
         """Returns a list of data that defines the geometry in a given frame
 
@@ -221,6 +222,8 @@ class MandelBrotInterface(Geometry2DGrid):
             Queue from which get orders from the master.
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
@@ -238,35 +241,17 @@ class MandelBrotInterface(Geometry2DGrid):
                 v_max,
                 w_value,
                 q_tasks,
-                options
-              
+                options,
+                caller
               )
-        if (
-            self.data is not None
-            and np.array_equal(np.array(u), np.array(self.last_computed_frame[0]))
-            and np.array_equal(np.array(v), np.array(self.last_computed_frame[1]))
-            and (u_min == self.last_computed_frame[2])
-            and (u_max == self.last_computed_frame[3])
-            and (v_min == self.last_computed_frame[4])
-            and (v_max == self.last_computed_frame[5])
-            and (w_value == self.last_computed_frame[6])
-            and (options["u_steps"] == self.last_computed_frame[7]["u_steps"])
-            and (options["v_steps"] == self.last_computed_frame[7]["v_steps"])
-            and (options["Max iter"] == self.last_computed_frame[7]["Max iter"])
-        ):
+        last_frame_key = (*u, *v, u_min, u_max, v_min, v_max, w_value, options.get("u_steps", 50), options.get("v_steps", 50), options.get("Max iter", 10))
+        if (caller in self.last_computed_frame) and (
+            self.last_computed_frame[caller] == last_frame_key
+        ) and (caller in self.data):
             print("Skipping polygon computation.")
-            return self.data, False
+            return self.data[caller], False
 
-        self.last_computed_frame = [
-            u,
-            v,
-            u_min,
-            u_max,
-            v_min,
-            v_max,
-            w_value,
-            options,
-        ]
+        self.last_computed_frame[caller] = last_frame_key
 
         # Script taken from:
         # https://gist.github.com/jfpuget/60e07a82dece69b011bb
@@ -294,14 +279,14 @@ class MandelBrotInterface(Geometry2DGrid):
             u_min, u_max, v_min, v_max, options["u_steps"], options["v_steps"], maxiter
         )
 
-        self.data = Data2D.from_grid(
+        self.data[caller] = Data2D.from_grid(
             np.array(grid).reshape((options["v_steps"], options["u_steps"]), order="F"), xvalues, yvalues
         )
 
-        return self.data, True
+        return self.data[caller], True
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 

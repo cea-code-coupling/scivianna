@@ -147,12 +147,14 @@ class VTKInterface(Geometry2DPolygon):
     ):
         """VTK interface constructor."""
         _require_pyvista()
-        self.data: Data2D = None
+        self.data: Dict[str, Data2D] = {}
+        """Dictionary with caller as key storing past computed data for each caller"""
         self.reader: Any = None
         self.mesh: Any = None
         self.times: List[float] = []
         self.results: Dict[str, Any] = {}
-        self.last_computed_frame: List[float] = []
+        self.last_computed_frame: Dict[str, List[float]] = {}
+        """Dictionary with caller as key storing parameters of the last computed frame"""
         self.current_time: float = -1.
 
     def read_file(self, file_path: str, file_label: str):
@@ -241,6 +243,7 @@ class VTKInterface(Geometry2DPolygon):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[List[PolygonElement], bool]:
         _require_pyvista()
         """Returns a list of polygons that defines the geometry in a given frame
@@ -283,13 +286,13 @@ class VTKInterface(Geometry2DPolygon):
             self.load_at_time(options["time"])
             time_updated = True
 
-        if (self.data is not None) and (
-            self.last_computed_frame == [*u, *v, w_value]
-        ) and ( not (
+        if (caller in self.last_computed_frame) and (
+            self.last_computed_frame.get(caller) == [*u, *v, w_value]
+        ) and (caller in self.data) and ( not (
             options["recompute"] and time_updated
         )):
             print("Skipping polygon computation.")
-            return self.data, False
+            return self.data[caller], False
         
         u = np.array(u)/np.linalg.norm(u)
         v = np.array(v)/np.linalg.norm(v)
@@ -323,14 +326,14 @@ class VTKInterface(Geometry2DPolygon):
                 mesh_slice.cell_data["cell_id"][i],
             ))
 
-        self.data = Data2D.from_polygon_list(polygon_elements)
-        self.last_computed_frame = [*u, *v, w_value]
+        self.data[caller] = Data2D.from_polygon_list(polygon_elements)
+        self.last_computed_frame[caller] = [*u, *v, w_value]
         
-        return self.data, True
+        return self.data[caller], True
 
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 

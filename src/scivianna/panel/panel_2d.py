@@ -289,6 +289,7 @@ class Panel2D(VisualizationPanel):
             None,
             self.displayed_field,
             options,
+            caller=self.panel_name,
         )
 
         if computed_data is None:

@@ -244,7 +244,8 @@ if __name__ == "__main__":
         0, 1, 0, 1,  # values not used
         0., 
         None,
-        {}
+        {},
+        caller="AgentWorker"
     )
     set_colors_list(data_2d, med, "INTEGRATED_POWER", "viridis", False, {})
 

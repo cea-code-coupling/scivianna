@@ -25,7 +25,8 @@ def build_data_polygon() -> Data2D:
         0, 1, 0, 1, # values not used
         0., 
         None,
-        {"u_steps": 50, "v_steps": 50}
+        {"u_steps": 50, "v_steps": 50},
+        caller="Test"
     )
     set_colors_list(data_2d, med, "INTEGRATED_POWER", "viridis", False, {})
 
@@ -41,7 +42,8 @@ def build_data_grid() -> Data2D:
         0, 1, 
         0., 
         None,
-        {"u_steps": 50, "v_steps": 50}
+        {"u_steps": 50, "v_steps": 50},
+        caller="Test"
     )
     set_colors_list(data_2d, mandelbrot, MATERIAL, "viridis", False, {})
 

@@ -162,6 +162,7 @@ class Geometry2D(GenericInterface):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[Data2D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
@@ -185,6 +186,8 @@ class Geometry2D(GenericInterface):
             Queue from which get orders from the master.
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
@@ -201,7 +204,7 @@ class Geometry2D(GenericInterface):
         raise NotImplementedError()
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -213,6 +216,8 @@ class Geometry2D(GenericInterface):
             List of cells names
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------

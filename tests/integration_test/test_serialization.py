@@ -23,6 +23,11 @@ def test_serialize_slave():
 
         slave = med_panel.get_slave()
         
+        # First compute with caller="Test" to populate cache
+        slave.compute_2D_data(
+            X, Y, 0, 1, 0, 1, 0.5, None, MESH, {}, caller="Test"
+        )
+        
         save_slave_to_file(
             slave,
             "slave.pkl",
@@ -36,7 +41,7 @@ def test_serialize_slave():
             True
         )
         data, recomputed, = slave2.compute_2D_data(
-            X, Y, 0, 1, 0, 1, 0.5, None, MESH, {}
+            X, Y, 0, 1, 0, 1, 0.5, None, MESH, {}, caller="Test"
         )
         assert not recomputed, "Slave2 should not have recomputed the polygons."
     finally:
@@ -58,6 +63,19 @@ def test_serialize_panel():
         import time
         time.sleep(1)
 
+        # First compute with caller="Test" to populate cache
+        slave.compute_2D_data(
+            med_panel.u, 
+            med_panel.v, 
+            *med_panel.u_range, 
+            *med_panel.v_range, 
+            med_panel.w_value, 
+            None, 
+            MESH, 
+            {},
+            caller="Test"
+        )
+
         save_panel2d_to_file(
             med_panel,
             "panel2d_test"
@@ -76,7 +94,8 @@ def test_serialize_panel():
             panel_2.w_value, 
             None, 
             MESH, 
-            {}
+            {},
+            caller="Test"
         )
         print(
             panel_2.u, 

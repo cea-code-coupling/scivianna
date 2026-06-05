@@ -150,6 +150,7 @@ def worker(
                         q_tasks_,
                         coloring_label,
                         options,
+                        caller,
                     ) = data
 
                     if not isinstance(code_, Geometry2D):
@@ -167,10 +168,11 @@ def worker(
                         w_value,
                         q_tasks_,
                         options,
+                        caller,
                     )
 
                     dict_value_per_cell = code_.get_value_dict(
-                        coloring_label, data.cell_ids, options
+                        coloring_label, data.cell_ids, options, caller
                     )
 
                     data.cell_values = [dict_value_per_cell[v] for v in data.cell_ids]
@@ -440,6 +442,7 @@ class ComputeSlave:
         q_tasks: mp.Queue,
         coloring_label: str,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[
         Data2D, bool
     ]:
@@ -467,6 +470,8 @@ class ComputeSlave:
             Field label to display
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
@@ -487,12 +492,13 @@ class ComputeSlave:
                     q_tasks,
                     coloring_label,
                     options,
+                    caller,
                 ],
             ]
         )
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -504,13 +510,15 @@ class ComputeSlave:
             List of cells names
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
         Dict[Union[int,str], str]
             Field value for each requested cell names
         """
-        return self.__get_function([SlaveCommand.GET_VALUE_DICT, [value_label, cells, options]])
+        return self.__get_function([SlaveCommand.GET_VALUE_DICT, [value_label, cells, options, caller]])
 
     def get_geometry_type(self,) -> GeometryType:
         """Returns the interface geometry type

@@ -36,7 +36,8 @@ def plot_frame_in_axes(
     custom_colors: Dict[str, Dict[str, str]] = {},
     rename_values: Dict[str, Dict[str, str]] = {},
     legend_options: Dict[str, Any] = {},
-    polygonize: bool = True
+    polygonize: bool = True,
+    caller: str = "MatplotlibAPI"
 ):
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -107,6 +108,7 @@ def plot_frame_in_axes(
         coloring_label=coloring_label,
         q_tasks=None,
         options=options,
+        caller=caller,
     )
 
     set_colors_list(
@@ -237,7 +239,8 @@ def plot_frame(
     custom_colors: Dict[str, Dict[str, str]] = {},
     rename_values: Dict[str, Dict[str, str]] = {},
     legend_options: Dict[str, Any] = {},
-    polygonize: bool = True
+    polygonize: bool = True,
+    caller: str = "MatplotlibAPI"
 ) -> Tuple[plt.Figure, matplotlib.axes.Axes]:
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -315,6 +318,7 @@ def plot_frame(
         custom_colors=custom_colors,
         rename_values=rename_values,
         legend_options=legend_options,
-        polygonize=polygonize
+        polygonize=polygonize,
+        caller=caller
     )
     return fig, axes

@@ -387,8 +387,8 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
 
     def __init__(self):
         """MEDCoupling interface constructor."""
-        self.data: Data2D = None
-        """Past computed data"""
+        self.data: Dict[str, Data2D] = {}
+        """Dictionary with caller as key storing past computed data for each caller"""
         self.file_path = None
         """Read file path saved for lazy load"""
         self.meshnames = []
@@ -404,9 +404,11 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
         self.fields_iterations = {}
         """Dictionnary containing the med file available (iter, order) couples"""
         self.cell_dict = {}
-        """Dictionnary associating the 2D mesh cells to the 3D mesh cells"""
-        self.last_computed_frame = []
-        """Parameters of the last computed frame"""
+        """Dictionnary associating the 2D mesh cells to the 3D mesh cells (deprecated, use cell_dicts per caller)"""
+        self.cell_dicts = {}
+        """Dictionary with caller as key storing the cell_dict for each caller"""
+        self.last_computed_frame = {}
+        """Dictionary with caller as key storing parameters of the last computed frame"""
 
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
@@ -471,6 +473,7 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[Data2D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
@@ -502,11 +505,11 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
         bool
             Were the polygons updated compared to the past call
         """
-        if (self.data is not None) and (
-            self.last_computed_frame == [*u, *v, w_value]
-        ):
+        if (caller in self.last_computed_frame) and (
+            self.last_computed_frame.get(caller) == [*u, *v, w_value]
+        ) and (caller in self.data):
             print("Skipping polygon computation.")
-            return self.data, False
+            return self.data[caller], False
 
         if profile_time:
             start_time = time.time()
@@ -562,10 +565,10 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
 
         cells_count = mesh.getNumberOfCells()
 
-        self.data = []
+        polygons = []
 
         vertices_coords = [list(c) for c in mesh.getCoords()]
-        self.cell_dict.clear()
+        caller_cell_dict = {}
 
         for cell in range(cells_count):
             x_vals = [
@@ -584,7 +587,7 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
             u_vals = np.matmul(coords.T, u)
             v_vals = np.matmul(coords.T, v)
 
-            self.data.append(
+            polygons.append(
                 PolygonElement(
                     exterior_polygon=PolygonCoords(x_coords=u_vals, y_coords=v_vals),
                     holes=[],
@@ -593,21 +596,23 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
             )
 
             if not use_cell_id:
-                self.cell_dict[cell] = self.mesh.getCellContainingPoint(
+                caller_cell_dict[cell] = self.mesh.getCellContainingPoint(
                     [np.mean(x_vals), np.mean(y_vals), np.mean(z_vals)], eps=0.0
                 )
 
         if use_cell_id:
-            self.cell_dict = dict(zip(list(range(cells_count)), cell_ids))
+            caller_cell_dict = dict(zip(list(range(cells_count)), cell_ids))
+
+        self.cell_dicts[caller] = caller_cell_dict
 
         if profile_time:
             print(
                 f"Gathering cells id time: {time.time() - start_time} using cell id {use_cell_id}"
             )
 
-        self.last_computed_frame = [*u, *v, w_value]
-        self.data = Data2D.from_polygon_list(self.data)
-        return self.data, True
+        self.last_computed_frame[caller] = [*u, *v, w_value]
+        self.data[caller] = Data2D.from_polygon_list(polygons)
+        return self.data[caller], True
 
     def get_labels(
         self,
@@ -623,7 +628,7 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
         return labels
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -691,7 +696,8 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
                 self.fields[value_label] = field_np_array
 
         if field_np_array is not None:
-            indexes = np.array(list(self.cell_dict.values())).astype(int)
+            caller_cell_dict = self.cell_dicts.get(caller, self.cell_dict)
+            indexes = np.array(list(caller_cell_dict.values())).astype(int)
             values = field_np_array[indexes[np.array(cells).astype(int)].tolist()]
 
             value_dict = dict(zip(np.array(cells).astype(str), values))
@@ -804,7 +810,6 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
                     sys.version,
                     include_files,
                     "MEDInterface",
-                    self.data,
                     self.file_path,
                     self.meshnames,
                     self.mesh,
@@ -812,8 +817,9 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
                     self.fields,
                     self.field_doubles,
                     self.fields_iterations,
-                    self.cell_dict,
-                    self.last_computed_frame
+                    self.cell_dicts,
+                    self.last_computed_frame,
+                    self.data
                 )
             else:
                 data = (
@@ -823,8 +829,8 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
                     include_files,
                     "MEDInterface",
                     self.last_computed_frame,
-                    self.data,
-                    self.cell_dict
+                    self.cell_dicts,
+                    self.data
                 )
 
             pickle.dump(data, f)
@@ -864,7 +870,6 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
 
             if include_files:
                 (
-                    self.data,
                     self.file_path,
                     self.meshnames,
                     self.mesh,
@@ -872,15 +877,16 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
                     self.fields,
                     self.field_doubles,
                     self.fields_iterations,
-                    self.cell_dict,
-                    self.last_computed_frame
+                    self.cell_dicts,
+                    self.last_computed_frame,
+                    self.data
                 ) = data[5:]
 
             else:
                 (
                     self.last_computed_frame,
-                    self.data,
-                    self.cell_dict
+                    self.cell_dicts,
+                    self.data
                 ) = data[5:]
 
 

@@ -33,8 +33,10 @@ class StructuredMeshInterface(Geometry2DPolygon):
 
     def __init__(self, ):
         """StructuredMesh interface constructor."""
-        self.data: Data2D = []
-        self.last_computed_frame = []
+        self.data: Dict[str, Data2D] = {}
+        """Dictionary with caller as key storing past computed data for each caller"""
+        self.last_computed_frame = {}
+        """Dictionary with caller as key storing parameters of the last computed frame"""
 
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
@@ -59,6 +61,7 @@ class StructuredMeshInterface(Geometry2DPolygon):
         w_value: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
+        caller: str = "API",
     ) -> Tuple[Data2D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
@@ -90,22 +93,22 @@ class StructuredMeshInterface(Geometry2DPolygon):
         bool
             Were the polygons updated compared to the past call
         """
-        if (self.data is not None) and (
-            self.last_computed_frame == [*u, *v, w_value]
-        ):
+        if (caller in self.last_computed_frame) and (
+            self.last_computed_frame.get(caller) == [*u, *v, w_value]
+        ) and (caller in self.data):
             print("Skipping polygon computation.")
-            return self.data, False
+            return self.data[caller], False
 
-        self.last_computed_frame = [*u, *v, w_value]
+        self.last_computed_frame[caller] = [*u, *v, w_value]
 
         u = np.array(u)
         v = np.array(v)
         vec = np.cross(u, v)
         origin = u_min * u + v_min * v + w_value * vec
 
-        self.data = Data2D.from_polygon_list(self.mesh.compute_2D_slice(origin, u, v))
+        self.data[caller] = Data2D.from_polygon_list(self.mesh.compute_2D_slice(origin, u, v))
 
-        return self.data, True
+        return self.data[caller], True
 
     def get_labels(
         self,
@@ -121,7 +124,7 @@ class StructuredMeshInterface(Geometry2DPolygon):
         return labels
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any]
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -189,7 +192,7 @@ class StructuredMeshInterface(Geometry2DPolygon):
         os.makedirs(Path(file_path).parent, exist_ok=True)
 
         with open(file_path, "wb") as f:
-            data = self.data, self.last_computed_frame, self.mesh, self.fields
+            data = self.last_computed_frame, self.mesh, self.fields, self.data
 
             pickle.dump(data, f)
 
@@ -213,7 +216,7 @@ class StructuredMeshInterface(Geometry2DPolygon):
         with open(file_path, "rb") as f:
             data = pickle.load(f)
 
-            self.data, self.last_computed_frame, self.mesh, self.fields = data
+            self.last_computed_frame, self.mesh, self.fields, self.data = data
 
 
 if __name__ == "__main__":

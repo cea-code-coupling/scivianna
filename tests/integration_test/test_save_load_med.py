@@ -20,9 +20,9 @@ def test_save_load_med_with_include_files():
         GEOMETRY,
     )
 
-    data, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {})
+    data, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
     assert computed, "First compute_2d_data should have been computed"
-    dict1 = slave.get_value_dict("INTEGRATED_POWER", data.cell_ids, {})
+    dict1 = slave.get_value_dict("INTEGRATED_POWER", data.cell_ids, {}, caller="Test")
 
     #   Saving the current save state (loaded file, computed polygons, loaded files...)
     slave.save("med_test.pkl", True)
@@ -33,9 +33,9 @@ def test_save_load_med_with_include_files():
     slave2.load("med_test.pkl", True)
 
     #   New compute_2D_data is now instant as the polygons were saved
-    data2, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {})
+    data2, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
     assert not computed, "Loaded compute_2d_data should have been skipped"
-    dict2 = slave2.get_value_dict("INTEGRATED_POWER", data2.cell_ids, {})
+    dict2 = slave2.get_value_dict("INTEGRATED_POWER", data2.cell_ids, {}, caller="Test")
 
     assert dict1 == dict2, "Returned cell value dictionnary doesn't match the first"
 
@@ -54,9 +54,9 @@ def test_save_load_med_without_include_files():
         GEOMETRY,
     )
 
-    data, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {})
+    data, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
     assert computed, "First compute_2d_data should have been computed"
-    dict1 = slave.get_value_dict("INTEGRATED_POWER", data.cell_ids, {})
+    dict1 = slave.get_value_dict("INTEGRATED_POWER", data.cell_ids, {}, caller="Test")
 
     #   Saving the current save state (loaded file, computed polygons, loaded files...)
     slave.save("med_test.pkl", False)
@@ -71,9 +71,9 @@ def test_save_load_med_without_include_files():
     slave2.load("med_test.pkl", False)
 
     #   New compute_2D_data is now instant as the polygons were saved
-    data2, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {})
+    data2, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
     assert not computed, "Loaded compute_2d_data should have been skipped"
-    dict2 = slave2.get_value_dict("INTEGRATED_POWER", data2.cell_ids, {})
+    dict2 = slave2.get_value_dict("INTEGRATED_POWER", data2.cell_ids, {}, caller="Test")
 
     assert dict1 == dict2, "Returned cell value dictionnary doesn't match the first"
 
