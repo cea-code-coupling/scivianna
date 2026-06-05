@@ -1,7 +1,9 @@
 """Tests for scivianna.interface.csv_result.CSVInterface."""
 
 import os
+import shutil
 import tempfile
+import uuid
 import numpy as np
 import pytest
 import pandas as pd
@@ -10,6 +12,9 @@ from scivianna.interface.csv_result import CSVInterface
 
 def create_csv_file(filename: str, data: dict) -> str:
     """Helper to create a temporary CSV file with a specific filename.
+    
+    Uses a unique subdirectory to avoid race conditions when tests run in parallel
+    (e.g., with pytest-xdist -n 8 in CI).
     
     Parameters
     ----------
@@ -24,13 +29,12 @@ def create_csv_file(filename: str, data: dict) -> str:
         Path to the temporary file
     """
     df = pd.DataFrame(data)
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, dir="/tmp") as f:
-        df.to_csv(f, index=False)
-        # We need to rename to get the desired basename
-        temp_path = f.name
-    new_path = os.path.join("/tmp", filename)
-    os.rename(temp_path, new_path)
-    return new_path
+    # Create a unique directory to avoid collisions in parallel test execution
+    unique_id = uuid.uuid4().hex[:8]
+    unique_dir = tempfile.mkdtemp(prefix=f"csv_test_{unique_id}_")
+    temp_path = os.path.join(unique_dir, filename)
+    df.to_csv(temp_path, index=False)
+    return temp_path
 
 
 # ---- Fixtures ----
@@ -49,7 +53,11 @@ def csv_cell_file():
         "pressure": [1.0, 2.0, 3.0],
     })
     yield path
+    # Clean up the file and its parent directory
+    parent_dir = os.path.dirname(path)
     os.unlink(path)
+    if os.path.exists(parent_dir):
+        os.rmdir(parent_dir)
 
 
 @pytest.fixture
@@ -61,7 +69,11 @@ def csv_cell_file_numeric_cells():
         "pressure": [1.0, 2.0, 3.0],
     })
     yield path
+    # Clean up the file and its parent directory
+    parent_dir = os.path.dirname(path)
     os.unlink(path)
+    if os.path.exists(parent_dir):
+        os.rmdir(parent_dir)
 
 
 @pytest.fixture
@@ -72,7 +84,11 @@ def csv_custom_basename_file():
         "field": [42.0],
     })
     yield path
+    # Clean up the file and its parent directory
+    parent_dir = os.path.dirname(path)
     os.unlink(path)
+    if os.path.exists(parent_dir):
+        os.rmdir(parent_dir)
 
 
 # ---- __init__ Tests ----
