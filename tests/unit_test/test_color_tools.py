@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 import multiprocessing as mp
+import pytest
 
 from scivianna.data.data2d import Data2D
 from scivianna.interface.generic_interface import Geometry2DPolygon
@@ -165,6 +166,7 @@ class ColorTestInterface(Geometry2DPolygon):
         return []
 
 
+@pytest.mark.default
 def test_interpolate_cmap_gray():
     colors = interpolate_cmap_at_values("gray", [0, 0.5, 1.0])
 
@@ -181,6 +183,7 @@ def test_interpolate_cmap_gray():
     )
 
 
+@pytest.mark.default
 def test_interpolate_cmap_blues():
     colors = interpolate_cmap_at_values("Blues", [0, 0.4, 1.0])
 
@@ -191,6 +194,7 @@ def test_interpolate_cmap_blues():
     np.testing.assert_equal(colors, [value_0, value_05, value_1])
 
 
+@pytest.mark.default
 def test_color_list_none():
     interface = ColorTestInterface()
     data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
@@ -200,6 +204,7 @@ def test_color_list_none():
     np.testing.assert_equal(data2D.cell_edge_colors, [(180, 180, 180, 255)] * 5)
 
 
+@pytest.mark.default
 def test_color_list_str():
     interface = ColorTestInterface()
     data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
@@ -210,6 +215,7 @@ def test_color_list_str():
     )
 
 
+@pytest.mark.default
 def test_color_list_float():
     interface = ColorTestInterface()
     data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")

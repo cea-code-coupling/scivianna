@@ -11,6 +11,7 @@ from test_interface import make_panel_2d, get_polygons, get_colors, get_cell_ids
 scivianna.utils._testing = True
 
 
+@pytest.mark.default
 def test_change_field(panel_fixture):
     """Test switching between different fields."""
     panel, extensions, cleanup = panel_fixture
@@ -34,6 +35,7 @@ def test_change_field(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_get_uv(panel_fixture):
     """Test that get_uv returns normalized direction vectors."""
     panel, extensions, cleanup = panel_fixture
@@ -63,6 +65,7 @@ def test_get_uv(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_get_slave(panel_fixture):
     """Test that get_slave returns the correct slave."""
     panel, extensions, cleanup = panel_fixture
@@ -77,6 +80,7 @@ def test_get_slave(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_set_colormap(panel_fixture):
     """Test setting different colormaps and verifying colors reach the plotter."""
     panel, extensions, cleanup = panel_fixture
@@ -121,6 +125,7 @@ def test_set_colormap(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_set_coordinates_u(panel_fixture):
     """Test setting U axis direction vector and verifying plotter receives axes."""
     panel, extensions, cleanup = panel_fixture
@@ -157,6 +162,7 @@ def test_set_coordinates_u(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_set_coordinates_v(panel_fixture):
     """Test setting V axis direction vector and verifying plotter receives axes."""
     panel, extensions, cleanup = panel_fixture
@@ -196,6 +202,7 @@ def test_set_coordinates_v(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_set_coordinates_ranges(panel_fixture):
     """Test setting coordinate ranges (u_min, u_max, v_min, v_max) and verifying plotter."""
     panel, extensions, cleanup = panel_fixture
@@ -225,6 +232,7 @@ def test_set_coordinates_ranges(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_set_coordinates_w(panel_fixture):
     """Test setting w value (normal axis location) and verifying plotter."""
     panel, extensions, cleanup = panel_fixture
@@ -256,6 +264,7 @@ def test_set_coordinates_w(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_set_coordinates_type_errors(panel_fixture):
     """Test that set_coordinates raises appropriate errors for invalid types."""
     panel, extensions, cleanup = panel_fixture
@@ -287,6 +296,7 @@ def test_set_coordinates_type_errors(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_set_coordinates_combined(panel_fixture):
     """Test setting multiple coordinates at once and verifying plotter."""
     panel, extensions, cleanup = panel_fixture
@@ -337,6 +347,7 @@ def test_set_coordinates_combined(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_duplicate(panel_fixture):
     """Test that duplicate creates a valid copy of the panel."""
     panel, extensions, cleanup = panel_fixture
@@ -369,6 +380,7 @@ def test_duplicate(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_field_change_callback(panel_fixture):
     """Test that field change callback is stored and called."""
     panel, extensions, cleanup = panel_fixture
@@ -393,6 +405,7 @@ def test_field_change_callback(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_provide_callbacks(panel_fixture):
     """Test that callback setters store the callbacks."""
     panel, extensions, cleanup = panel_fixture
@@ -418,6 +431,7 @@ def test_provide_callbacks(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_recompute(panel_fixture):
     """Test that recompute triggers a data recomputation."""
     panel, extensions, cleanup = panel_fixture
@@ -440,6 +454,7 @@ def test_recompute(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_displayed_field_initial_state(panel_fixture):
     """Test that the panel starts with MESH as the displayed field."""
     panel, extensions, cleanup = panel_fixture
@@ -453,6 +468,7 @@ def test_displayed_field_initial_state(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_display_polygons_attribute(panel_fixture):
     """Test that display_polygons attribute is correctly set."""
     panel, extensions, cleanup = panel_fixture
@@ -466,6 +482,7 @@ def test_display_polygons_attribute(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_update_polygons_attribute(panel_fixture):
     """Test that update_polygons attribute exists and is boolean."""
     panel, extensions, cleanup = panel_fixture
@@ -479,6 +496,7 @@ def test_update_polygons_attribute(panel_fixture):
         cleanup()
 
 
+@pytest.mark.default
 def test_unavailable_field_warning(panel_fixture):
     """Test that requesting an unavailable field shows a warning."""
     panel, extensions, cleanup = panel_fixture

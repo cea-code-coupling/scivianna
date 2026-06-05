@@ -1,3 +1,5 @@
+import pytest
+
 import scivianna.utils
 from scivianna.constants import X, Y, Z, MESH
 from scivianna.interface.med_interface import MEDInterface
@@ -15,6 +17,7 @@ from scivianna_example.med.grid_stack_example import get_panel as get_gridstack_
 from scivianna_example.europe_grid.europe_grid import make_europe_panel, EuropeGridInterface, CountryTimeSeriesInterface
 scivianna.utils._testing = True
 
+@pytest.mark.default
 def test_serialize_slave():
     slave = None
     slave2 = None
@@ -50,6 +53,7 @@ def test_serialize_slave():
         if slave2 is not None:
             slave2.terminate()
 
+@pytest.mark.default
 def test_serialize_panel():
     slave = None
     slave2 = None
@@ -115,6 +119,7 @@ def test_serialize_panel():
             print("Terminating slave 1")
             slave2.terminate()
 
+@pytest.mark.default
 def test_serialize_split():
     panel, slaves = get_panel(None, True)
 
@@ -132,6 +137,7 @@ def test_serialize_split():
         for panel in new_layout.visualisation_panels.values():
             panel.get_slave().terminate()
 
+@pytest.mark.default
 def test_serialize_gridstack():
     panel, slaves = get_gridstack_panel(None, True)
 
@@ -149,6 +155,7 @@ def test_serialize_gridstack():
         for panel in new_layout.visualisation_panels.values():
             panel.get_slave().terminate()
 
+@pytest.mark.default
 def test_restore_europe():
     layout, slaves = make_europe_panel(None, True)
 

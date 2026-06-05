@@ -524,6 +524,7 @@ def get_cell_ids(panel: Panel2D):
 def get_cell_values(panel: Panel2D):
     return panel.plotter.source_polygons.data[COMPO_NAMES]
 
+@pytest.mark.default
 def test_build_panel():
     make_panel_2d()
     assert True
@@ -531,6 +532,7 @@ def test_build_panel():
 class TestMouseMoveCallbacks:
     """Tests for mouse move callback functionality."""
 
+    @pytest.mark.default
     def test_provide_on_mouse_move_callback_registers_callback(self):
         """Test that providing a mouse move callback stores it in the plotter."""
         panel, _, cleanup = make_panel_2d()
@@ -543,6 +545,7 @@ class TestMouseMoveCallbacks:
         # The callback is wrapped with functools.partial in Bokeh2DPolygonPlotter
         assert callable(panel.plotter.on_mouse_move_callback)
 
+    @pytest.mark.default
     def test_mouse_move_callback_receives_panel(self):
         """Test that the mouse move callback receives the panel correctly."""
         panel, _, cleanup = make_panel_2d()
@@ -562,6 +565,7 @@ class TestMouseMoveCallbacks:
         # Verify callback was registered
         assert panel.plotter.on_mouse_move_callback is not None
 
+    @pytest.mark.default
     def test_plotter_send_event_with_valid_index(self):
         """Test that send_event correctly passes data when index is valid."""
         panel, _, cleanup = make_panel_2d()
@@ -597,6 +601,7 @@ class TestMouseMoveCallbacks:
         assert callback_calls[0]['space_location'] == (0.5, 0.5, 0.0)
         assert callback_calls[0]['cell_id'] == 0
 
+    @pytest.mark.default
     def test_plotter_send_event_with_multiple_cells(self):
         """Test send_event with different cell IDs."""
         panel, _, cleanup = make_panel_2d()
@@ -617,6 +622,7 @@ class TestMouseMoveCallbacks:
         assert len(callback_calls) == 1
         assert callback_calls[0] == 1
 
+    @pytest.mark.default
     def test_plotter_send_event_with_invalid_index(self):
         """Test that send_event does not call callback when index is out of bounds."""
         panel, _, cleanup = make_panel_2d()
@@ -637,6 +643,7 @@ class TestMouseMoveCallbacks:
         
         assert len(callback_calls) == 0
 
+    @pytest.mark.default
     def test_panel_provide_on_mouse_move_callback_integration(self):
         """Test that Panel2D.provide_on_mouse_move_callback correctly delegates to plotter."""
         panel, _, cleanup = make_panel_2d()
@@ -646,6 +653,7 @@ class TestMouseMoveCallbacks:
         assert panel.plotter.on_mouse_move_callback is not None
         assert callable(panel.plotter.on_mouse_move_callback)
 
+    @pytest.mark.default
     def test_mouse_move_callback_data_structure(self):
         """Test that mouse move callback receives correct data structure."""
         panel, _, cleanup = make_panel_2d()
@@ -683,6 +691,7 @@ class TestMouseMoveCallbacks:
 class TestClickCallbacks:
     """Tests for click (tap) callback functionality."""
 
+    @pytest.mark.default
     def test_provide_on_clic_callback_registers_callback(self):
         """Test that providing a click callback stores it in the plotter."""
         panel, _, cleanup = make_panel_2d()
@@ -694,6 +703,7 @@ class TestClickCallbacks:
         assert panel.plotter.on_clic_callback is not None
         assert callable(panel.plotter.on_clic_callback)
 
+    @pytest.mark.default
     def test_click_callback_receives_panel(self):
         """Test that the click callback receives the panel correctly."""
         panel, _, cleanup = make_panel_2d()
@@ -713,6 +723,7 @@ class TestClickCallbacks:
         # Verify callback was registered
         assert panel.plotter.on_clic_callback is not None
 
+    @pytest.mark.default
     def test_plotter_send_event_for_click(self):
         """Test that send_event works for click events too."""
         panel, _, cleanup = make_panel_2d()
@@ -746,6 +757,7 @@ class TestClickCallbacks:
         assert callback_calls[0]['space_location'] == (0.3, 0.6, 0.0)
         assert callback_calls[0]['cell_id'] == 1
 
+    @pytest.mark.default
     def test_click_callback_with_invalid_index(self):
         """Test that click callback is not called when index is out of bounds."""
         panel, _, cleanup = make_panel_2d()
@@ -765,6 +777,7 @@ class TestClickCallbacks:
         
         assert len(callback_calls) == 0
 
+    @pytest.mark.default
     def test_panel_provide_on_clic_callback_integration(self):
         """Test that Panel2D.provide_on_clic_callback correctly delegates to plotter."""
         panel, _, cleanup = make_panel_2d()
@@ -774,6 +787,7 @@ class TestClickCallbacks:
         assert panel.plotter.on_clic_callback is not None
         assert callable(panel.plotter.on_clic_callback)
 
+    @pytest.mark.default
     def test_click_callback_data_structure(self):
         """Test that click callback receives correct data structure."""
         panel, _, cleanup = make_panel_2d()
@@ -807,6 +821,7 @@ class TestClickCallbacks:
         assert received_data['space'] == (0.1, 0.9, 0.0)
         assert received_data['cell'] == 0
 
+    @pytest.mark.default
     def test_plotter_has_tap_event_registered(self):
         """Test that the Bokeh figure has Tap event registered for click."""
         panel, _, cleanup = make_panel_2d()
@@ -818,6 +833,7 @@ class TestClickCallbacks:
         # After providing callback, the figure should have an event listener
         assert hasattr(panel.plotter.figure, 'on_event')
 
+    @pytest.mark.default
     def test_both_callbacks_registered_simultaneously(self):
         """Test that both mouse move and click callbacks can be registered simultaneously."""
         panel, _, cleanup = make_panel_2d()
@@ -871,6 +887,7 @@ class TestClickCallbacks:
 class TestExtensionReceivesMouseCallbacks:
     """Tests verifying that Extension instances receive mouse move and click callbacks from Panel2D."""
 
+    @pytest.mark.default
     def test_extension_receives_mouse_move_callback(self):
         """Test that an extension's on_mouse_move method is called when the mouse moves on the plot.
         
@@ -911,6 +928,7 @@ class TestExtensionReceivesMouseCallbacks:
         assert event.space_location == (0.5, 0.5, 0.0)
         assert event.cell_id == 0
 
+    @pytest.mark.default
     def test_extension_receives_mouse_click_callback(self):
         """Test that an extension's on_mouse_clic method is called when the user clicks on the plot.
         
@@ -951,6 +969,7 @@ class TestExtensionReceivesMouseCallbacks:
         assert event.space_location == (0.3, 0.6, 0.0)
         assert event.cell_id == 1
 
+    @pytest.mark.default
     def test_extension_receives_multiple_mouse_move_events(self):
         """Test that an extension receives multiple mouse move events correctly."""
         panel, extensions, cleanup = make_panel_2d()
@@ -991,6 +1010,7 @@ class TestExtensionReceivesMouseCallbacks:
         assert dummy_ext._mouse_move_history[2].screen_location == (300.0, 250.0)
         assert dummy_ext._mouse_move_history[2].cell_id == 2
 
+    @pytest.mark.default
     def test_extension_receives_multiple_mouse_click_events(self):
         """Test that an extension receives multiple mouse click events correctly."""
         panel, extensions, cleanup = make_panel_2d()
@@ -1028,6 +1048,7 @@ class TestExtensionReceivesMouseCallbacks:
         assert dummy_ext._mouse_click_history[1].screen_location == (200.0, 150.0)
         assert dummy_ext._mouse_click_history[1].cell_id == 1
 
+    @pytest.mark.default
     def test_extension_does_not_receive_callback_with_invalid_index(self):
         """Test that extension callbacks are not triggered when index is out of bounds."""
         panel, extensions, cleanup = make_panel_2d()
@@ -1076,6 +1097,7 @@ class TestExtensionReceivesMouseCallbacks:
         assert not dummy_ext._on_mouse_clic_called, "Extension should not receive click callback with invalid index"
         assert len(dummy_ext._mouse_click_history) == 0, "No mouse click events should be recorded"
 
+    @pytest.mark.default
     def test_all_extensions_receive_mouse_callbacks(self):
         """Test that all extensions registered on the panel receive mouse callbacks."""
         panel, extensions, cleanup = make_panel_2d()

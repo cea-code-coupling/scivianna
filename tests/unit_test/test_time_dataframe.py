@@ -6,6 +6,7 @@ import pandas as pd
 from unittest.mock import MagicMock, patch
 
 
+@pytest.mark.default
 class TestTimeDataFrame:
     """Test suite for TimeDataFrame class."""
 
@@ -321,6 +322,7 @@ class TestTimeDataFrame:
         assert time_dataframe.time == 1.0
 
 
+@pytest.mark.default
 class TestTimeDataFrameEdgeCases:
     """Edge case tests for TimeDataFrame."""
 

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 
+@pytest.mark.default
 class TestData1D:
     """Test suite for Data1D class."""
 
@@ -605,6 +606,7 @@ class TestData1D:
         assert copied.line_colors[0] is None or str(copied.line_colors[0]) == 'None'
 
 
+@pytest.mark.default
 class TestData1DIntegration:
     """Integration tests for Data1D class."""
 

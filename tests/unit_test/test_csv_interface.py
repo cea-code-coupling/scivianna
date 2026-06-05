@@ -77,6 +77,7 @@ def csv_custom_basename_file():
 
 # ---- __init__ Tests ----
 
+@pytest.mark.default
 class TestCSVInterfaceInit:
     def test_init_success_cell_file(self, csv_cell_file):
         """Test initialization with a cell-indexed CSV file."""
@@ -127,6 +128,7 @@ class TestCSVInterfaceInit:
 # Note: get_value() uses raw DataFrame column names (e.g., 'temp', 'pressure')
 # material_name parameter is accepted but ignored
 
+@pytest.mark.default
 class TestCSVInterfaceGetValue:
     def test_get_value_cell_index(self, csv_cell_file):
         """Test get_value with cell_index using raw column name."""
@@ -199,6 +201,7 @@ class TestCSVInterfaceGetValue:
 # Note: get_values() uses raw DataFrame column names
 # material_names parameter is accepted but ignored
 
+@pytest.mark.default
 class TestCSVInterfaceGetValues:
     def test_get_values_cell_indexes(self, csv_cell_file):
         """Test get_values with multiple cell indexes."""
@@ -293,6 +296,7 @@ class TestCSVInterfaceGetValues:
 # ---- get_fields Tests ----
 # Note: get_fields() returns basename-prefixed column names
 
+@pytest.mark.default
 class TestCSVInterfaceGetFields:
     def test_get_fields_cell_file(self, csv_cell_file):
         """Test get_fields returns prefixed field names for cell file."""
@@ -332,6 +336,7 @@ class TestCSVInterfaceGetFields:
 
 # ---- Integration-like Tests ----
 
+@pytest.mark.default
 class TestCSVInterfaceIntegration:
     def test_full_workflow(self, csv_cell_file):
         """Test a full workflow with cell-indexed CSV."""

@@ -39,6 +39,7 @@ def clic_to_country(panel_2d, country):
     return panel_2d.plotter.source_polygons.data[CELL_NAMES][index]
 
 
+@pytest.mark.default
 def test_europe_mouse_move():
     split_panel: SplitLayout
     split_panel, [slave, slave_result] = europe_example(None, return_slaves=True)
@@ -71,6 +72,7 @@ def test_europe_mouse_move():
     assert f"{country_name.lower()}_{current_field.lower()}" in panel_1d.plotter.source_data_dict
     assert panel_1d.plotter.visible == [f"{country_name.lower()}_{current_field.lower()}"]
     
+@pytest.mark.default
 def test_europe_mouse_clic():
     split_panel: SplitLayout
     split_panel, [slave, slave_result] = europe_example(None, return_slaves=True)
