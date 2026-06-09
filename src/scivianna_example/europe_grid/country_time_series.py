@@ -14,7 +14,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
         """
         pass
 
-    def read_file(self, file_path:str, file_type:str):
+    def read_file(self, file_path:str, file_label:str):
         """Read CSV file to get results from.
 
         Parameters
