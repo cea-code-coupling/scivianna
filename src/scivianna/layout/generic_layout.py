@@ -10,6 +10,7 @@ import scivianna.utils
 from scivianna.enums import UpdateEvent
 from scivianna.extension.layout import LayoutExtension
 from scivianna.extension.coupling import CouplingExtension
+import scivianna.interface
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.panel.gui import GUI
 from scivianna.slave import ComputeSlave
@@ -17,7 +18,6 @@ from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.utils.interface_tools import (
     GenericInterfaceEnum,
     get_interface_default_panel,
-    load_available_interfaces,
 )
 
 
@@ -53,7 +53,7 @@ class GenericLayout:
         self.visualisation_panels = visualisation_panels
 
         if self.load_available_interfaces is None:
-            self.available_interfaces = load_available_interfaces()
+            self.available_interfaces = scivianna.interface.INTERFACES
         else:
             self.available_interfaces = self.load_available_interfaces()
 

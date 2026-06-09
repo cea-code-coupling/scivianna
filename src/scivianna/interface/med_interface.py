@@ -497,6 +497,8 @@ class MEDInterface(Geometry2DPolygon, IcocoInterface):
             Queue from which get orders from the master.
         options : Dict[str, Any]
             Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
