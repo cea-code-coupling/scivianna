@@ -102,7 +102,7 @@ def get_med_panel(geo: str, title="MED") -> VisualizationPanel:
     slave = ComputeSlave(MEDInterface)
     if geo is None:
         slave.read_file(Path(__file__).parent / "input_file" / "power.med", GEOMETRY)
-    elif isinstance(geo, str):
+    elif isinstance(geo, (str, Path)):
         slave.read_file(geo, GEOMETRY)
     else:
         raise TypeError(f"Provided type {type(geo)} not implemented")
