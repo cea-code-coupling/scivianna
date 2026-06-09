@@ -112,7 +112,8 @@ def worker(
 
                 #   GenericInterface functions
                 if task == SlaveCommand.READ_FILE:
-                    code_.read_file(*data)
+                    file_path, file_label = data
+                    code_.read_file(file_path=file_path, file_label=file_label)
                     q_returns.put("OK")
 
                 elif task == SlaveCommand.GET_LABELS:
@@ -121,7 +122,7 @@ def worker(
 
                 elif task == SlaveCommand.GET_LABEL_COLORING_MODE:
                     field_name = data
-                    set_return = code_.get_label_coloring_mode(field_name)
+                    set_return = code_.get_label_coloring_mode(label=field_name)
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.GET_FILE_INPUT_LIST:
@@ -129,11 +130,13 @@ def worker(
                     q_returns.put(input_list)
 
                 elif task == SlaveCommand.SAVE:
-                    code_.save(*data)
+                    file_path, include_files = data
+                    code_.save(file_path=file_path, include_files=include_files)
                     q_returns.put("OK")
 
                 elif task == SlaveCommand.LOAD:
-                    code_.load(*data)
+                    file_path, include_files = data
+                    code_.load(file_path=file_path, include_files=include_files)
                     q_returns.put("OK")
 
                 #
@@ -159,20 +162,23 @@ def worker(
                         )
                     data: Data2D
                     data, polygons_updated = code_.compute_2D_data(
-                        u,
-                        v,
-                        u_min,
-                        u_max,
-                        v_min,
-                        v_max,
-                        w_value,
-                        q_tasks_,
-                        options,
-                        caller,
+                        u=u,
+                        v=v,
+                        u_min=u_min,
+                        u_max=u_max,
+                        v_min=v_min,
+                        v_max=v_max,
+                        w_value=w_value,
+                        q_tasks=q_tasks_,
+                        options=options,
+                        caller=caller,
                     )
 
                     dict_value_per_cell = code_.get_value_dict(
-                        coloring_label, data.cell_ids, options, caller
+                        value_label=coloring_label,
+                        cells=data.cell_ids,
+                        options=options,
+                        caller=caller,
                     )
 
                     data.cell_values = [dict_value_per_cell[v] for v in data.cell_ids]
@@ -189,7 +195,13 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an Geometry2D, found class {type(code_)}."
                         )
-                    set_return = code_.get_value_dict(*data)
+                    value_label, cells, options, caller = data
+                    set_return = code_.get_value_dict(
+                        value_label=value_label,
+                        cells=cells,
+                        options=options,
+                        caller=caller,
+                    )
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.GET_GEOMETRY_TYPE:
@@ -201,7 +213,13 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an ValueAtLocation, found class {type(code_)}."
                         )
-                    set_return = code_.get_value(*data)
+                    position, cell_index, material_name, field = data
+                    set_return = code_.get_value(
+                        position=position,
+                        cell_index=cell_index,
+                        material_name=material_name,
+                        field=field,
+                    )
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.GET_VALUES:
@@ -209,7 +227,13 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an ValueAtLocation, found class {type(code_)}."
                         )
-                    set_return = code_.get_values(*data)
+                    positions, cell_indexes, material_names, field = data
+                    set_return = code_.get_values(
+                        positions=positions,
+                        cell_indexes=cell_indexes,
+                        material_names=material_names,
+                        field=field,
+                    )
                     q_returns.put(set_return)
 
                 #
@@ -219,7 +243,13 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an Value1DAtLocation, found class {type(code_)}."
                         )
-                    input_list = code_.get_1D_value(*data)
+                    position, cell_index, material_name, field = data
+                    input_list = code_.get_1D_value(
+                        position=position,
+                        cell_index=cell_index,
+                        material_name=material_name,
+                        field=field,
+                    )
                     q_returns.put(input_list)
 
                 #
@@ -229,7 +259,14 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an OverLine, found class {type(code_)}."
                         )
-                    input_list = code_.compute_1D_line_data(*data)
+                    pos, u, d, q_tasks_, options = data
+                    input_list = code_.compute_1D_line_data(
+                        pos=pos,
+                        u=u,
+                        d=d,
+                        q_tasks_=q_tasks_,
+                        options=options,
+                    )
                     q_returns.put(input_list)
 
                 #
@@ -241,7 +278,7 @@ def worker(
                         )
                     field_name = data
                     field_template: "medcoupling.MEDCouplingFieldDouble" = (
-                        code_.getInputMEDDoubleFieldTemplate(field_name)
+                        code_.getInputMEDDoubleFieldTemplate(field_name=field_name)
                     )
                     q_returns.put(field_template)
 
@@ -251,7 +288,7 @@ def worker(
                             f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
                         )
                     field_name, field = data
-                    set_return = code_.setInputMEDDoubleField(field_name, field)
+                    set_return = code_.setInputMEDDoubleField(field_name=field_name, field=field)
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.SET_TIME:
@@ -260,7 +297,7 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
                         )
-                    set_return = code_.setTime(time_)
+                    set_return = code_.setTime(time=time_)
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.SET_INPUT_DOUBLE_VALUE:
@@ -269,7 +306,7 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
                         )
-                    set_return = code_.setInputDoubleValue(name, val)
+                    set_return = code_.setInputDoubleValue(name=name, val=val)
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.CUSTOM:

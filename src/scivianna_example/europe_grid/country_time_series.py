@@ -14,16 +14,16 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
         """
         pass
 
-    def read_file(self, csv_file_path:str, file_type:str):
+    def read_file(self, file_path:str, file_type:str):
         """Read CSV file to get results from.
 
         Parameters
         ----------
-        csv_file_path : str
+        file_path : str
             CSV file input path
 
         """
-        path = Path(csv_file_path)
+        path = Path(file_path)
         self.df = pd.read_csv(path)
         
         self.country_codes = []
