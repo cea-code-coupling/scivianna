@@ -540,7 +540,7 @@ class Bokeh2DGridPlotter(Plotter2D):
                     self.save_data = False
                     data = self.data.copy()
 
-                    data.cell_colors[data.cell_ids.index(hovered_cell)][3] = 0.6*255
+                    data.cell_colors[list(data.cell_ids).index(hovered_cell)][3] = 0.6*255
 
                     self.update_2d_frame(data)
 
