@@ -53,6 +53,7 @@ from icoco.problem import Problem, ValueType
 import panel as pn
 import socket
 
+from scivianna.enums import UpdatePolicy
 from scivianna.interface.generic_interface import CouplingInterface
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.panel_1d import Panel1D
@@ -174,7 +175,7 @@ class LayoutProblem(Problem):
         """(Mandatory) Return the current time of the simulation.
 
         Can be called any time between initialize() and terminate().
-        The current time can only change during a call to validateTimeStep() or to resetTime().
+        The current time can only change during a call to validateTimeStep() or to reset_time().
 
         Returns
         -------
@@ -311,7 +312,7 @@ class LayoutProblem(Problem):
             exception if called outside the TIME_STEP_DEFINED context (see Problem documentation).
             exception if called before the solveTimeStep() method.
         """
-
+        self.layout.time_widget.add_time_value(self.time)
         self.time += self._dt
         self._dt = None
 
@@ -428,12 +429,12 @@ class LayoutProblem(Problem):
 
         slave = self.layout.get_panel(visualization_panel).get_slave()
 
-        if field_name not in slave.get_labels():
-            raise ValueError(
-                f"Unknown requested field '{field_name}' for panel {visualization_panel}, available fields: {list(slave.get_labels())}. Make sure the key requested by the exchanger is defined as panel_name@field_name"
-            )
+        # if field_name not in slave.get_labels():
+        #     raise ValueError(
+        #         f"Unknown requested field '{field_name}' for panel {visualization_panel}, available fields: {list(slave.get_labels())}. Make sure the key requested by the exchanger is defined as panel_name@field_name"
+        #     )
 
-        return slave.getInputMEDDoubleFieldTemplate(field_name)
+        return slave.get_template(field_name)
 
     def setInputMEDDoubleField(
         self, name: str, afield: medcoupling.MEDCouplingFieldDouble
@@ -471,14 +472,23 @@ class LayoutProblem(Problem):
         panel = self.layout.get_panel(visualization_panel)
         slave = panel.get_slave()
 
-        if field_name not in slave.get_labels():
-            raise ValueError(
-                f"Unknown requested field {field_name} for panel  {visualization_panel}, available fields: {list(slave.get_labels())}. Make sure the key requested by the exchanger is defined as panel_name@field_name"
-            )
+        # if field_name not in slave.get_labels():
+        #     raise ValueError(
+        #         f"Unknown requested field {field_name} for panel  {visualization_panel}, available fields: {list(slave.get_labels())}. Make sure the key requested by the exchanger is defined as panel_name@field_name"
+        #     )
 
         #   The time is set before the field
-        slave.setTime(self.time)
-        return_val = slave.setInputMEDDoubleField(field_name, afield)
+        slave.set_time(self.time)
+        if slave.update_policy == UpdatePolicy.UPDATE_DATA:
+            return_val = slave.update_data(field_name, afield)
+        elif slave.update_policy == UpdatePolicy.UPDATE_MESH:
+            return_val = slave.update_mesh(field_name, afield)
+        elif slave.update_policy == UpdatePolicy.APPEND_DATA:
+            return_val = slave.append_data(field_name, afield)
+        elif slave.update_policy == UpdatePolicy.APPEND_MESH:
+            return_val = slave.append_mesh(field_name, afield)
+        else:
+            raise ValueError(f"Update policy {slave.update_policy} not implemented in LayoutProblem.")
 
         self.panels_to_recompute.append(visualization_panel)
 
@@ -510,8 +520,17 @@ class LayoutProblem(Problem):
         slave = panel.get_slave()
 
         #   The time is set before the field
-        slave.setTime(self.time)
-        return_val = slave.setInputDoubleValue(field_name, val)
+        slave.set_time(self.time)
+        if slave.update_policy == UpdatePolicy.UPDATE_DATA:
+            return_val = slave.update_data(field_name, val)
+        elif slave.update_policy == UpdatePolicy.UPDATE_MESH:
+            return_val = slave.update_mesh(field_name, val)
+        elif slave.update_policy == UpdatePolicy.APPEND_DATA:
+            return_val = slave.append_data(field_name, val)
+        elif slave.update_policy == UpdatePolicy.APPEND_MESH:
+            return_val = slave.append_mesh(field_name, val)
+        else:
+            raise ValueError(f"Update policy {slave.update_policy} not implemented in LayoutProblem.")
 
         self.panels_to_recompute.append(visualization_panel)
 

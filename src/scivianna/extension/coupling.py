@@ -57,10 +57,25 @@ This extension allows you run coupling simulations.
             width=30,
             align="center",
         )
+        self.display_last = pmui.Checkbox(
+            name = "Display last time", 
+            value = True,
+            width = 280
+        )
+        self.time_slider = pmui.DiscreteSlider(
+            name = "Time selector", 
+            value = 0., 
+            options = [0.], 
+            description="Time at which display the results",
+            width = 260,
+            show_value=False,
+            size="small"
+        )
 
         self.layout = layout
 
         self.run_button.on_click(self.request_recompute)
+        self.time_slider.param.watch(self.request_recompute, "value")
 
         self.curdoc = curdoc()
 
@@ -68,6 +83,8 @@ This extension allows you run coupling simulations.
 
         self.layout_param_card = pn.Column(
             self.run_button,
+            self.display_last,
+            self.time_slider,
             width=300,
             margin=0,
         )
@@ -97,9 +114,23 @@ This extension allows you run coupling simulations.
             If the call is from a button press or release
         """
         if event:
-            if self.layout.periodic_recompute_added:
-                self.run_button.icon = "player-play"
-                self.layout.stop_periodic_update()
+            if event.obj == self.run_button:
+                if self.layout.periodic_recompute_added:
+                    self.run_button.icon = "player-play"
+                    self.layout.stop_periodic_update()
+                else:
+                    self.run_button.icon = "player-pause"
+                    self.layout.add_periodic_update()
             else:
-                self.run_button.icon = "player-pause"
-                self.layout.add_periodic_update()
+                self.layout.recompute()
+
+    def provide_options(self):
+        option_dict = super().provide_options()
+        option_dict["time"] = self.time_slider.value
+
+        return option_dict
+    
+    def add_time_value(self, value: float):
+        self.time_slider.options = self.time_slider.options + [round(value, 8)]
+        if self.display_last.value:
+            self.time_slider.value = round(value, 8)

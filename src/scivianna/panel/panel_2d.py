@@ -278,6 +278,11 @@ class Panel2D(VisualizationPanel):
             e.provide_options() for e in self.extensions
         ] for key, value in options.items()}
 
+        if self.panel_coupling_extension is not None:
+            coupling_options = self.panel_coupling_extension.provide_options()
+            for key, value in coupling_options.items():
+                options[key] = value
+
         computed_data = self.slave.compute_2D_data(
             u,
             v,

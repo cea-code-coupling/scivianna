@@ -25,7 +25,11 @@ def get_panel(_):
                 FieldPanel(
                     name = "Field value",
                     interface = MEDInterface,
-                    update_policy = UpdatePolicy.UPDATE_DATA
+                    update_policy = UpdatePolicy.UPDATE_DATA,
+                    template = [
+                        ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
+                        ("Mesh", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
+                    ]
                 ),
                 ValuePanel(
                     name = "MAX",
@@ -41,7 +45,8 @@ def get_panel(_):
     os.makedirs(working_dir, exist_ok=True)
     visu_problem, visu_data_file = get_grid_stack_problem(
         working_directory = working_dir, 
-        data_to_view = visualizer_data
+        data_to_view = visualizer_data,
+        use_server = False
     )
     myVIZDriver = ICOCODriver(visu_problem)
     myVIZDriver.setDataFile(visu_data_file)
@@ -54,13 +59,13 @@ def get_panel(_):
         method=c3po.DirectMatching(),
 
         fieldsToGet=[(fieldDriver, "VALUE")],
-        fieldsToSet=[(myVIZDriver, "Field value")],
+        fieldsToSet=[(myVIZDriver, "Field value@Field value")],
 
         valuesToGet=[
             (fieldDriver, "MAX"),
         ],
         valuesToSet=[
-            (myVIZDriver, "MAX"),
+            (myVIZDriver, "MAX@MAX"),
         ],
     )
 

@@ -71,6 +71,7 @@ class VisualizationPanel(pn.viewable.Viewer):
         #         
         super().__init__()
         
+        self.panel_coupling_extension: Extension = None
         self.panel_name = name
         self.copy_index = 1
         

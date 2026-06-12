@@ -257,16 +257,28 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         """
         xs, ys = self._polygons_to_coords(data.get_polygons())
 
-        self.source_polygons.data = {
-            XS: xs,
-            YS: ys,
-            CELL_NAMES: data.cell_ids.tolist(),
-            COMPO_NAMES: data.cell_values.tolist(),
-            COLORS: np.array(data.cell_colors)[:, :-1].tolist(),
-            FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
-            EDGE_COLORS: np.array(data.cell_edge_colors)[:, :-1].tolist(),
-            EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1]/255).tolist(),
-        }
+        if len(data.cell_ids) > 0:
+            self.source_polygons.data = {
+                XS: xs,
+                YS: ys,
+                CELL_NAMES: data.cell_ids.tolist(),
+                COMPO_NAMES: data.cell_values.tolist(),
+                COLORS: np.array(data.cell_colors)[:, :-1].tolist(),
+                FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
+                EDGE_COLORS: np.array(data.cell_edge_colors)[:, :-1].tolist(),
+                EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1]/255).tolist(),
+            }
+        else:
+            self.source_polygons.data = {
+                XS: xs,
+                YS: ys,
+                CELL_NAMES: [],
+                COMPO_NAMES: [],
+                COLORS: [],
+                FILL_ALPHA: [],
+                EDGE_COLORS: [],
+                EDGE_ALPHA: [],
+            }
 
         self.hovered_glyph = self.figure.multi_polygons(
             xs=XS,
@@ -294,18 +306,31 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         """
         xs, ys = self._polygons_to_coords(data.get_polygons())
 
-        self.source_polygons.update(
-            data={
+        if len(data.cell_ids) > 0:
+            self.source_polygons.update(
+                data={
+                    XS: xs,
+                    YS: ys,
+                    CELL_NAMES: data.cell_ids.tolist(),
+                    COMPO_NAMES: data.cell_values.tolist(),
+                    COLORS: np.array(data.cell_colors).tolist(),
+                    EDGE_COLORS: np.array(data.cell_edge_colors).tolist(),
+                    FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
+                    EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1]/255).tolist(),
+                }
+            )
+        else:
+            self.source_polygons.data = {
                 XS: xs,
                 YS: ys,
-                CELL_NAMES: data.cell_ids.tolist(),
-                COMPO_NAMES: data.cell_values.tolist(),
-                COLORS: np.array(data.cell_colors).tolist(),
-                EDGE_COLORS: np.array(data.cell_edge_colors).tolist(),
-                FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
-                EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1]/255).tolist(),
+                CELL_NAMES: [],
+                COMPO_NAMES: [],
+                COLORS: [],
+                FILL_ALPHA: [],
+                EDGE_COLORS: [],
+                EDGE_ALPHA: [],
             }
-        )
+
 
     def update_colors(self, data: Data2D,):
         """Updates the colors of the displayed polygons

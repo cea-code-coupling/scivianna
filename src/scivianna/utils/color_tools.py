@@ -64,6 +64,10 @@ def get_edges_colors(face_colors:np.ndarray) -> np.ndarray:
     """
     edge_colors:np.ndarray = face_colors.copy()
 
+    # Allowing no data being displayed
+    if len(edge_colors.shape) == 1:
+        return edge_colors
+    
     # Darkening the colors
     edge_colors[:, :3] -= 20
 

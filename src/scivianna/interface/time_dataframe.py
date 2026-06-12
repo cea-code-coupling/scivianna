@@ -3,7 +3,7 @@ from pathlib import Path
 import pickle
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 from scivianna.enums import UpdatePolicy
 from scivianna.interface.generic_interface import Value1DAtLocation, CouplingInterface
@@ -12,7 +12,6 @@ from scivianna.interface.generic_interface import Value1DAtLocation, CouplingInt
 class TimeDataFrame(Value1DAtLocation, CouplingInterface):
     def __init__(self, ):
         """Interface hosting a dataframe that is filled along a coupling
-
         """
         self.df = pd.DataFrame()
         self.time = 0.
@@ -76,7 +75,22 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
                 }, index = [self.time])
             ])
 
-    def append_data(self, name: str, value: float):
+    def append_data(self, key: str, data: Any):
+        """Stores the data and associates it to the current time.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        if not key in self.df.columns:
+            self.df.loc[:,key] = pd.Series([np.nan]*len(self.df), index=self.df.index)
+
+        self.df.loc[self.time, key] = data
+
+    def update_data(self, key: str, data: Any):
         """Replaces the interface data by the current value
 
         Parameters
@@ -86,10 +100,57 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         data : Any
             New value
         """
-        if not name in self.df.columns:
-            self.df.loc[:,name] = pd.Series([np.nan]*len(self.df), index=self.df.index)
+        self.append_data(key=key, data=data)
 
-        self.df.loc[self.time, name] = value
+    def update_mesh(self, key: str, data: Any):
+        """Replaces the interface data and mesh by the current value
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        # For TimeDataFrame, mesh is not applicable, treating same as update_data
+        self.append_data(key=key, data=data)
+
+    def append_mesh(self, key: str, data: Any):
+        """Stores the data and mesh and associate them to the current time.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        # For TimeDataFrame, mesh is not applicable, treating same as append_data
+        self.append_data(key=key, data=data)
+
+    def get_template(self, name: str):
+        """Returns the template for the C3PO getOutputxxxFieldTemplate functions
+
+        Parameters
+        ----------
+        name : str
+            Field name
+        """
+        # Return a pandas Series as template for TimeDataFrame
+        return pd.Series(dtype=float)
+
+    def set_template(self, name: str, template: Any):
+        """Sets the template returned by C3PO getOutputxxxFieldTemplate functions
+
+        Parameters
+        ----------
+        name : str
+            Field name
+        template : Any
+            Object to set as template
+        """
+        # Templates are not used with TimeDataFrame, pass silently
+        pass
 
     def save(self, file_path: Path, include_files: bool):
         """Pickle saves the slave content to a file, allows slave state reload.

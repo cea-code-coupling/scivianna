@@ -1,14 +1,16 @@
 from enum import Enum, auto
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Type
+from typing import Dict, List, Optional, Union, Type, Tuple
 
 from scivianna.coupling.problem_server import ServerManager, ProblemClient
 from scivianna.enums import UpdatePolicy
 from scivianna.layout.gridstack import GridStackLayout
 from scivianna.panel.panel_1d import Panel1D
+from scivianna.panel.panel_2d import Panel2D
 from scivianna.interface.generic_interface import GenericInterface, Geometry2D, Value1DAtLocation, ValueAtLocation
 from scivianna.interface.time_dataframe import TimeDataFrame
+from scivianna.interface import INTERFACES
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.slave import ComputeSlave
 from scivianna.notebook_tools import get_med_panel
@@ -21,6 +23,7 @@ from pydantic import (
     NonNegativeFloat,
     PositiveFloat,
     model_validator,
+    field_validator
 )
 
 import numpy as np
@@ -32,8 +35,19 @@ class VisuPanel(BaseModel):
     name: str
     update_policy: UpdatePolicy
     interface: Type[GenericInterface]
-    template: any = None
+    template: List[Tuple[str, any]] | None = None
 
+    @field_validator("interface", mode="before")
+    @classmethod
+    def resolve_interface(cls, v):
+        if isinstance(v, type):
+            return v
+        if isinstance(v, str):
+            resolved = INTERFACES.get(v)
+            if resolved is None:
+                raise ValueError(f"Unknown interface identifier: {v}")
+            return resolved
+        raise TypeError(f"interface must be str or type, got {type(v).__name__}")
 
 class FieldPanel(VisuPanel):
     interface: Type[Geometry2D]
@@ -50,7 +64,6 @@ class ValuePanel(VisuPanel):
 
 
 class ReductionType(Enum):
-
     MAX = "MAX"
     MIN = "MIN"
     AVERAGE = "AVERAGE"
@@ -58,7 +71,6 @@ class ReductionType(Enum):
 
 
 class VisualizerData(BaseModel):
-
     grid: List[List[Optional[Union[FieldPanel, ValuePanel]]]]
     """Grid of the plots"""
 
@@ -73,6 +85,7 @@ class VisualizerData(BaseModel):
             for element in line:
                 if element.name in found_names:
                     raise ValueError(f"name {element.name} appears at least twice.")
+                
                 found_names.add(element.name)
 
         return self
@@ -88,8 +101,8 @@ def get_serializable_data(
         for element in line:
             slave = element.interface.get_slave()
 
-            if element.template is not None:
-                slave.set_template(element.name, element.template)
+            assert element.interface in INTERFACES.values(), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
+            element.interface = list(INTERFACES.keys())[list(INTERFACES.values()).index(element.interface)]
             
             serializable_grid[-1].append(element)
 
@@ -116,10 +129,14 @@ class GridStackProblem(LayoutProblem):
 
         print(f"server pid = {os.getpid()}")
 
-        data_to_view = self.data_file_path
-        # data_to_view = VisualizerData.model_validate_json(
-        #     Path(self.data_file_path).read_text()
-        # )
+        if isinstance(self.data_file_path, (str, Path)):
+            data_to_view = VisualizerData.model_validate_json(
+                Path(self.data_file_path).read_text()
+            )
+        elif isinstance(self.data_file_path, VisualizerData):
+            data_to_view = self.data_file_path
+        else:
+            raise TypeError(f"Provided data_file_path type not implemented: {type(self.data_file_path)}")
 
         np_x = 1
         for line in data_to_view.grid:
@@ -139,27 +156,23 @@ class GridStackProblem(LayoutProblem):
 
                 name = element.name
                 if isinstance(element, ValuePanel):
-                    slave_result = ComputeSlave(TimeDataFrame)
+                    slave_result = ComputeSlave(element.interface)
 
-                    slave_result.setTime(-1.0)
-                    slave_result.setInputDoubleValue(name, np.nan)
+                    slave_result.set_time(0.)
+                    slave_result.update_data(name, np.nan)
 
                     visualisation_panels[name] = Panel1D(slave_result, name)
-
-                # elif isinstance(element, FieldValuePanel):
-                #     slave_result = ComputeSlave(TimeDataFrame)
-
-                #     slave_result.setTime(-1.0)
-                #     slave_result.setInputDoubleValue(name, np.nan)
-
-                #     visualisation_panels[name] = Panel1D(slave_result, name)
-                #     self._field_values[name] = element.reduction_type
-                #     mesh = mc.ReadMeshFromFile(str(element.mesh))
-                #     self._meshes[name] = mesh
 
                 elif isinstance(element, FieldPanel):
                     element: FieldPanel
 
+                    slave_result = ComputeSlave(element.interface)
+                    slave_result.set_time(0.)
+                    slave_result.update_policy = element.update_policy
+
+                    if element.template is not None:
+                        for template_name, value in element.template:
+                            slave_result.set_template(template_name, value)
                     # mesh = mc.ReadMeshFromFile(str(element.mesh))
                     # self._meshes[name] = mesh
 
@@ -168,10 +181,12 @@ class GridStackProblem(LayoutProblem):
                     #     self._working_directory / f"field_{name.replace(' ', '_')}.med"
                     # )
                     # mc.WriteField(str(field_path), field, True)
-                    visualisation_panels[name] = get_med_panel(
-                        str(field_path), title=name
-                    )
-                    visualisation_panels[name].set_field(name)
+                    print(name)
+                    visualisation_panels[name] = Panel2D(slave_result, name=name)
+                    # visualisation_panels[name] = get_med_panel(
+                    #     str(field_path), title=name
+                    # )
+                    # visualisation_panels[name].set_field(name)
 
                 else:
                     raise
@@ -182,14 +197,16 @@ class GridStackProblem(LayoutProblem):
 
         # mfldsn
         #   Adding the run button to be able to start the synchronisation to the coupling
-        self.gridstack = GridStackLayout(
+        self.layout = GridStackLayout(
             visualisation_panels, 
             bounds_x, 
             bounds_y, 
             add_run_button=True
         )
 
-        self.gridstack.add_time_widget()
+        self.layout.add_time_widget()
+        for panel in self.layout.visualisation_panels.values():
+            panel.panel_coupling_extension = self.layout.time_widget
 
         return super().initialize()
 
@@ -215,24 +232,20 @@ class GridStackProblem(LayoutProblem):
 
             return self.setInputDoubleValue(name, value)
 
-        long_name = f"{name}@{name}"
-
         if isinstance(afield, mc.DataArrayDouble):
             afield = self.get_field_template(
-                array=afield, mesh=self._meshes[name], name=long_name
+                array=afield, mesh=self._meshes[name], name=name
             )
-        print(f"-------> {long_name=}, {type(afield)=}")
-        return super().setInputMEDDoubleField(long_name, afield)
+        print(f"-------> {name=}, {type(afield)=}")
+        return super().setInputMEDDoubleField(name, afield)
 
     def getInputMEDDoubleFieldTemplate(self, name):
         if name in self._field_values:
             return self.get_field_template(mesh=self._meshes[name], name=name)
 
-        name = f"{name}@{name}"
         return super().getInputMEDDoubleFieldTemplate(name)
 
     def setInputDoubleValue(self, name, val):
-        name = f"{name}@{name}"
         return super().setInputDoubleValue(name, val)
 
     def get_field_template(self, name: str,
@@ -255,7 +268,8 @@ class GridStackProblem(LayoutProblem):
 
 def get_grid_stack_problem(
         working_directory: Path, 
-        data_to_view: VisualizerData
+        data_to_view: VisualizerData,
+        use_server: bool = True
     ) -> GridStackProblem:
     """Creates the visualisation objects from a working dir
 
@@ -265,6 +279,8 @@ def get_grid_stack_problem(
         Directory where the med files are
     data_to_view : str
         Data to diplay
+    use_server : bool
+        Use a server to have the visualizer running on another process, by default True
 
     Returns
     -------
@@ -275,16 +291,19 @@ def get_grid_stack_problem(
         working_directory = working_directory, 
         visualiser_data = data_to_view
     )
-    # data_file = working_directory / "data_inputs_neutro.json"
-    # data_file.write_text(data_to_view.model_dump_json(indent=4), encoding="utf-8")
+    data_file = working_directory / "data_inputs_neutro.json"
+    data_file.write_text(data_to_view.model_dump_json(indent=4), encoding="utf-8")
 
-    typeid = ServerManager.register(GridStackProblem)
+    if use_server:
+        typeid = ServerManager.register(GridStackProblem)
 
-    print(f"Client pid = {os.getpid()}")
+        print(f"Client pid = {os.getpid()}")
 
-    problem = ProblemClient(
-        typeid=typeid, 
-        working_directory=working_directory
-    )  # pylint: disable=abstract-class-instantiated
+        problem = ProblemClient(
+            typeid=typeid, 
+            working_directory=working_directory
+        )  # pylint: disable=abstract-class-instantiated
+    else:
+        problem = GridStackProblem(working_directory=working_directory)
 
-    return problem, data_to_view
+    return problem, data_file

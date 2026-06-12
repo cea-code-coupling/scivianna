@@ -149,8 +149,11 @@ def set_colors_list(
 
     edge_colors = get_edges_colors(cell_colors)
 
-    if not isinstance(cell_values[0], str):
-        edge_colors[:, 3] = np.where(np.isnan(np.array(cell_values)), 255, edge_colors[:, 3])
+    if len(cell_values) > 0:
+        if not isinstance(cell_values[0], str):
+            edge_colors[:, 3] = np.where(np.isnan(np.array(cell_values)), 255, edge_colors[:, 3])
+    else:
+        data.cell_edge_colors = data.cell_colors
 
     data.cell_edge_colors = edge_colors
 

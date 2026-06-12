@@ -72,15 +72,25 @@ class SlaveCommand:
     COMPUTE_1D_LINE_DATA = "compute_1d_line_data"
     """Compute a 1D result along a line"""
 
-    #   ICOCOInterface functions
-    GET_INPUT_MED_DOUBLEFIELD_TEMPLATE = "getInputMEDDoubleFieldTemplate"
-    """Returns the med field template"""
-    SET_INPUT_MED_DOUBLEFIELD = "setInputMEDDoubleField"
-    """Sets an input field"""
-    SET_INPUT_DOUBLE_VALUE = "setInputDoubleValue"
-    """Sets a float"""
-    SET_TIME = "setTime"
+    #   CouplingInterface functions
+    UPDATE_DATA = "update_data"
+    """Updates interface data"""
+    APPEND_DATA = "append_data"
+    """Appends interface data"""
+    UPDATE_MESH = "update_mesh"
+    """Updates interface mesh"""
+    APPEND_MESH = "append_mesh"
+    """Appends interface mesh"""
+    GET_TEMPLATE = "get_template"
+    """Gets field template"""
+    SET_TEMPLATE = "set_template"
+    """Sets field template"""
+    SET_TIME = "set_time"
     """Sets the current time"""
+    GET_UPDATE_POLICY = "get_update_policy"
+    """Gets the update policy attribute"""
+    SET_UPDATE_POLICY = "set_update_policy"
+    """Sets the update policy attribute"""
 
     CUSTOM = "custom"
     """Custom call to transfer to the interface to ease extension development"""
@@ -269,45 +279,85 @@ def worker(
                     )
                     q_returns.put(input_list)
 
-                #
-                #   ICOCOInterface functions
-                elif task == SlaveCommand.GET_INPUT_MED_DOUBLEFIELD_TEMPLATE:
+                #   CouplingInterface functions
+                elif task == SlaveCommand.UPDATE_DATA:
+                    key, data_value = data
                     if not isinstance(code_, CouplingInterface):
                         raise TypeError(
-                            f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
                         )
-                    field_name = data
-                    field_template: "medcoupling.MEDCouplingFieldDouble" = (
-                        code_.getInputMEDDoubleFieldTemplate(field_name=field_name)
-                    )
-                    q_returns.put(field_template)
+                    set_return = code_.update_data(key=key, data=data_value)
+                    q_returns.put(set_return)
 
-                elif task == SlaveCommand.SET_INPUT_MED_DOUBLEFIELD:
+                elif task == SlaveCommand.APPEND_DATA:
+                    key, data_value = data
                     if not isinstance(code_, CouplingInterface):
                         raise TypeError(
-                            f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
                         )
-                    field_name, field = data
-                    set_return = code_.setInputMEDDoubleField(field_name=field_name, field=field)
+                    set_return = code_.append_data(key=key, data=data_value)
+                    q_returns.put(set_return)
+
+                elif task == SlaveCommand.UPDATE_MESH:
+                    key, data_value = data
+                    if not isinstance(code_, CouplingInterface):
+                        raise TypeError(
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        )
+                    set_return = code_.update_mesh(key=key, data=data_value)
+                    q_returns.put(set_return)
+
+                elif task == SlaveCommand.APPEND_MESH:
+                    key, data_value = data
+                    if not isinstance(code_, CouplingInterface):
+                        raise TypeError(
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        )
+                    set_return = code_.append_mesh(key=key, data=data_value)
+                    q_returns.put(set_return)
+
+                elif task == SlaveCommand.GET_TEMPLATE:
+                    name = data
+                    if not isinstance(code_, CouplingInterface):
+                        raise TypeError(
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        )
+                    set_return = code_.get_template(name=name)
+                    q_returns.put(set_return)
+
+                elif task == SlaveCommand.SET_TEMPLATE:
+                    name, template = data
+                    if not isinstance(code_, CouplingInterface):
+                        raise TypeError(
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        )
+                    set_return = code_.set_template(name=name, template=template)
                     q_returns.put(set_return)
 
                 elif task == SlaveCommand.SET_TIME:
                     time_ = data[0]
                     if not isinstance(code_, CouplingInterface):
                         raise TypeError(
-                            f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
                         )
                     set_return = code_.set_time(time=time_)
                     q_returns.put(set_return)
 
-                elif task == SlaveCommand.SET_INPUT_DOUBLE_VALUE:
-                    name, val = data
+                elif task == SlaveCommand.GET_UPDATE_POLICY:
                     if not isinstance(code_, CouplingInterface):
                         raise TypeError(
-                            f"The requested panel is not associated to an IcocoInterface, found class {type(code_)}."
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
                         )
-                    set_return = code_.setInputDoubleValue(name=name, val=val)
+                    set_return = code_.update_policy
                     q_returns.put(set_return)
+
+                elif task == SlaveCommand.SET_UPDATE_POLICY:
+                    if not isinstance(code_, CouplingInterface):
+                        raise TypeError(
+                            f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        )
+                    code_.update_policy = data
+                    q_returns.put("OK")
 
                 elif task == SlaveCommand.CUSTOM:
                     function_name, arguments = data
@@ -723,46 +773,7 @@ class ComputeSlave:
             ]
         )
 
-    #   ICOCOInterface functions
-    def getInputMEDDoubleFieldTemplate(
-        self, fieldName: str
-    ) -> "medcoupling.MEDCouplingFieldDouble":
-        """Returns the med template in which cast the field set.
-
-        Parameters
-        ----------
-        fieldName: str
-            Field name
-        """
-        return self.__get_function([SlaveCommand.GET_INPUT_MED_DOUBLEFIELD_TEMPLATE, fieldName])
-
-    def setInputMEDDoubleField(
-        self, fieldName: str, aField: "medcoupling.MEDCouplingFieldDouble"
-    ):
-        """Updates a field in the interface.
-
-        Parameters
-        ----------
-        fieldName: str
-            Field name
-        aField : medcoupling.MEDCouplingFieldDouble
-            New field value
-        """
-        return self.__get_function([SlaveCommand.SET_INPUT_MED_DOUBLEFIELD, [fieldName, aField]])
-
-    def setInputDoubleValue(self, name: str, val: float):
-        """Set the current time in an interface to associate to the received value.
-
-        Parameters
-        ----------
-        name : str
-            Name associated to the set value
-        time : float
-            Current time
-        """
-        return self.__get_function([SlaveCommand.SET_INPUT_DOUBLE_VALUE, [name, val]])
-
-    def setTime(self, time_: float):
+    def set_time(self, time_: float):
         """Set the current time in an interface to associate to the received value.
 
         Parameters
@@ -771,6 +782,99 @@ class ComputeSlave:
             Current time
         """
         return self.__get_function([SlaveCommand.SET_TIME, [time_]])
+
+    #   CouplingInterface functions
+    def update_data(self, key: str, data: Any):
+        """Replaces the interface data by the current value
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        return self.__get_function([SlaveCommand.UPDATE_DATA, [key, data]])
+
+    def append_data(self, key: str, data: Any):
+        """Stores the data and associates it to the current time.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        return self.__get_function([SlaveCommand.APPEND_DATA, [key, data]])
+
+    def update_mesh(self, key: str, data: Any):
+        """Replaces the interface data and mesh by the current value
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        return self.__get_function([SlaveCommand.UPDATE_MESH, [key, data]])
+
+    def append_mesh(self, key: str, data: Any):
+        """Stores the data and mesh and associate them to the current time.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        return self.__get_function([SlaveCommand.APPEND_MESH, [key, data]])
+
+    def get_template(self, name: str):
+        """Returns the template for the C3PO getOutputxxxFieldTemplate functions
+
+        Parameters
+        ----------
+        name : str
+            Field name
+        """
+        return self.__get_function([SlaveCommand.GET_TEMPLATE, name])
+
+    def set_template(self, name: str, template: Any):
+        """Sets the template returned by C3PO getOutputxxxFieldTemplate functions
+
+        Parameters
+        ----------
+        name : str
+            Field name
+        template : Any
+            Object to set as template
+        """
+        return self.__get_function([SlaveCommand.SET_TEMPLATE, [name, template]])
+
+    @property
+    def update_policy(self):
+        """Returns the update_policy attribute from the interface
+
+        Returns
+        -------
+        Any
+            The update_policy value
+        """
+        return self.__get_function([SlaveCommand.GET_UPDATE_POLICY, None])
+
+    @update_policy.setter
+    def update_policy(self, value):
+        """Sets the update_policy attribute on the interface
+
+        Parameters
+        ----------
+        value : Any
+            The update_policy value to set
+        """
+        return self.__get_function([SlaveCommand.SET_UPDATE_POLICY, value])
 
     def duplicate(
         self,
