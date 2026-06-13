@@ -27,8 +27,7 @@ import medcoupling
 from scivianna.constants import MESH, GEOMETRY, CSV
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
-if profile_time:
-    import time
+import time
 
 with open(Path(scivianna.icon.__file__).parent / "salome.svg", "r") as f:
     icon_svg = f.read()
