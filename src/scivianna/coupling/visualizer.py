@@ -156,38 +156,27 @@ class GridStackProblem(LayoutProblem):
 
                 name = element.name
                 if isinstance(element, ValuePanel):
-                    slave_result = ComputeSlave(element.interface)
+                    slave_1d = ComputeSlave(element.interface)
 
-                    slave_result.set_time(0.)
-                    slave_result.update_data(name, np.nan)
+                    slave_1d.set_time(0.)
+                    slave_1d.update_data(name, np.nan)
 
-                    visualisation_panels[name] = Panel1D(slave_result, name)
+                    visualisation_panels[name] = Panel1D(slave_1d, name)
 
                 elif isinstance(element, FieldPanel):
                     element: FieldPanel
 
-                    slave_result = ComputeSlave(element.interface)
-                    slave_result.set_time(0.)
-                    slave_result.update_policy = element.update_policy
+                    slave_2d = ComputeSlave(element.interface)
+                    slave_2d.set_time(0.)
+                    slave_2d.update_policy = element.update_policy
 
                     if element.template is not None:
                         for template_name, value in element.template:
-                            slave_result.set_template(template_name, value)
-                    # mesh = mc.ReadMeshFromFile(str(element.mesh))
-                    # self._meshes[name] = mesh
-
-                    # field = self.get_field_template(mesh=mesh, name=name)
-                    # field_path = (
-                    #     self._working_directory / f"field_{name.replace(' ', '_')}.med"
-                    # )
-                    # mc.WriteField(str(field_path), field, True)
-                    print(name)
-                    visualisation_panels[name] = Panel2D(slave_result, name=name)
-                    # visualisation_panels[name] = get_med_panel(
-                    #     str(field_path), title=name
-                    # )
-                    # visualisation_panels[name].set_field(name)
-
+                            slave_2d.set_template(template_name, value)
+                            
+                    visualisation_panels[name] = Panel2D(slave_2d, name=name)
+                    if element.template is not None:
+                        visualisation_panels[name].set_field(element.template[-1][0])
                 else:
                     raise
 

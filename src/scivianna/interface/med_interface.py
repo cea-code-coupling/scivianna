@@ -352,10 +352,6 @@ This extension allows defining the medcoupling field display parameters.
 
 
 class MEDInterface(Geometry2DPolygon, CouplingInterface):
-
-    polygons: List[PolygonElement]
-    """Polygons computed at the previous iteration"""
-
     file_path: str
     """MEDCoupling .med file path saved to read MedCouplingFields later."""
 
@@ -374,8 +370,8 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
     fields: Dict[str, List[Tuple[np.ndarray, float]]]
     """Dictionnary containing the list of (field_np_array, time) for each read field."""
 
-    cell_dict: Dict[int, int]
-    """Dictionnary associating the 2D mesh cells to the 3D mesh cells"""
+    cell_dicts: Dict[int, int]
+    """Dictionary with caller as key storing the cell_dict for each caller"""
 
     templates: Dict[str, medcoupling.MEDCouplingFieldDouble]
 
@@ -400,8 +396,6 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         """Dictionary of field name to list of (np_array, time) tuples"""
         self.fields_iterations = {}
         """Dictionnary containing the med file available (iter, order) couples"""
-        self.cell_dict = {}
-        """Dictionnary associating the 2D mesh cells to the 3D mesh cells (deprecated, use cell_dicts per caller)"""
         self.cell_dicts = {}
         """Dictionary with caller as key storing the cell_dict for each caller"""
         self.last_computed_frame = {}
@@ -456,6 +450,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                         ] = [tuple(iteration)]
 
             mesh_data = medcoupling.ReadMeshFromFile(file_path, 0)
+            
             self.mesh = [(mesh_data, 0.0)]
 
             if profile_time:
@@ -463,8 +458,8 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         else:
             raise ValueError(f"File label '{file_label}' not implemented")
 
-    def _get_mesh_at_time(self, time: float) -> medcoupling.MEDCouplingUMesh:
-        """Returns the mesh at the specified time. If not found, returns the closest time's mesh.
+    def _get_mesh_at_time(self, time: float) -> Tuple[medcoupling.MEDCouplingUMesh, float]:
+        """Returns the mesh with the highest time below the specified time. If not found, return the last mesh.
         
         Parameters
         ----------
@@ -473,22 +468,22 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             
         Returns
         -------
-        medcoupling.MEDCouplingUMesh
-            Mesh at the specified time
+        Tuple[medcoupling.MEDCouplingUMesh, float]
+            Mesh and its associated time
         """
         if len(self.mesh) == 0:
             return None
         
         # Try to find exact time match
         for m, t in self.mesh:
-            if abs(t - time) < 1e-10:
-                return m
+            if t >= time:
+                return m, t
         
         # If no exact match, return the closest time (or first mesh)
-        return self.mesh[0][0]
+        return self.mesh[-1]
 
-    def _get_field_at_time(self, value_label: str, time: float) -> np.ndarray:
-        """Returns the field data at the specified time.
+    def _get_field_at_time(self, value_label: str, time: float) -> Tuple[np.ndarray, float]:
+        """Returns the field data with the highest time below the specified time. If not found, return the last data.
         
         Parameters
         ----------
@@ -499,19 +494,19 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             
         Returns
         -------
-        np.ndarray
-            Field data at the specified time
+        Tuple[np.ndarray, float]
+            Field data and its associated time
         """
         if value_label not in self.fields or len(self.fields[value_label]) == 0:
             return None
         
         # Try to find exact time match
         for arr, t in self.fields[value_label]:
-            if abs(t - time) < 1e-10:
-                return arr
+            if t >= time:
+                return arr, t
         
         # If no exact match, return the last (most recent) data
-        return self.fields[value_label][-1][0]
+        return self.fields[value_label][-1]
 
     def compute_2D_data(
         self,
@@ -558,15 +553,6 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         bool
             Were the polygons updated compared to the past call
         """
-        if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*u, *v, w_value]
-        ) and (caller in self.data):
-            print("Skipping polygon computation.")
-            return self.data[caller], False
-
-        if profile_time:
-            start_time = time.time()
-
         # Get time from options, default to 0 if absent
         time = options.get("time", 0.0)
         
@@ -574,7 +560,17 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             self.data[caller] = Data2D.from_polygon_list([])
             return self.data[caller], True
         
-        current_mesh = self._get_mesh_at_time(time)
+        current_mesh, mesh_time = self._get_mesh_at_time(time)
+
+        if (caller in self.last_computed_frame) and (
+            self.last_computed_frame.get(caller) == [*u, *v, w_value, mesh_time]
+        ) and (caller in self.data):
+            print("Skipping polygon computation.")
+            return self.data[caller], False
+
+        if profile_time:
+            start_time = time.time()
+        
         mesh_dimension = current_mesh.getMeshDimension()
 
         use_cell_id = True
@@ -671,7 +667,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                 f"Gathering cells id time: {time.time() - start_time} using cell id {use_cell_id}"
             )
 
-        self.last_computed_frame[caller] = [*u, *v, w_value]
+        self.last_computed_frame[caller] = [*u, *v, w_value, mesh_time]
         self.data[caller] = Data2D.from_polygon_list(polygons)
         return self.data[caller], True
 
@@ -685,8 +681,8 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         List[str]
             List of fields names
         """
-        labels = list(self.fields_iterations.keys()) + [MESH]
-        return labels
+        labels = list(self.fields_iterations.keys()) + [MESH] + list(self.templates.keys())
+        return list(set(labels))
 
     def get_value_dict(
         self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
@@ -707,16 +703,16 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         Dict[Union[int,str], str]
             Field value for each requested cell names
         """
-        print("Options : ", options)
-        
         if profile_time:
             start_time = time.time()
+
         if value_label == MESH:
             return {str(v): np.nan for v in cells}
 
         if "Iteration" not in options:
             print(f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}")
             options["Iteration"] = self.fields_iterations[value_label][0][0]
+
         if "Order" not in options:
             print(f"Order not found in medcoupling option, setting {self.fields_iterations[value_label][0][1]}")
             options["Order"] = self.fields_iterations[value_label][0][1]
@@ -726,13 +722,14 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
 
         field_np_array = None
 
+        # Array already loaded in fields
         if value_label in self.fields and len(self.fields[value_label]) > 0:
             # Get field data at specified time
-            field_np_array = self._get_field_at_time(value_label, time)
+            field_np_array, _ = self._get_field_at_time(value_label, time)
+
+        # Loading it if available
         else:
             print(f"Reading MEDCouplingFieldDouble in {self.file_path}")
-            # print("Checking", value_label, "in", self.fields_iterations, field in self.fields_iterations.keys())
-
             if value_label in self.fields_iterations:
                 # if "Iteration" in options and "Order" in options and (options["Iteration"], options["Order"]) in self.fields_iterations[value_label]:
                 if True:
@@ -762,7 +759,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                 self.fields[value_label] = [(field_np_array, time)]
 
         if field_np_array is not None:
-            caller_cell_dict = self.cell_dicts.get(caller, self.cell_dict)
+            caller_cell_dict = self.cell_dicts.get(caller, dict(zip(cells, cells)))
             indexes = np.array(list(caller_cell_dict.values())).astype(int)
             values = field_np_array[indexes[np.array(cells).astype(int)].tolist()]
 
@@ -772,7 +769,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                 print(f"Get value dict time: {time.time() - start_time}")
             return value_dict
 
-        # Allowing the field not to be defined at start
+        # Allowing the field not to be defined at start, in which case we return only the mesh
         if "time" in options:
             return {str(v): np.nan for v in cells}
         
@@ -806,7 +803,10 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         List[Tuple[str, str]]
             List of (file label, description)
         """
-        return [(GEOMETRY, "MED file."), (CSV, "CSV result file.")]
+        return [
+            (GEOMETRY, "MED file."), 
+            (CSV, "CSV result file.")
+        ]
 
     def set_time(self, time: float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.
@@ -830,19 +830,12 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         """
         if isinstance(data, medcoupling.MEDCouplingFieldDouble):
             field_array: medcoupling.DataArrayDouble = data.getArray()
-            mesh = data.getMesh()
             
             # Replace the last entry for this key, or add new one at time 0
             if key in self.fields and len(self.fields[key]) > 0:
                 self.fields[key][-1] = (field_array.toNumPyArray(), self.current_time)
             else:
-                self.fields[key] = [(field_array.toNumPyArray(), self.current_time)]
-            
-            # Replace mesh at last time step or add at time 0
-            if len(self.mesh) > 0:
-                self.mesh[-1] = (mesh, self.current_time)
-            else:
-                self.mesh = [(mesh, self.current_time)]
+                self.fields[key] = [(field_array.toNumPyArray(), 0.)]
 
     def append_data(self, key: str, data: Any):
         """Stores the data and associates it to the current time.
@@ -857,22 +850,11 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         """
         if isinstance(data, medcoupling.MEDCouplingFieldDouble):
             field_array: medcoupling.DataArrayDouble = data.getArray()
-            mesh = data.getMesh()
             
             # Append new entry for this key
             if key not in self.fields:
                 self.fields[key] = []
             self.fields[key].append((field_array.toNumPyArray(), self.current_time))
-            
-            # Store mesh at this time step (replace if same time exists, else append)
-            mesh_found = False
-            for i, (m, t) in enumerate(self.mesh):
-                if t == self.current_time:
-                    self.mesh[i] = (mesh, self.current_time)
-                    mesh_found = True
-                    break
-            if not mesh_found:
-                self.mesh.append((mesh, self.current_time))
 
     def update_mesh(self, key: str, data: Any):
         """Replaces the interface data and mesh by the current value.
@@ -897,9 +879,9 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             
             # Replace mesh at last time step or add at time 0
             if len(self.mesh) > 0:
-                self.mesh[-1] = (mesh, self.current_time)
+                self.mesh[-1][0] = (mesh, self.current_time)
             else:
-                self.mesh = [(mesh, self.current_time)]
+                self.mesh = [(mesh, 0.)]
 
     def append_mesh(self, key: str, data: Any):
         """Stores the data and mesh and associate them to the current time.
@@ -921,15 +903,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                 self.fields[key] = []
             self.fields[key].append((field_array.toNumPyArray(), self.current_time))
             
-            # Store mesh at this time step (replace if same time exists, else append)
-            mesh_found = False
-            for i, (m, t) in enumerate(self.mesh):
-                if t == self.current_time:
-                    self.mesh[i] = (mesh, self.current_time)
-                    mesh_found = True
-                    break
-            if not mesh_found:
-                self.mesh.append((mesh, self.current_time))
+            self.mesh.append((mesh, self.current_time))
 
     def get_template(self, name: str):
         """Returns the template for the C3PO getOutputxxxFieldTemplate functions
@@ -967,6 +941,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         """
         # Templates are not used with MEDInterface, pass silently
         self.templates[name] = template
+        self.read_file(template, GEOMETRY)
 
     def get_iterations(self,) -> Dict[str, List[Tuple[int, int]]]:
         """Returns the fields iterations
@@ -997,7 +972,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         if len(self.mesh) == 0:
             return ((0., 0.), (0., 0.), (0., 0.))
         
-        mesh = self._get_mesh_at_time(time)
+        mesh, mesh_time = self._get_mesh_at_time(time)
         if mesh is None:
             return ((0., 0.), (0., 0.), (0., 0.))
         return mesh.getBoundingBox()

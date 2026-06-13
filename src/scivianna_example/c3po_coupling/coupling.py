@@ -25,10 +25,9 @@ def get_panel(_):
                 FieldPanel(
                     name = "Field value",
                     interface = MEDInterface,
-                    update_policy = UpdatePolicy.UPDATE_DATA,
+                    update_policy = UpdatePolicy.APPEND_DATA,
                     template = [
                         ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
-                        ("Mesh", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
                     ]
                 ),
                 ValuePanel(
