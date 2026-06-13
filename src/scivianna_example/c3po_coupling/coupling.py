@@ -4,14 +4,19 @@ from c3po.physicsDrivers.ICOCODriver import ICOCODriver
 import c3po
 
 import scivianna
-import scivianna.interface
 from scivianna_example.c3po_coupling.fake_driver import DecreasingFieldProblem
 from scivianna.coupling.visualizer import VisualizerData, FieldPanel, ValuePanel, get_grid_stack_problem, UpdatePolicy
 
 from scivianna.interface.med_interface import MEDInterface
 from scivianna.interface.time_dataframe import TimeDataFrame
 
-def get_panel(_):
+def get_panel(
+        working_directory: Path = Path("./results"),
+        computation_time = .01, 
+        use_server = True,
+        show = False,
+        *args, **kwargs
+    ):
     # Building of objects driving codes
     fieldDriver = DecreasingFieldProblem(
         str(Path(scivianna.__file__).parent / "input_file" / "power.med")
@@ -40,12 +45,12 @@ def get_panel(_):
         title="C3PO coupling demo",
     )
 
-    working_dir = Path("./results")
-    os.makedirs(working_dir, exist_ok=True)
+    os.makedirs(working_directory, exist_ok=True)
     visu_problem, visu_data_file = get_grid_stack_problem(
-        working_directory = working_dir, 
+        working_directory = working_directory, 
         data_to_view = visualizer_data,
-        use_server = False
+        use_server = use_server,
+        show = show
     )
     myVIZDriver = ICOCODriver(visu_problem)
     myVIZDriver.setDataFile(visu_data_file)
@@ -79,9 +84,6 @@ def get_panel(_):
             self._exchangers["PHY_2_VIZ"].exchange()
             power = self._physicsDrivers["PHY"].getOutputDoubleValue("MAX")
             self._physicsDrivers["VISU"].solve()
-            print(
-                "time =", self._physicsDrivers["VISU"].presentTime(), " power = ", power
-            )
             if power > self.maxPower:
                 self.maxPower = power
             return self.getSolveStatus()
@@ -103,10 +105,10 @@ def get_panel(_):
     # Transient
     transientCoupler.maxPower = 0.0
     transientCoupler.setStationaryMode(False)
-    transientCoupler.solveTransient(0.03)
+    transientCoupler.solveTransient(computation_time)
 
     myVIZDriver.term()
 
 
 if __name__ == "__main__":
-    get_panel(None)
+    get_panel()

@@ -43,7 +43,7 @@ The process threads structure of a coupling with the visualiser works as follow:
                 -   The C3PO Thread will set a boolean to mark the need for an update;
                 -   At each periodic task, if the boolean is at True, the Visualizer thread refreshes the geometry
 """
-
+from pathlib import Path
 from typing import List, Tuple
 
 import medcoupling  # type: ignore
@@ -57,6 +57,7 @@ from scivianna.enums import UpdatePolicy
 from scivianna.interface.generic_interface import CouplingInterface
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.panel_1d import Panel1D
+from scivianna.utils.serialization import save_gridstack_to_zip
 
 
 class Value:
@@ -67,11 +68,13 @@ class Value:
 
 class LayoutProblem(Problem):
     panel: GenericLayout
+    _working_directory: Path
 
     def __init__(
         self, 
         layout: GenericLayout, 
-        title="C3PO Coupling visualizer"
+        title="C3PO Coupling visualizer",
+        show_server: bool = True
     ):
         self.layout = layout
 
@@ -83,6 +86,7 @@ class LayoutProblem(Problem):
 
         self.data_file_path = None
         self.title = title
+        self.show_server = show_server
 
     def setDataFile(self, datafile: str) -> None:
         """(Optional) Provide the relative path of a data file to be used by the code.
@@ -134,12 +138,12 @@ class LayoutProblem(Problem):
         port = sock.getsockname()[1]
         sock.close()
 
-        pn.serve(
+        self.server = pn.serve(
             self.layout.main_frame,
             address=ip_adress,
             websocket_origin=f"{ip_adress}:{port}",
             port=port,
-            # show = False,
+            show = self.show_server,
             threaded=True,
             title=self.title,
         )
@@ -170,6 +174,15 @@ class LayoutProblem(Problem):
         self.time = 0.0
         self._up_rate = 1
         self._up_skipped = 0
+
+        if self._working_directory is not None:
+            save_gridstack_to_zip(self.layout, Path(self._working_directory) / "save_layout")
+
+        for panel in self.layout.visualisation_panels.values():
+            print(f"Terminating panel {panel.panel_name}")
+            panel.get_slave().terminate()
+        
+        self.server.stop()
 
     def presentTime(self) -> float:
         """(Mandatory) Return the current time of the simulation.

@@ -1009,7 +1009,8 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                     self.cell_dicts,
                     self.last_computed_frame,
                     self.data,
-                    self.current_time
+                    self.current_time,
+                    self.templates
                 )
             else:
                 data = (
@@ -1069,7 +1070,8 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                     self.cell_dicts,
                     self.last_computed_frame,
                     self.data,
-                    self.current_time
+                    self.current_time,
+                    self.templates
                 ) = data[5:]
 
             else:

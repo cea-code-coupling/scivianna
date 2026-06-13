@@ -137,117 +137,117 @@ class TestTimeDataFrame:
         )
         assert isinstance(result, pd.Series)
 
-    # ---- setTime tests ----
+    # ---- set_time tests ----
 
     def test_set_time_existing(self, time_dataframe_with_data):
-        """Test setTime with an existing time index."""
-        time_dataframe_with_data.setTime(1.0)
+        """Test set_time with an existing time index."""
+        time_dataframe_with_data.set_time(1.0)
         assert time_dataframe_with_data.time == 1.0
         # Should not add a new row since time exists
         assert len(time_dataframe_with_data.df) == 3
 
     def test_set_time_new(self, time_dataframe_with_data):
-        """Test setTime with a new time index adds a row."""
-        time_dataframe_with_data.setTime(3.0)
+        """Test set_time with a new time index adds a row."""
+        time_dataframe_with_data.set_time(3.0)
         assert time_dataframe_with_data.time == 3.0
         # Should add a new row with NaN values
         assert len(time_dataframe_with_data.df) == 4
         assert time_dataframe_with_data.df.loc[3.0].isna().all()
 
     def test_set_time_from_zero(self, time_dataframe):
-        """Test setTime on empty dataframe creates first row."""
-        time_dataframe.setTime(5.0)
+        """Test set_time on empty dataframe creates first row."""
+        time_dataframe.set_time(5.0)
         assert time_dataframe.time == 5.0
         assert len(time_dataframe.df) == 1
         # Row should have NaN values (no columns yet)
         assert time_dataframe.df.empty or time_dataframe.df.loc[5.0].isna().all()
 
     def test_set_time_float_precision(self, time_dataframe_with_data):
-        """Test setTime handles float precision correctly."""
-        time_dataframe_with_data.setTime(1.0000001)
+        """Test set_time handles float precision correctly."""
+        time_dataframe_with_data.set_time(1.0000001)
         assert time_dataframe_with_data.time == 1.0000001
         # Should add a new row since 1.0000001 != 1.0 in index
         assert len(time_dataframe_with_data.df) == 4
 
     def test_set_time_negative(self, time_dataframe_with_data):
-        """Test setTime with negative time value."""
-        time_dataframe_with_data.setTime(-1.0)
+        """Test set_time with negative time value."""
+        time_dataframe_with_data.set_time(-1.0)
         assert time_dataframe_with_data.time == -1.0
         assert len(time_dataframe_with_data.df) == 4
 
-    # ---- setInputDoubleValue tests ----
+    # ---- append_data tests ----
 
-    def test_set_input_double_value_new_column(self, time_dataframe_with_data):
-        """Test setInputDoubleValue creates new column if field doesn't exist."""
-        time_dataframe_with_data.setInputDoubleValue("new_field", 42.0)
+    def test_append_data_new_column(self, time_dataframe_with_data):
+        """Test append_data creates new column if field doesn't exist."""
+        time_dataframe_with_data.append_data("new_field", 42.0)
         assert "new_field" in time_dataframe_with_data.df.columns
         assert time_dataframe_with_data.df.loc[1.0, "new_field"] == 42.0
 
-    def test_set_input_double_value_existing_column(self, time_dataframe_with_data):
-        """Test setInputDoubleValue updates existing column at current time."""
+    def test_append_data_existing_column(self, time_dataframe_with_data):
+        """Test append_data updates existing column at current time."""
         # Initial value
         initial_val = time_dataframe_with_data.df.loc[1.0, "temperature"]
         
-        time_dataframe_with_data.setInputDoubleValue("temperature", 999.0)
+        time_dataframe_with_data.append_data("temperature", 999.0)
         
         assert time_dataframe_with_data.df.loc[1.0, "temperature"] == 999.0
 
-    def test_set_input_double_value_nan_initial(self, time_dataframe_with_data):
+    def test_append_data_nan_initial(self, time_dataframe_with_data):
         """Test that new columns are initialized with NaN values."""
-        time_dataframe_with_data.setInputDoubleValue("computed", 10.0)
+        time_dataframe_with_data.append_data("computed", 10.0)
         
         # Existing rows should have NaN for the new field (except current time row)
         assert pd.isna(time_dataframe_with_data.df.loc[0.0, "computed"])
         assert time_dataframe_with_data.df.loc[1.0, "computed"] == 10.0
         assert pd.isna(time_dataframe_with_data.df.loc[2.0, "computed"])
 
-    def test_set_input_double_value_multiple_times(self, time_dataframe_with_data):
-        """Test setInputDoubleValue can be called multiple times."""
-        time_dataframe_with_data.setInputDoubleValue("counter", 1)
+    def test_append_data_multiple_times(self, time_dataframe_with_data):
+        """Test append_data can be called multiple times."""
+        time_dataframe_with_data.append_data("counter", 1)
         assert time_dataframe_with_data.df.loc[1.0, "counter"] == 1
         
-        time_dataframe_with_data.setInputDoubleValue("counter", 2)
+        time_dataframe_with_data.append_data("counter", 2)
         assert time_dataframe_with_data.df.loc[1.0, "counter"] == 2
 
-    def test_set_input_double_value_zero(self, time_dataframe_with_data):
-        """Test setInputDoubleValue with zero value."""
-        time_dataframe_with_data.setInputDoubleValue("zero_field", 0.0)
+    def test_append_data_zero(self, time_dataframe_with_data):
+        """Test append_data with zero value."""
+        time_dataframe_with_data.append_data("zero_field", 0.0)
         assert time_dataframe_with_data.df.loc[1.0, "zero_field"] == 0.0
 
-    def test_set_input_double_value_negative(self, time_dataframe_with_data):
-        """Test setInputDoubleValue with negative value."""
-        time_dataframe_with_data.setInputDoubleValue("neg_field", -5.5)
+    def test_append_data_negative(self, time_dataframe_with_data):
+        """Test append_data with negative value."""
+        time_dataframe_with_data.append_data("neg_field", -5.5)
         assert time_dataframe_with_data.df.loc[1.0, "neg_field"] == -5.5
 
-    def test_set_input_double_value_large(self, time_dataframe_with_data):
-        """Test setInputDoubleValue with very large value."""
+    def test_append_data_large(self, time_dataframe_with_data):
+        """Test append_data with very large value."""
         large_val = 1e15
-        time_dataframe_with_data.setInputDoubleValue("large_field", large_val)
+        time_dataframe_with_data.append_data("large_field", large_val)
         assert time_dataframe_with_data.df.loc[1.0, "large_field"] == large_val
 
-    def test_set_input_double_value_small(self, time_dataframe_with_data):
-        """Test setInputDoubleValue with very small value."""
+    def test_append_data_small(self, time_dataframe_with_data):
+        """Test append_data with very small value."""
         small_val = 1e-15
-        time_dataframe_with_data.setInputDoubleValue("small_field", small_val)
+        time_dataframe_with_data.append_data("small_field", small_val)
         assert abs(time_dataframe_with_data.df.loc[1.0, "small_field"] - small_val) < 1e-20
 
-    def test_set_input_double_value_nonexistent_field_error(self, time_dataframe_with_data):
-        """Test setInputDoubleValue creates column for unknown field (no error)."""
+    def test_append_data_nonexistent_field_error(self, time_dataframe_with_data):
+        """Test append_data creates column for unknown field (no error)."""
         # This should NOT raise an error - it creates a new column
-        time_dataframe_with_data.setInputDoubleValue("unknown_field", 1.0)
+        time_dataframe_with_data.append_data("unknown_field", 1.0)
         assert "unknown_field" in time_dataframe_with_data.df.columns
 
-    def test_set_input_double_value_preserves_index(self, time_dataframe_with_data):
-        """Test setInputDoubleValue preserves the dataframe index."""
+    def test_append_data_preserves_index(self, time_dataframe_with_data):
+        """Test append_data preserves the dataframe index."""
         original_index = time_dataframe_with_data.df.index.copy()
-        time_dataframe_with_data.setInputDoubleValue("new", 1.0)
+        time_dataframe_with_data.append_data("new", 1.0)
         pd.testing.assert_index_equal(time_dataframe_with_data.df.index, original_index)
 
-    def test_set_input_double_value_multiple_columns(self, time_dataframe_with_data):
-        """Test setInputDoubleValue with multiple different fields."""
-        time_dataframe_with_data.setInputDoubleValue("field_a", 1.0)
-        time_dataframe_with_data.setInputDoubleValue("field_b", 2.0)
-        time_dataframe_with_data.setInputDoubleValue("field_c", 3.0)
+    def test_append_data_multiple_columns(self, time_dataframe_with_data):
+        """Test append_data with multiple different fields."""
+        time_dataframe_with_data.append_data("field_a", 1.0)
+        time_dataframe_with_data.append_data("field_b", 2.0)
+        time_dataframe_with_data.append_data("field_c", 3.0)
         
         assert "field_a" in time_dataframe_with_data.df.columns
         assert "field_b" in time_dataframe_with_data.df.columns
@@ -258,29 +258,29 @@ class TestTimeDataFrame:
 
     # ---- Integration tests ----
 
-    def test_set_time_then_set_input_double_value(self, time_dataframe):
-        """Test workflow: setTime followed by setInputDoubleValue."""
-        time_dataframe.setTime(1.0)
-        time_dataframe.setInputDoubleValue("temperature", 300.0)
+    def test_set_time_then_append_data(self, time_dataframe):
+        """Test workflow: set_time followed by append_data."""
+        time_dataframe.set_time(1.0)
+        time_dataframe.append_data("temperature", 300.0)
         
         assert time_dataframe.time == 1.0
         assert "temperature" in time_dataframe.df.columns
         assert time_dataframe.df.loc[1.0, "temperature"] == 300.0
 
-    def test_set_time_new_then_set_input_double_value(self, time_dataframe):
-        """Test workflow: setTime with new value followed by setInputDoubleValue."""
-        time_dataframe.setTime(5.0)
-        time_dataframe.setInputDoubleValue("pressure", 101325.0)
+    def test_set_time_new_then_append_data(self, time_dataframe):
+        """Test workflow: set_time with new value followed by append_data."""
+        time_dataframe.set_time(5.0)
+        time_dataframe.append_data("pressure", 101325.0)
         
         assert time_dataframe.time == 5.0
         assert "pressure" in time_dataframe.df.columns
         assert time_dataframe.df.loc[5.0, "pressure"] == 101325.0
 
     def test_multiple_time_updates(self, time_dataframe):
-        """Test multiple setTime calls at different times."""
+        """Test multiple set_time calls at different times."""
         for t in [0.0, 1.0, 2.0, 3.0]:
-            time_dataframe.setTime(t)
-            time_dataframe.setInputDoubleValue("temp", float(t * 100))
+            time_dataframe.set_time(t)
+            time_dataframe.append_data("temp", float(t * 100))
         
         assert len(time_dataframe.df) == 4
         assert time_dataframe.df.loc[0.0, "temp"] == 0.0
@@ -290,13 +290,13 @@ class TestTimeDataFrame:
 
     def test_dataframe_structure_after_operations(self, time_dataframe):
         """Test dataframe maintains correct structure after multiple operations."""
-        time_dataframe.setTime(1.0)
-        time_dataframe.setInputDoubleValue("a", 1.0)
-        time_dataframe.setInputDoubleValue("b", 2.0)
+        time_dataframe.set_time(1.0)
+        time_dataframe.append_data("a", 1.0)
+        time_dataframe.append_data("b", 2.0)
         
-        time_dataframe.setTime(2.0)
-        time_dataframe.setInputDoubleValue("a", 3.0)
-        time_dataframe.setInputDoubleValue("c", 4.0)
+        time_dataframe.set_time(2.0)
+        time_dataframe.append_data("a", 3.0)
+        time_dataframe.append_data("c", 4.0)
         
         assert set(time_dataframe.df.columns) == {'a', 'b', 'c'}
         assert len(time_dataframe.df) == 2
@@ -305,17 +305,17 @@ class TestTimeDataFrame:
         assert pd.isna(time_dataframe.df.loc[1.0, 'c'])
 
     def test_get_labels_after_modifications(self, time_dataframe):
-        """Test get_labels reflects changes after setInputDoubleValue."""
+        """Test get_labels reflects changes after append_data."""
         initial_labels = time_dataframe.get_labels()
         assert initial_labels == []
         
-        time_dataframe.setInputDoubleValue("new_col", 1.0)
+        time_dataframe.append_data("new_col", 1.0)
         labels = time_dataframe.get_labels()
         assert labels == ['new_col']
 
     def test_set_time_with_empty_columns(self, time_dataframe):
-        """Test setTime when dataframe has no columns."""
-        time_dataframe.setTime(1.0)
+        """Test set_time when dataframe has no columns."""
+        time_dataframe.set_time(1.0)
         
         assert len(time_dataframe.df) == 1
         # With no columns, the row should still exist but be empty
@@ -397,17 +397,17 @@ class TestTimeDataFrameEdgeCases:
             assert len(result) == 1
             assert result.iloc[0] == float(i)
 
-    def test_set_input_double_value_with_special_column_names(self):
-        """Test setInputDoubleValue with special characters in column names."""
+    def test_append_data_with_special_column_names(self):
+        """Test append_data with special characters in column names."""
         from scivianna.interface.time_dataframe import TimeDataFrame
         td = TimeDataFrame()
         
         td.df = pd.DataFrame({'existing': [1.0]}, index=[0.0])
         td.time = 0.0
         
-        td.setInputDoubleValue("field with spaces", 2.0)
-        td.setInputDoubleValue("field-with-dashes", 3.0)
-        td.setInputDoubleValue("field.with.dots", 4.0)
+        td.append_data("field with spaces", 2.0)
+        td.append_data("field-with-dashes", 3.0)
+        td.append_data("field.with.dots", 4.0)
         
         assert "field with spaces" in td.df.columns
         assert "field-with-dashes" in td.df.columns

@@ -111,8 +111,8 @@ def get_serializable_data(
 
 
 class GridStackProblem(LayoutProblem):
-    def __init__(self, working_directory: Path):
-        super().__init__(layout=None)
+    def __init__(self, working_directory: Path, show_server: bool = True):
+        super().__init__(layout=None, show_server = show_server)
 
         self._working_directory = working_directory
 
@@ -258,7 +258,8 @@ class GridStackProblem(LayoutProblem):
 def get_grid_stack_problem(
         working_directory: Path, 
         data_to_view: VisualizerData,
-        use_server: bool = True
+        use_server: bool = True,
+        show: bool = True
     ) -> GridStackProblem:
     """Creates the visualisation objects from a working dir
 
@@ -270,6 +271,8 @@ def get_grid_stack_problem(
         Data to diplay
     use_server : bool
         Use a server to have the visualizer running on another process, by default True
+    show : bool
+        Display the server on start
 
     Returns
     -------
@@ -290,9 +293,10 @@ def get_grid_stack_problem(
 
         problem = ProblemClient(
             typeid=typeid, 
-            working_directory=working_directory
+            working_directory=working_directory,
+            show_server = show
         )  # pylint: disable=abstract-class-instantiated
     else:
-        problem = GridStackProblem(working_directory=working_directory)
+        problem = GridStackProblem(working_directory=working_directory, show_server = show)
 
     return problem, data_file
