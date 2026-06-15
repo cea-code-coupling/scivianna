@@ -77,9 +77,9 @@ This extension allows you run coupling simulations.
         self.run_button.on_click(self.request_recompute)
         self.time_slider.param.watch(self.request_recompute, "value")
 
-        self.curdoc = curdoc()
-
-        pn.state.curdoc = self.curdoc
+        if pn.state.curdoc is None:
+            self.curdoc = curdoc()
+            pn.state.curdoc = self.curdoc
 
         self.layout_param_card = pn.Column(
             self.run_button,
@@ -113,6 +113,7 @@ This extension allows you run coupling simulations.
         event : bool
             If the call is from a button press or release
         """
+        print(event)
         if event:
             if event.obj == self.run_button:
                 if self.layout.periodic_recompute_added:
@@ -122,6 +123,7 @@ This extension allows you run coupling simulations.
                     self.run_button.icon = "player-pause"
                     self.layout.add_periodic_update()
             else:
+                print("Requesting recompute")
                 self.layout.recompute()
 
     def provide_options(self):
@@ -131,6 +133,49 @@ This extension allows you run coupling simulations.
         return option_dict
     
     def add_time_value(self, value: float):
-        self.time_slider.options = self.time_slider.options + [round(value, 8)]
+        if not round(value, 8) in self.time_slider.options:
+            self.time_slider.options = self.time_slider.options + [round(value, 8)]
         if self.display_last.value:
             self.time_slider.value = round(value, 8)
+
+    def to_json(self) -> dict:
+        """Returns a dictionary with the information required to rebuild the extension.
+        
+        Returns
+        -------
+        dict
+            Information dictionary
+        """
+        return {
+            "time_slider_options": self.time_slider.options,
+            "time_slider_value": self.time_slider.value,
+            "display_last_value": self.display_last.value
+        }
+    
+    @classmethod
+    def from_json(cls, extension: "CouplingExtension", info_dict: dict) -> "CouplingExtension":
+        """Restores the extension from its information dict.
+        
+        Parameters
+        ----------
+        extension : CouplingExtension
+            Extension instance to restore
+        info_dict : dict
+            Dictionary containing extension state information
+            
+        Returns
+        -------
+        CouplingExtension
+            Restored extension
+        """
+        extension._restoring = True
+        try:
+            if "time_slider_options" in info_dict:
+                extension.time_slider.options = info_dict["time_slider_options"]
+            if "time_slider_value" in info_dict:
+                extension.time_slider.value = info_dict["time_slider_value"]
+            if "display_last_value" in info_dict:
+                extension.display_last.value = info_dict["display_last_value"]
+        finally:
+            extension._restoring = False
+        return extension

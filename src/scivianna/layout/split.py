@@ -72,7 +72,6 @@ class SplitLayout(GenericLayout):
         additional_interfaces: Dict[
             Union[str, GenericInterfaceEnum], Type[GenericInterface]
         ] = {},
-        add_run_button: bool = False,
     ):
         """VisualizationGridStack constructor
 
@@ -80,8 +79,6 @@ class SplitLayout(GenericLayout):
         ----------
         split_item : SplitItem
             Item defining the panels to display
-        add_run_button:bool = False
-            Add a run button to add an automatic update of the frames in the case of visualizer coupling.
 
         Raises
         ------
@@ -91,7 +88,7 @@ class SplitLayout(GenericLayout):
 
         self.split_item = split_item
 
-        super().__init__(self.get_panels_dict(split_item), additional_interfaces, add_run_button)
+        super().__init__(self.get_panels_dict(split_item), additional_interfaces)
 
         """
             Building interface
@@ -371,8 +368,7 @@ class SplitLayout(GenericLayout):
         cls, 
         file_path: Union[str, Path], 
         include_files: bool = True,
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
-        add_run_button: bool = False
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {}
     ) -> "SplitLayout":
         """Restores a SplitLayout from a zip file.
         
@@ -384,8 +380,6 @@ class SplitLayout(GenericLayout):
             If True, includes loaded files in the slave deserialization
         additional_interfaces : Dict = {}
             Additional interfaces to register
-        add_run_button : bool = False
-            Whether to add a run button for coupling simulations
             
         Returns
         -------
@@ -395,6 +389,5 @@ class SplitLayout(GenericLayout):
         return load_layout_from_zip(
             file_path, 
             include_files, 
-            additional_interfaces, 
-            add_run_button
+            additional_interfaces            
         )

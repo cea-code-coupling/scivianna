@@ -51,7 +51,6 @@ class GridStackLayout(GenericLayout):
         additional_interfaces: Dict[
             Union[str, GenericInterfaceEnum], Type[GenericInterface]
         ] = {},
-        add_run_button: bool = False,
     ):
         """VisualizationGridStack constructor
 
@@ -63,8 +62,6 @@ class GridStackLayout(GenericLayout):
             Dictionnary containing position in the gridstack along the horizontal axis
         bounds_y : Dict[str, Tuple[int]]
             Dictionnary containing position in the gridstack along the vertical axis
-        add_run_button:bool = False
-            Add a run button to add an automatic update of the frames in the case of visualizer coupling.
 
         Raises
         ------
@@ -77,7 +74,7 @@ class GridStackLayout(GenericLayout):
         self.bounds_x = bounds_x
         self.bounds_y = bounds_y
 
-        super().__init__(visualisation_panels, additional_interfaces, add_run_button)
+        super().__init__(visualisation_panels, additional_interfaces)
 
         size_x = max(max([x_range for x_range in bounds_x.values()]))
         size_y = max(max([y_range for y_range in bounds_y.values()]))
@@ -345,8 +342,7 @@ class GridStackLayout(GenericLayout):
         cls,
         file_path: Union[str, Path],
         include_files: bool = True,
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
-        add_run_button: bool = False
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {}
     ) -> "GridStackLayout":
         """
         Restores a GridStackLayout from a zip file.
@@ -359,8 +355,6 @@ class GridStackLayout(GenericLayout):
             If True, includes loaded files in the slave deserialization
         additional_interfaces : Dict = {}
             Additional interfaces to register
-        add_run_button : bool = False
-            Whether to add a run button for coupling simulations
             
         Returns
         -------
@@ -371,6 +365,5 @@ class GridStackLayout(GenericLayout):
             file_path,
             include_files=include_files,
             additional_interfaces=additional_interfaces,
-            add_run_button=add_run_button
         )
             

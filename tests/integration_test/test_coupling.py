@@ -28,8 +28,7 @@ def test_reload_coupling(cleanup):
     get_panel(computation_time = 0.001, use_server = False, working_directory=working_directory)
 
     layout = load_gridstack_from_zip(
-        working_directory / "save_layout.zip",
-        add_run_button=True
+        working_directory / "save_layout.zip"
     )
 
     for panel in layout.visualisation_panels.values():
@@ -37,13 +36,12 @@ def test_reload_coupling(cleanup):
 
 if __name__ == "__main__":
     get_panel(
-        computation_time = 0.001, 
+        computation_time = 0.002, 
         use_server = False, 
         working_directory=working_directory
     )
 
     layout = load_gridstack_from_zip(
-        working_directory / "save_layout.zip",
-        add_run_button = True
+        working_directory / "save_layout.zip"
     )
     _serve_panel(layout)

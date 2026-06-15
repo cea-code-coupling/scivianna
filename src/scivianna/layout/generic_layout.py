@@ -48,7 +48,6 @@ class GenericLayout:
         additional_interfaces: Dict[
             Union[str, GenericInterfaceEnum], Type[GenericInterface]
         ] = {},
-        add_run_button: bool = False,
     ):
         self.visualisation_panels = visualisation_panels
 
@@ -83,7 +82,7 @@ class GenericLayout:
 
         self.panels_to_recompute: List[str] = []
 
-        self.layout_extension = LayoutExtension(add_run_button, self, None, None, None)
+        self.layout_extension = LayoutExtension(self, None, None, None)
 
         self.button_columns: Dict[str, List[pmui.IconButton]] = {}
         self.side_bars: Dict[str, pn.Column] = {}

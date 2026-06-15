@@ -189,8 +189,7 @@ class GridStackProblem(LayoutProblem):
         self.layout = GridStackLayout(
             visualisation_panels, 
             bounds_x, 
-            bounds_y, 
-            add_run_button=True
+            bounds_y
         )
 
         self.layout.add_time_widget()

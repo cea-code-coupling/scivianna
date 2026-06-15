@@ -27,7 +27,8 @@ import medcoupling
 from scivianna.constants import MESH, GEOMETRY, CSV
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
-import time
+if profile_time:
+    import time
 
 with open(Path(scivianna.icon.__file__).parent / "salome.svg", "r") as f:
     icon_svg = f.read()
@@ -717,14 +718,15 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             options["Order"] = self.fields_iterations[value_label][0][1]
 
         # Get time from options, default to 0 if absent
-        time = options.get("time", 0.0)
+        coupling_time = options.get("time", 0.0)
+        print(f"Coupling time : {coupling_time}")
 
         field_np_array = None
 
         # Array already loaded in fields
         if value_label in self.fields and len(self.fields[value_label]) > 0:
             # Get field data at specified time
-            field_np_array, _ = self._get_field_at_time(value_label, time)
+            field_np_array, _ = self._get_field_at_time(value_label, coupling_time)
 
         # Loading it if available
         else:
@@ -755,7 +757,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
 
             if field_np_array is not None:
                 # Store as list of (array, time) tuples
-                self.fields[value_label] = [(field_np_array, time)]
+                self.fields[value_label] = [(field_np_array, coupling_time)]
 
         if field_np_array is not None:
             caller_cell_dict = self.cell_dicts.get(caller, dict(zip(cells, cells)))
@@ -765,7 +767,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             value_dict = dict(zip(np.array(cells).astype(str), values))
 
             if profile_time:
-                print(f"Get value dict time: {time.time() - start_time}")
+                print(f"Get value dict time: {coupling_time.time() - start_time}")
             return value_dict
 
         # Allowing the field not to be defined at start, in which case we return only the mesh

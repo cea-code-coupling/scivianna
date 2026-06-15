@@ -20,7 +20,6 @@ class LayoutExtension(Extension):
 
     def __init__(
         self,
-        add_run_button: bool,
         layout: "GenericLayout",
         slave: ComputeSlave,
         plotter: Plotter2D,
@@ -30,6 +29,8 @@ class LayoutExtension(Extension):
 
         Parameters
         ----------
+        layout : GenericLayout
+            Extension associated layout
         slave : ComputeSlave
             Slave computing the displayed data
         plotter : Plotter2D

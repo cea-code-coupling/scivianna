@@ -603,6 +603,7 @@ def save_layout_to_zip(
         layout_data = {
             "split_item": _serialize_split_item(layout.split_item),
             "current_frame": layout.current_frame,
+            "time_widget": layout.time_widget.to_json() if hasattr(layout, 'time_widget') else None,
             "panels": {}
         }
         
@@ -661,8 +662,7 @@ def save_layout_to_zip(
 def load_layout_from_zip(
     file_path: Union[str, Path],
     include_files: bool = True,
-    additional_interfaces: Dict[Union[str, Any], Type[GenericInterface]] = {},
-    add_run_button: bool = False
+    additional_interfaces: Dict[Union[str, Any], Type[GenericInterface]] = {}
 ) -> "SplitLayout":
     """
     Restores a SplitLayout from a zip file.
@@ -675,8 +675,6 @@ def load_layout_from_zip(
         If True, includes loaded files in the slave deserialization
     additional_interfaces : Dict = {}
         Additional interfaces to register
-    add_run_button : bool = False
-        Whether to add a run button for coupling simulations
         
     Returns
     -------
@@ -709,9 +707,16 @@ def load_layout_from_zip(
         # Create the layout instance
         layout = SplitLayout(
             split_item=split_item,
-            additional_interfaces=additional_interfaces,
-            add_run_button=add_run_button
+            additional_interfaces=additional_interfaces
         )
+        
+        # Restore time_widget if it was saved
+        time_widget_data = layout_data.get("time_widget")
+        if time_widget_data is not None:
+            from scivianna.extension.coupling import CouplingExtension
+            layout.time_widget = CouplingExtension(layout, None, None, None)
+            CouplingExtension.from_json(layout.time_widget, time_widget_data)
+            layout.gui.add_extension(layout.time_widget)
         
         # Set the current frame
         layout.set_to_frame(layout_data["current_frame"])
@@ -936,6 +941,7 @@ def save_gridstack_to_zip(
             "current_frame": layout.current_frame,
             "bounds_x": {k: list(v) for k, v in layout.bounds_x.items()},
             "bounds_y": {k: list(v) for k, v in layout.bounds_y.items()},
+            "time_widget": layout.time_widget.to_json() if hasattr(layout, 'time_widget') else None,
             "panels": {}
         }
         
@@ -1002,7 +1008,6 @@ def load_gridstack_from_zip(
     file_path: Union[str, Path],
     include_files: bool = True,
     additional_interfaces: Dict[Union[str, Any], Type[GenericInterface]] = {},
-    add_run_button: bool = False
 ) -> "GridStackLayout":
     """
     Restores a GridStackLayout from a zip file.
@@ -1015,8 +1020,6 @@ def load_gridstack_from_zip(
         If True, includes loaded files in the slave deserialization
     additional_interfaces : Dict = {}
         Additional interfaces to register
-    add_run_button : bool = False
-        Whether to add a run button for coupling simulations
         
     Returns
     -------
@@ -1094,9 +1097,16 @@ def load_gridstack_from_zip(
             visualisation_panels=restored_panels,
             bounds_x=bounds_x,
             bounds_y=bounds_y,
-            additional_interfaces=additional_interfaces,
-            add_run_button=add_run_button
+            additional_interfaces=additional_interfaces
         )
+        
+        # Restore time_widget if it was saved
+        time_widget_data = layout_data.get("time_widget")
+        if time_widget_data is not None:
+            from scivianna.extension.coupling import CouplingExtension
+            layout.time_widget = CouplingExtension(layout, None, None, None)
+            CouplingExtension.from_json(layout.time_widget, time_widget_data)
+            layout.gui.add_extension(layout.time_widget)
         
         # Set the current frame
         layout.set_to_frame(layout_data["current_frame"])
