@@ -78,6 +78,10 @@ setup(
             "coverage",
             "pytest-cov",
             "nbmake",
+        ],
+        "coupling": [
+            "salome-c3po",
+            "pydantic"
         ]
     },
 )
