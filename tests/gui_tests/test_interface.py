@@ -24,7 +24,7 @@ from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInt
 from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 from scivianna.enums import GeometryType, VisualizationMode
 
-from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV, XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA, X, Y
+from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV, XS, YS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA, X, Y
 
 from bokeh import events as bokeh_events
 
@@ -522,7 +522,7 @@ def get_cell_ids(panel: Panel2D):
 
 
 def get_cell_values(panel: Panel2D):
-    return panel.plotter.source_polygons.data[COMPO_NAMES]
+    return panel.plotter.source_polygons.data[CELL_VALUES]
 
 @pytest.mark.default
 def test_build_panel():

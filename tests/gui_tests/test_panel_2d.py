@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from scivianna.extension.field_selector import FieldSelector
-from scivianna.constants import MESH, MATERIAL, X, Y, XS, YS, COLORS, COMPO_NAMES, CELL_NAMES
+from scivianna.constants import MESH, MATERIAL, X, Y, XS, YS, COLORS, CELL_VALUES, CELL_NAMES
 from scivianna.utils.color_tools import interpolate_cmap_at_values
 import scivianna.utils
 

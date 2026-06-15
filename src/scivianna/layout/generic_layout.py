@@ -294,6 +294,14 @@ class GenericLayout:
         elif scivianna.utils._testing:
             self.async_update_data()
 
+    def recompute_all(
+        self,
+    ):
+        """Marks all panels to recompute, and calls the recompute function."""
+        for panel in self.visualisation_panels:
+            self.panels_to_recompute.append(panel)
+        self.recompute()
+
     @pn.io.hold()
     async def async_update_data(
         self,
@@ -388,6 +396,7 @@ class GenericLayout:
         """Adds a time management widget to the layout
         """
         self.time_widget = CouplingExtension(self, None, None, None)
+        self.time_widget.show_play_button = True
 
         self.gui.add_extension(self.time_widget)
 

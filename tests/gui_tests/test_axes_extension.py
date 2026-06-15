@@ -15,7 +15,7 @@ scivianna.utils._testing = True
 
 from scivianna.extension.axes import Axes
 from scivianna.enums import GeometryType
-from scivianna.constants import XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA
+from scivianna.constants import XS, YS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA
 from scivianna.data.data2d import Data2D
 
 from test_interface import make_panel_2d, panel_fixture

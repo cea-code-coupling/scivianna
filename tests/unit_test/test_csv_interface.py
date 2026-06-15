@@ -116,7 +116,7 @@ class TestCSVInterfaceInit:
         }
         path = create_csv_file("test.csv", data)
         try:
-            with pytest.raises(ValueError, match="Cell column was not found"):
+            with pytest.raises(ValueError, match="cell column was not found"):
                 CSVInterface(path)
         finally:
             os.unlink(path)

@@ -717,6 +717,9 @@ def load_layout_from_zip(
             layout.time_widget = CouplingExtension(layout, None, None, None)
             CouplingExtension.from_json(layout.time_widget, time_widget_data)
             layout.gui.add_extension(layout.time_widget)
+
+            for panel in layout.visualisation_panels.values():
+                panel.panel_coupling_extension = layout.time_widget
         
         # Set the current frame
         layout.set_to_frame(layout_data["current_frame"])
@@ -1107,6 +1110,9 @@ def load_gridstack_from_zip(
             layout.time_widget = CouplingExtension(layout, None, None, None)
             CouplingExtension.from_json(layout.time_widget, time_widget_data)
             layout.gui.add_extension(layout.time_widget)
+
+            for panel in layout.visualisation_panels.values():
+                panel.panel_coupling_extension = layout.time_widget
         
         # Set the current frame
         layout.set_to_frame(layout_data["current_frame"])

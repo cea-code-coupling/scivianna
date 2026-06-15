@@ -23,7 +23,7 @@ from bokeh import events
 
 import numpy as np
 
-from scivianna.constants import XS, YS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS, GEOMETRY, EDGE_ALPHA, FILL_ALPHA
+from scivianna.constants import XS, YS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, GEOMETRY, EDGE_ALPHA, FILL_ALPHA
 from scivianna.utils.color_tools import beautiful_color_maps
 
 import os
@@ -43,7 +43,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 COLORS: [],
                 EDGE_COLORS: [],
                 CELL_NAMES: [],
-                COMPO_NAMES: [],
+                CELL_VALUES: [],
             }
         )
 
@@ -262,7 +262,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 XS: xs,
                 YS: ys,
                 CELL_NAMES: data.cell_ids.tolist(),
-                COMPO_NAMES: data.cell_values.tolist(),
+                CELL_VALUES: data.cell_values.tolist(),
                 COLORS: np.array(data.cell_colors)[:, :-1].tolist(),
                 FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
                 EDGE_COLORS: np.array(data.cell_edge_colors)[:, :-1].tolist(),
@@ -273,7 +273,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 XS: xs,
                 YS: ys,
                 CELL_NAMES: [],
-                COMPO_NAMES: [],
+                CELL_VALUES: [],
                 COLORS: [],
                 FILL_ALPHA: [],
                 EDGE_COLORS: [],
@@ -312,7 +312,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                     XS: xs,
                     YS: ys,
                     CELL_NAMES: data.cell_ids.tolist(),
-                    COMPO_NAMES: data.cell_values.tolist(),
+                    CELL_VALUES: data.cell_values.tolist(),
                     COLORS: np.array(data.cell_colors).tolist(),
                     EDGE_COLORS: np.array(data.cell_edge_colors).tolist(),
                     FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
@@ -324,7 +324,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 XS: xs,
                 YS: ys,
                 CELL_NAMES: [],
-                COMPO_NAMES: [],
+                CELL_VALUES: [],
                 COLORS: [],
                 FILL_ALPHA: [],
                 EDGE_COLORS: [],
@@ -346,7 +346,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
         self.source_polygons.patch(
             {
-                COMPO_NAMES: [(slice(0, cell_count), data.cell_values.tolist())],
+                CELL_VALUES: [(slice(0, cell_count), data.cell_values.tolist())],
                 COLORS: [(slice(0, cell_count), np.array(data.cell_colors)[:, :-1].tolist())],
                 EDGE_COLORS: [
                     (slice(0, cell_count), np.array(data.cell_edge_colors).tolist())

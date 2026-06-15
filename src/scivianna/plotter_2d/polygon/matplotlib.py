@@ -10,7 +10,7 @@ from matplotlib import cm
 from matplotlib import colors as plt_colors
 from matplotlib.colors import LinearSegmentedColormap
 
-from scivianna.constants import POLYGONS, CELL_NAMES, COMPO_NAMES, COLORS, EDGE_COLORS
+from scivianna.constants import POLYGONS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS
 from scivianna.utils.color_tools import get_edges_colors, beautiful_color_maps
 
 from shapely import Polygon
@@ -152,7 +152,7 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
         self.last_plot = {
             POLYGONS: polygons,
             CELL_NAMES: cell_list,
-            COMPO_NAMES: data.cell_values,
+            CELL_VALUES: data.cell_values,
             COLORS: cell_colors.tolist(),
             EDGE_COLORS: cell_edge_colors.tolist(),
         }

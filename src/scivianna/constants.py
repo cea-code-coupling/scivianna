@@ -4,7 +4,7 @@ import numpy as np
 XS = "xs"
 YS = "ys"
 CELL_NAMES = "cell_names"
-COMPO_NAMES = "compo_names"
+CELL_VALUES = "cell_values"
 COLORS = "colors"
 EDGE_COLORS = "edge_colors"
 POLYGONS = "polygons"

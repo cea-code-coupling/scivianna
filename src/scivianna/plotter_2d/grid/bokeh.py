@@ -24,7 +24,7 @@ from scivianna.utils.color_tools import get_edges_colors
 
 import numpy as np
 
-from scivianna.constants import XS, YS, GRID, CELL_NAMES, COMPO_NAMES, GEOMETRY
+from scivianna.constants import XS, YS, GRID, CELL_NAMES, CELL_VALUES, GEOMETRY
 from scivianna.utils.color_tools import beautiful_color_maps
 
 import os
@@ -46,7 +46,7 @@ class Bokeh2DGridPlotter(Plotter2D):
             {
                 GRID: [],
                 CELL_NAMES: [],
-                COMPO_NAMES: [],
+                CELL_VALUES: [],
             }
         )
 
@@ -285,7 +285,7 @@ class Bokeh2DGridPlotter(Plotter2D):
             {
                 GRID: [img],
                 CELL_NAMES: [grid],
-                COMPO_NAMES: [val_grid],
+                CELL_VALUES: [val_grid],
             }
         )
 
@@ -319,7 +319,7 @@ class Bokeh2DGridPlotter(Plotter2D):
             data = {
                 GRID : [img],
                 CELL_NAMES : [grid],
-                COMPO_NAMES : [val_grid],
+                CELL_VALUES : [val_grid],
             }
         )
 
