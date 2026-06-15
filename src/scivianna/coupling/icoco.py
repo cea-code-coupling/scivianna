@@ -46,6 +46,7 @@ The process threads structure of a coupling with the visualiser works as follow:
 from pathlib import Path
 from typing import List, Tuple
 
+import atexit
 import medcoupling  # type: ignore
 from icoco.exception import WrongContext, WrongArgument
 from icoco.problem import Problem, ValueType
@@ -87,6 +88,8 @@ class LayoutProblem(Problem):
         self.data_file_path = None
         self.title = title
         self.show_server = show_server
+        
+        atexit.register(self.terminate)
 
     def setDataFile(self, datafile: str) -> None:
         """(Optional) Provide the relative path of a data file to be used by the code.
