@@ -130,8 +130,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         # Manifestement, ca ne marche pas avec un nom a plusieurs caracteres pour x ???
         TOOLTIPS = [
             ("Coordinates", "$x{custom}"),
-            ("Cell ID", "@cell_names"),
-            ("Value", "@compo_names"),
+            ("Cell ID", "@"+CELL_NAMES),
+            ("Value", "@"+CELL_VALUES),
         ]
 
         self.hover_tool = HoverTool(
