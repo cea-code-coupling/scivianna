@@ -39,7 +39,7 @@ class TestTimeDataFrame:
         """Test default initialization values."""
         assert isinstance(time_dataframe.df, pd.DataFrame)
         assert time_dataframe.df.empty
-        assert time_dataframe.time == 0.0
+        assert time_dataframe.time == -1.0
 
     # ---- get_labels tests ----
 
@@ -51,6 +51,14 @@ class TestTimeDataFrame:
 
     def test_get_labels_with_data(self, time_dataframe_with_data):
         """Test get_labels returns column names as list."""
+        labels = time_dataframe_with_data.get_labels()
+        assert set(labels) == {"Time", 'temperature', 'pressure', 'velocity'}
+        assert isinstance(labels, list)
+        assert all(isinstance(l, str) for l in labels)
+
+    def test_get_labels_without_time(self, time_dataframe_with_data):
+        """Test get_labels returns column names as list."""
+        time_dataframe_with_data.time = -1
         labels = time_dataframe_with_data.get_labels()
         assert set(labels) == {'temperature', 'pressure', 'velocity'}
         assert isinstance(labels, list)

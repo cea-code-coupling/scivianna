@@ -47,8 +47,8 @@ If a color bar is used, you can decide to center it on zero.
 """
 
         fields_list = self.slave.get_labels()
-        self.field_color_selector = pmui.Select(
-            name="Displayed plot", options=fields_list, value=fields_list[0], width=280
+        self.field_color_selector = pmui.MultiChoice(
+            name="Displayed plot", options=fields_list, value=[fields_list[0]], width=280
         )
         
         self.x_scale = pmui.Select(

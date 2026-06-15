@@ -146,7 +146,19 @@ class Panel1D(VisualizationPanel):
         key : str
             Field to request to the slave
         """
-        series = self.slave.get_1D_value(self.position, self.cell_id, None, key)
+        options = {}
+        if self.panel_coupling_extension is not None:
+            coupling_options = self.panel_coupling_extension.provide_options()
+            for k, value in coupling_options.items():
+                options[k] = value
+
+        series = self.slave.get_1D_value(
+            position = self.position,
+            cell_index = self.cell_id, 
+            material_name = None, 
+            field = key, 
+            options = options
+        )
 
         if isinstance(series, list):
             for serie in series:

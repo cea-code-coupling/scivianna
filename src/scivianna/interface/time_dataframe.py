@@ -14,7 +14,7 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         """Interface hosting a dataframe that is filled along a coupling
         """
         self.df = pd.DataFrame()
-        self.time = 0.
+        self.time = -1
         self.update_policy = UpdatePolicy.APPEND_DATA
 
     def get_labels(self) -> List[str]:
@@ -25,7 +25,11 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         List[str]
             Fields names
         """
-        return self.df.columns.tolist()
+        labels = self.df.columns.tolist()
+        if self.time != -1:
+            # We are in a coupling, time exists
+            labels += ["Time"]
+        return labels
 
     def get_1D_value(
         self,
@@ -55,10 +59,20 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         Union[pd.Series, List[pd.Series]]
             Field value
         """
+        if field == "Time":
+            if "time" in options:
+                return pd.Series(["min", "max"], index=[options["time"], options["time"]]).rename(
+                    "Time"
+                )
+            else:
+                return pd.Series([]).rename(
+                    "Time"
+                )
+
         if field in self.df.columns:
             return self.df[field]
-        else:
-            raise ValueError(f"Field {field} not found, dataframe contains {self.df.columns.tolist()}")
+        
+        raise ValueError(f"Field {field} not found, dataframe contains {self.df.columns.tolist()}")
     
     def set_time(self, time:float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.
