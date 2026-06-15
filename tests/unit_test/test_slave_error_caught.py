@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import pytest
 from scivianna.interface.generic_interface import ValueAtLocation
@@ -17,6 +17,7 @@ class ThrowingErrorInterface(ValueAtLocation):
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ):
         """Provides the result value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -30,6 +31,8 @@ class ThrowingErrorInterface(ValueAtLocation):
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -44,6 +47,7 @@ class ThrowingErrorInterface(ValueAtLocation):
         cell_indexes: List[str],
         material_names: List[str],
         field: str,
+        options: Dict[str, Any] = None,
     ) -> List[Union[str, float]]:
         """Provides the result values at different positions from either the (x, y, z) positions, the cell indexes, or the material names.
 
@@ -53,10 +57,12 @@ class ThrowingErrorInterface(ValueAtLocation):
             List of position at which the value is requested
         cell_indexes : List[str]
             Indexes of the requested cells
-        material_names : List[str]
+        material_names: List[str]
             Names of the requested materials
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------

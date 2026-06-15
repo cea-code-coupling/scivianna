@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pickle
-from typing import List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 from scivianna.interface.generic_interface import ValueAtLocation, Value1DAtLocation
 from scivianna.enums import VisualizationMode
 
@@ -46,6 +46,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ):
         """Provides the result value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -59,6 +60,8 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -76,6 +79,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
         cell_indexes: List[str],
         material_names: List[str],
         field: str,
+        options: Dict[str, Any] = None,
     ) -> List[Union[str, float]]:
         """Provides the result values at different positions from either the (x, y, z) positions, the cell indexes, or the material names.
 
@@ -89,6 +93,8 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
             Names of the requested materials
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -115,6 +121,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ) -> Union[pd.Series, List[pd.Series]]:
         """Provides the 1D value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -128,6 +135,8 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for 1D value computation.
 
         Returns
         -------

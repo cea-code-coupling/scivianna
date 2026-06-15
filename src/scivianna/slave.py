@@ -223,12 +223,13 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an ValueAtLocation, found class {type(code_)}."
                         )
-                    position, cell_index, material_name, field = data
+                    position, cell_index, material_name, field, options = data
                     set_return = code_.get_value(
                         position=position,
                         cell_index=cell_index,
                         material_name=material_name,
                         field=field,
+                        options=options,
                     )
                     q_returns.put(set_return)
 
@@ -237,12 +238,13 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an ValueAtLocation, found class {type(code_)}."
                         )
-                    positions, cell_indexes, material_names, field = data
+                    positions, cell_indexes, material_names, field, options = data
                     set_return = code_.get_values(
                         positions=positions,
                         cell_indexes=cell_indexes,
                         material_names=material_names,
                         field=field,
+                        options=options,
                     )
                     q_returns.put(set_return)
 
@@ -253,12 +255,13 @@ def worker(
                         raise TypeError(
                             f"The requested panel is not associated to an Value1DAtLocation, found class {type(code_)}."
                         )
-                    position, cell_index, material_name, field = data
+                    position, cell_index, material_name, field, options = data
                     input_list = code_.get_1D_value(
                         position=position,
                         cell_index=cell_index,
                         material_name=material_name,
                         field=field,
+                        options=options,
                     )
                     q_returns.put(input_list)
 
@@ -624,6 +627,7 @@ class ComputeSlave:
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ) -> Union[str, float]:
         """Provides the result value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -637,6 +641,8 @@ class ComputeSlave:
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -651,6 +657,7 @@ class ComputeSlave:
                     cell_index,
                     material_name,
                     field,
+                    options,
                 ],
             ]
         )
@@ -661,6 +668,7 @@ class ComputeSlave:
         cell_indexes: List[str],
         material_names: List[str],
         field: str,
+        options: Dict[str, Any] = None,
     ) -> List[Union[str, float]]:
         """Provides the result values at different positions from either the (x, y, z) positions, the cell indexes, or the material names.
 
@@ -674,6 +682,8 @@ class ComputeSlave:
             Names of the requested materials
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -688,6 +698,7 @@ class ComputeSlave:
                     cell_indexes,
                     material_names,
                     field,
+                    options,
                 ],
             ]
         )
@@ -700,6 +711,7 @@ class ComputeSlave:
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ) -> Union[pd.Series, List[pd.Series]]:
         """Provides the 1D value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -713,6 +725,8 @@ class ComputeSlave:
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for 1D value computation.
 
         Returns
         -------
@@ -727,6 +741,7 @@ class ComputeSlave:
                     cell_index,
                     material_name,
                     field,
+                    options,
                 ],
             ]
         )

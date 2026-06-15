@@ -3,7 +3,7 @@ from pathlib import Path
 import pickle
 import numpy as np
 import pandas as pd
-from typing import Any, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from scivianna.enums import UpdatePolicy
 from scivianna.interface.generic_interface import Value1DAtLocation, CouplingInterface
@@ -33,6 +33,7 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ) -> Union[pd.Series, List[pd.Series]]:
         """Provides the 1D value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -46,6 +47,8 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for 1D value computation.
 
         Returns
         -------

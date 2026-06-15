@@ -3,11 +3,13 @@ from pathlib import Path
 import pickle
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Union
-from scivianna.interface.generic_interface import ValueAtLocation
+from typing import Any, Dict, List, Tuple, Union
+from scivianna.enums import UpdatePolicy
+from scivianna.interface.generic_interface import ValueAtLocation, CouplingInterface
 
 
-class CSVInterface(ValueAtLocation):
+
+class CSVInterface(ValueAtLocation, CouplingInterface):
     def __init__(self, csv_file_path: str):
         """CSV file interface to get results from.
 
@@ -36,12 +38,18 @@ class CSVInterface(ValueAtLocation):
                 f"cell column was not found in the csv columns. Found: {self.df.columns}."
             )
 
+        # Store dataframes at each time step
+        self.dfs: Dict[float, pd.DataFrame] = {}
+        self.time = 0.
+        self.update_policy = UpdatePolicy.APPEND_DATA
+
     def get_value(
         self,
         position: Tuple[float, float, float],
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ):
         """Provides the result value of a field from either the (x, y, z) position or the cell index.
 
@@ -55,6 +63,8 @@ class CSVInterface(ValueAtLocation):
             Name of the requested material (ignored for CSV interface)
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -76,6 +86,7 @@ class CSVInterface(ValueAtLocation):
         cell_indexes: List[str],
         material_names: List[str],
         field: str,
+        options: Dict[str, Any] = None,
     ) -> List[Union[str, float]]:
         """Provides the result values at different positions from either the (x, y, z) positions or the cell indexes.
 
@@ -89,6 +100,8 @@ class CSVInterface(ValueAtLocation):
             Names of the requested materials (ignored for CSV interface)
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -132,6 +145,106 @@ class CSVInterface(ValueAtLocation):
             if c != "cell"
         ]
 
+    def get_labels(self) -> List[str]:
+        """Returns the fields names providable.
+
+        Returns
+        -------
+        List[str]
+            Fields names
+        """
+        return self.df.columns.tolist()
+
+    def set_time(self, time: float):
+        """This non-Icoco function allows setting the current time in an interface to associate to the received value.
+
+        Parameters
+        ----------
+        time : float
+            Current time
+        """
+        self.time = time
+
+        # If no dataframe exists for this time, create one from the initial structure
+        if time not in self.dfs:
+            self.dfs[time] = self.df.copy()
+        self.df = self.dfs[time]
+
+    def append_data(self, key: str, data: Any):
+        """Stores the data and associates it to the current time.
+        Replaces the whole dataframe at the current time step.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        # Store the current dataframe at the current time
+        self.dfs[self.time] = self.df.copy()
+
+    def update_data(self, key: str, data: Any):
+        """Replaces the interface data by the current value
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        self.append_data(key=key, data=data)
+
+    def update_mesh(self, key: str, data: Any):
+        """Replaces the interface data and mesh by the current value
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        self.append_data(key=key, data=data)
+
+    def append_mesh(self, key: str, data: Any):
+        """Stores the data and mesh and associate them to the current time.
+        Replaces the whole dataframe at the current time step.
+
+        Parameters
+        ----------
+        key : str
+            Data associated key
+        data : Any
+            New value
+        """
+        self.append_data(key=key, data=data)
+
+    def get_template(self, name: str):
+        """Returns the template for the C3PO getOutputxxxFieldTemplate functions
+
+        Parameters
+        ----------
+        name : str
+            Field name
+        """
+        # Return a pandas Series as template for CSVInterface
+        return pd.Series(dtype=float)
+
+    def set_template(self, name: str, template: Any):
+        """Sets the template returned by C3PO getOutputxxxFieldTemplate functions
+
+        Parameters
+        ----------
+        name : str
+            Field name
+        template : Any
+            Object to set as template
+        """
+        # Templates are not used with CSVInterface, pass silently
+        pass
+
     def save(self, file_path: Path, include_files: bool):
         """Pickle saves the slave content to a file, allows slave state reload.
 
@@ -149,7 +262,7 @@ class CSVInterface(ValueAtLocation):
         os.makedirs(Path(file_path).parent, exist_ok=True)
 
         with open(file_path, "wb") as f:
-            data = self.df, self.basename
+            data = self.dfs, self.basename, self.time
 
             pickle.dump(data, f)
 
@@ -173,4 +286,8 @@ class CSVInterface(ValueAtLocation):
         with open(file_path, "rb") as f:
             data = pickle.load(f)
 
-            self.df, self.basename = data
+            self.dfs, self.basename, self.time = data
+            
+            # Restore current dataframe from the last time step
+            if self.dfs:
+                self.df = self.dfs.get(self.time, list(self.dfs.values())[-1])

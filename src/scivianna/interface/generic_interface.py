@@ -258,6 +258,7 @@ class ValueAtLocation(GenericInterface):
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ) -> Union[str, float]:
         """Provides the result value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -271,6 +272,8 @@ class ValueAtLocation(GenericInterface):
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -285,6 +288,7 @@ class ValueAtLocation(GenericInterface):
         cell_indexes: List[str],
         material_names: List[str],
         field: str,
+        options: Dict[str, Any] = None,
     ) -> List[Union[str, float]]:
         """Provides the result values at different positions from either the (x, y, z) positions, the cell indexes, or the material names.
 
@@ -298,6 +302,8 @@ class ValueAtLocation(GenericInterface):
             Names of the requested materials
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for value computation.
 
         Returns
         -------
@@ -316,6 +322,7 @@ class Value1DAtLocation(GenericInterface):
         cell_index: str,
         material_name: str,
         field: str,
+        options: Dict[str, Any] = None,
     ) -> Union[pd.Series, List[pd.Series]]:
         """Provides the 1D value of a field from either the (x, y, z) position, the cell index, or the material name.
 
@@ -329,6 +336,8 @@ class Value1DAtLocation(GenericInterface):
             Name of the requested material
         field : str
             Requested field name
+        options : Dict[str, Any], optional
+            Additional options for 1D value computation.
 
         Returns
         -------
