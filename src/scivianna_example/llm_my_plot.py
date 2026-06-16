@@ -6,7 +6,7 @@ from scivianna.agent import data_2d_worker
 from scivianna.constants import GEOMETRY, X, Y
 from scivianna.interface.med_interface import MEDInterface
 from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
-from scivianna.slave import set_colors_list
+from scivianna.extension.field_selector import set_colors_list
 from scivianna.data.data2d import Data2D
 from scivianna.agent.data_2d_worker import Data2DWorker
 

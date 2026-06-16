@@ -1,9 +1,50 @@
-#   Europe grid example
+# Europe Grid Example
 
-This example shows how to define a custom 2D geometry based on a Europe shapely polygons map. The following files are present:
+This example demonstrates how to visualize geographic data using Scivianna, showing electricity production and consumption across European countries.
 
--   **europe_grid.py** provides an example of how to make a class EuropeGridInterface that provides the visualizer polygons to display (applied to an Europe map) and how to associate the polygons (countries) to values.
--   **country_time_series.py** gives an example of result that associates a 1D value to a polygone/location to display in a 1D plot
--   **plot_api.py** plots an europe map as provided by the EuropeGridInterface in a .png file using the scivianna API.
+## Files
 
-![img](europe_grid_app.png)
+| File | Description |
+|------|-------------|
+| `__init__.py` | Package initialization file |
+| `europe_grid.py` | Main module with Europe panel creation |
+| `plot_api.py` | Plotting API for the Europe visualization |
+| `country_time_series.py` | Time series data handling per country |
+| `europe.geojson` | GeoJSON file with European country boundaries |
+| `time_series.csv` | Weekly electricity production/consumption data |
+| `description.md` | Example description for the demonstrator |
+| `readme.md` | This documentation file |
+
+## Overview
+
+The Europe Grid example showcases:
+- Geographic data visualization using GeoJSON
+- Interactive hover tools showing country-specific values
+- Time-series navigation with weekly time-steps
+- Production vs consumption comparison
+
+## Features
+
+### Interactive Map
+- Hover over countries to see electricity values
+- Click to select specific countries
+- Color-coded visualization of production/consumption
+
+### Time Series Data
+Weekly data including:
+- Electricity production per energy source
+- Electricity consumption per country
+- Net imports/exports
+
+## Usage
+
+### Open visualizer
+
+Run the `europe_grid.py` file where the make_europe_panel builds an interactive layout.
+
+## Plot API
+
+The `plot_api.py` provides:
+- Country selection callbacks
+- Value formatting for tooltips
+- Color scale configuration

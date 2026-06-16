@@ -76,17 +76,6 @@ def _get_extension_class(ext_name: str, interface: Type[GenericInterface], panel
     
     return None
 
-
-def _get_panel1d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
-    """Helper method to find a Panel1D extension class by name."""
-    return _get_extension_class(ext_name, interface, "Panel1D")
-
-
-def _get_panel2d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
-    """Helper method to find a Panel2D extension class by name."""
-    return _get_extension_class(ext_name, interface, "Panel2D")
-
-
 def _save_current_data(current_data: Any, temp_path: Path, panel_name: str) -> str:
     """
     Save current_data (Data2D) to a pickle file.
@@ -415,12 +404,6 @@ def load_panel2d_from_file(
         
         return panel
 
-
-def _get_panel2d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
-    """Helper method to find a Panel2D extension class by name."""
-    return _get_extension_class(ext_name, interface, "Panel2D")
-
-
 # =============================================================================
 # PANEL1D ONLY SERIALIZATION
 # =============================================================================
@@ -554,11 +537,6 @@ def load_panel1d_from_file(
         panel = Panel1D.from_json(panel_data["panel_json"], slave, extensions)
         
         return panel
-
-
-def _get_panel1d_extension_class(ext_name: str, interface: Type[GenericInterface]) -> Optional[Type]:
-    """Helper method to find a Panel1D extension class by name."""
-    return _get_extension_class(ext_name, interface, "Panel1D")
 
 
 # =============================================================================
