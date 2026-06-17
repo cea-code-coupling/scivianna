@@ -5,7 +5,7 @@ build:
   os: ubuntu-24.04
   jobs:
     pre_create_environment:
-      - cp tutorials/*.ipynb docs/sources/tutorials/
+      - cp tutorials/*.ipynb docs/source/tutorials/
       
   tools:
     python: "3.12"
