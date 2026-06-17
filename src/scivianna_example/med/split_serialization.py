@@ -1,7 +1,7 @@
 from scivianna.layout.split import SplitLayout
 from scivianna.utils.file_cleaner import mark_for_deletion
 
-from scivianna_example.med.split_item_example import get_panel, get_med_panel
+from scivianna_example.med.split_item_example import get_panel
 
 
 def get_restored_split():

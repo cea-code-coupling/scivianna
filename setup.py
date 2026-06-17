@@ -21,6 +21,7 @@ setup(
     version=get_version(),
     description="Python generic module to visualize simulation geometries and results.",
     long_description=get_long_description(),
+    long_description_content_type="text/markdown",
     author="CEA",
     maintainer="Thibault Moulignier",
     author_email="Thibault.Moulignier@cea.fr",
@@ -82,6 +83,12 @@ setup(
         "coupling": [
             "salome-c3po",
             "pydantic"
+        ],
+        "doc": [
+            "sphinx",
+            "sphinx-autobuild",
+            "myst_parser",
+            "sphinx-autoapi"
         ]
     },
 )

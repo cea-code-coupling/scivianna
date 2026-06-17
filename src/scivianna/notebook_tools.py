@@ -77,7 +77,7 @@ def _serve_panel(
 """
 
 
-def get_med_panel(geo: str, title="MED") -> VisualizationPanel:
+def get_med_panel(geo: str, title="MED") -> Panel2D:
     """Get the visualisation panel for a MEDCoupling .med file path
 
     Parameters
@@ -89,7 +89,7 @@ def get_med_panel(geo: str, title="MED") -> VisualizationPanel:
 
     Returns
     -------
-    VisualizationPanel
+    Panel2D
         Geometry visualisation panel
 
     Raises
