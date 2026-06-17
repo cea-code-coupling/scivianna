@@ -6,4 +6,4 @@ nbsphinx
 nbconvert
 ipython
 jinja2>=3.0
-myst_nb
+myst-nb
