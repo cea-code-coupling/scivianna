@@ -13,7 +13,7 @@ build:
 python:
   install:
     - method: pip
-      path: .
+      path: .[doc]
 
 sphinx:
   configuration: docs/source/conf.py

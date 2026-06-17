@@ -86,8 +86,9 @@ setup(
         ],
         "doc": [
             "sphinx",
-            "sphinx-autobuild",
-            "myst_parser",
+            "sphinx-rtd-theme",
+            "myst-nb",
+            "nbsphinx",
             "sphinx-autoapi"
         ]
     },

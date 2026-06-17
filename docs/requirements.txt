@@ -1,9 +1,0 @@
-sphinx
-sphinx-rtd-theme
-myst_parser
-sphinx-autoapi
-nbsphinx
-nbconvert
-ipython
-jinja2>=3.0
-myst-nb
