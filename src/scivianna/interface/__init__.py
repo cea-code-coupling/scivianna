@@ -6,8 +6,7 @@ This module provides a registry of all available interfaces.
 from typing import Dict, Type, Union
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.utils.interface_tools import GenericInterfaceEnum
-from scivianna.interface.med_interface import MEDInterface
-from scivianna.interface.vtk_interface import VTKInterface
+
 from scivianna.interface.csv_result import CSVInterface
 from scivianna.interface.structured_mesh_interface import StructuredMeshInterface
 from scivianna.interface.time_dataframe import TimeDataFrame
@@ -16,13 +15,22 @@ from scivianna.interface.time_dataframe import TimeDataFrame
 # Default dictionary of built-in interfaces
 # Users can add their own interfaces to this dictionary
 INTERFACES: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {
-    "MED": MEDInterface,
-    "VTK": VTKInterface,
     "CSV": CSVInterface,
     "StructuredMesh": StructuredMeshInterface,
     "TimeDataFrame": TimeDataFrame,
 }
 
+try:
+    from scivianna.interface.med_interface import MEDInterface
+    INTERFACES["MED"] = MEDInterface
+except ImportError:
+    pass
+
+try:
+    from scivianna.interface.vtk_interface import VTKInterface
+    INTERFACES["VTK"] = VTKInterface
+except ImportError:
+    pass
 
 def register_interface(
     key: Union[str, GenericInterfaceEnum], 

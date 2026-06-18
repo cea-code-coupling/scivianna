@@ -181,16 +181,6 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
         """
         return self.get_fields()
 
-    def get_1D_fields(self) -> List[str]:
-        """Returns the fields names providable.
-
-        Returns
-        -------
-        List[str]
-            Fields names
-        """
-        return self.fields
-
     def get_label_coloring_mode(self, label: str) -> VisualizationMode:
         """Returns the coloring mode of the field.
 
