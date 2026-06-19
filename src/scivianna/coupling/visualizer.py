@@ -85,7 +85,7 @@ class VisualizerData(BaseModel):
             for element in line:
                 if element.name in found_names:
                     raise ValueError(f"name {element.name} appears at least twice.")
-                
+
                 found_names.add(element.name)
 
         return self
@@ -103,7 +103,7 @@ def get_serializable_data(
 
             assert element.interface in INTERFACES.values(), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
             element.interface = list(INTERFACES.keys())[list(INTERFACES.values()).index(element.interface)]
-            
+
             serializable_grid[-1].append(element)
 
     return VisualizerData(title=visualiser_data.title, grid=serializable_grid)
@@ -173,7 +173,7 @@ class GridStackProblem(LayoutProblem):
                     if element.template is not None:
                         for template_name, value in element.template:
                             slave_2d.set_template(template_name, value)
-                            
+
                     visualisation_panels[name] = Panel2D(slave_2d, name=name)
                     if element.template is not None:
                         visualisation_panels[name].set_field(element.template[-1][0])
@@ -187,8 +187,8 @@ class GridStackProblem(LayoutProblem):
         # mfldsn
         #   Adding the run button to be able to start the synchronisation to the coupling
         self.layout = GridStackLayout(
-            visualisation_panels, 
-            bounds_x, 
+            visualisation_panels,
+            bounds_x,
             bounds_y
         )
 
@@ -255,7 +255,7 @@ class GridStackProblem(LayoutProblem):
 
 
 def get_grid_stack_problem(
-        working_directory: Path, 
+        working_directory: Path,
         data_to_view: VisualizerData,
         use_server: bool = True,
         show: bool = True
@@ -276,13 +276,13 @@ def get_grid_stack_problem(
     Returns
     -------
     GridStackProblem
-        Icoco problem for the visializer
+        Icoco problem for the visualizer
     """
     data_to_view = get_serializable_data(
-        working_directory = working_directory, 
+        working_directory = working_directory,
         visualiser_data = data_to_view
     )
-    data_file = working_directory / "data_inputs_neutro.json"
+    data_file = working_directory / "visu.json"
     data_file.write_text(data_to_view.model_dump_json(indent=4), encoding="utf-8")
 
     if use_server:
@@ -291,7 +291,7 @@ def get_grid_stack_problem(
         print(f"Client pid = {os.getpid()}")
 
         problem = ProblemClient(
-            typeid=typeid, 
+            typeid=typeid,
             working_directory=working_directory,
             show_server = show
         )  # pylint: disable=abstract-class-instantiated
