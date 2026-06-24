@@ -69,9 +69,6 @@ class Value:
 
 
 class LayoutProblem(Problem):
-    panel: GenericLayout
-    _working_directory: Path
-    _active_connections: set = set()
     """Set tracking active session IDs for connection monitoring."""
 
     def __init__(
@@ -80,7 +77,9 @@ class LayoutProblem(Problem):
         title="C3PO Coupling visualizer",
         show_server: bool = True
     ):
-        self.layout = layout
+        self._working_directory: Path = None
+        self._active_connections: set = set()
+        self.layout: GenericLayout = layout
 
         self.time = 0.0
         self._dt: float = -1.0
@@ -96,7 +95,6 @@ class LayoutProblem(Problem):
 
         # Register session lifecycle callbacks to track active connections
         pn.state.on_session_created(self._on_session_created)
-        pn.state.on_session_destroyed(self._on_session_destroyed)
 
     def setDataFile(self, datafile: str) -> None:
         """(Optional) Provide the relative path of a data file to be used by the code.
@@ -174,7 +172,8 @@ class LayoutProblem(Problem):
         session_context : SessionContext
             The session context for the new connection.
         """
-        LayoutProblem._active_connections.add(session_context.id)
+        self._active_connections.add(session_context.id)
+        pn.state.on_session_destroyed(self._on_session_destroyed)
         print(f"[LayoutProblem] New connection: {session_context.id}. Active connections: {len(self._active_connections)}")
 
     def _on_session_destroyed(self, session_context):
@@ -185,7 +184,7 @@ class LayoutProblem(Problem):
         session_context : SessionContext
             The session context for the disconnected client.
         """
-        LayoutProblem._active_connections.discard(session_context.id)
+        self._active_connections.discard(session_context.id)
         print(f"[LayoutProblem] Connection closed: {session_context.id}. Active connections: {len(self._active_connections)}")
 
     def wait_for_disconnect(self, poll_interval: float = 0.5) -> None:
