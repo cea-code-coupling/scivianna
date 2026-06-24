@@ -45,6 +45,7 @@ The process threads structure of a coupling with the visualiser works as follow:
 """
 from pathlib import Path
 from typing import List, Tuple
+import time
 
 import atexit
 import medcoupling  # type: ignore
@@ -70,10 +71,12 @@ class Value:
 class LayoutProblem(Problem):
     panel: GenericLayout
     _working_directory: Path
+    _active_connections: set = set()
+    """Set tracking active session IDs for connection monitoring."""
 
     def __init__(
-        self, 
-        layout: GenericLayout, 
+        self,
+        layout: GenericLayout,
         title="C3PO Coupling visualizer",
         show_server: bool = True
     ):
@@ -88,8 +91,12 @@ class LayoutProblem(Problem):
         self.data_file_path = None
         self.title = title
         self.show_server = show_server
-        
+
         atexit.register(self.terminate)
+
+        # Register session lifecycle callbacks to track active connections
+        pn.state.on_session_created(self._on_session_created)
+        pn.state.on_session_destroyed(self._on_session_destroyed)
 
     def setDataFile(self, datafile: str) -> None:
         """(Optional) Provide the relative path of a data file to be used by the code.
@@ -159,6 +166,45 @@ class LayoutProblem(Problem):
         self._up_skipped = 0
         return True
 
+    def _on_session_created(self, session_context):
+        """Callback called when a new client session is created.
+
+        Parameters
+        ----------
+        session_context : SessionContext
+            The session context for the new connection.
+        """
+        LayoutProblem._active_connections.add(session_context.id)
+        print(f"[LayoutProblem] New connection: {session_context.id}. Active connections: {len(self._active_connections)}")
+
+    def _on_session_destroyed(self, session_context):
+        """Callback called when a client session is destroyed.
+
+        Parameters
+        ----------
+        session_context : SessionContext
+            The session context for the disconnected client.
+        """
+        LayoutProblem._active_connections.discard(session_context.id)
+        print(f"[LayoutProblem] Connection closed: {session_context.id}. Active connections: {len(self._active_connections)}")
+
+    def wait_for_disconnect(self, poll_interval: float = 0.5) -> None:
+        """Wait until all client connections have been disconnected.
+
+        This method blocks the calling thread until no active connections remain.
+        It polls at the specified interval to check for remaining connections.
+
+        Parameters
+        ----------
+        poll_interval : float, optional
+
+            Time in seconds between connection checks (default: 0.5).
+        """
+        print(f"[LayoutProblem] Waiting for {len(self._active_connections)} active connection(s) to disconnect...")
+        while len(self._active_connections) > 0:
+            time.sleep(poll_interval)
+        print("[LayoutProblem] All connections disconnected.")
+
     def terminate(self) -> None:
         """(Mandatory) Terminate the current problem instance and release all allocated resources.
 
@@ -181,10 +227,13 @@ class LayoutProblem(Problem):
         if self._working_directory is not None:
             save_gridstack_to_zip(self.layout, Path(self._working_directory) / "save_layout")
 
+        # Wait for all client connections to disconnect before stopping the server
+        self.wait_for_disconnect()
+
         for panel in self.layout.visualisation_panels.values():
             print(f"Terminating panel {panel.panel_name}")
             panel.get_slave().terminate()
-        
+
         self.server.stop()
 
     def presentTime(self) -> float:
@@ -328,7 +377,9 @@ class LayoutProblem(Problem):
             exception if called outside the TIME_STEP_DEFINED context (see Problem documentation).
             exception if called before the solveTimeStep() method.
         """
-        self.layout.time_widget.add_time_value(self.time)
+        if self._up_skipped == self._up_rate:
+            self.layout.time_widget.add_time_value(self.time)
+
         self.time += self._dt
         self._dt = None
 
