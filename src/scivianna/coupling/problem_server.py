@@ -1,5 +1,5 @@
 """
-This module contains a functional client-server implementation of ICoCo ``Problem``. 
+This module contains a functional client-server implementation of ICoCo ``Problem``.
 It helps moving scivianna on another process to prevent it to slow down the ongoing simulation.
 
 Warning
@@ -16,26 +16,41 @@ from icoco.problem import Problem
 
 
 class ServerManager(BaseManager):
-    """Class to register remote ``Problem``."""
+    """
+    Manager class to register remote ICoCo ``Problem`` implementations.
+
+    This class extends Python's BaseManager to allow registration of
+    Problem classes that will be executed on a remote server process,
+    enabling distributed visualization.
+
+    See Also
+    --------
+    ProblemClient : Client-side proxy for remote problems.
+    """
 
     @classmethod
     def register(cls, class_type: Type, *args, **kwargs) -> str:  # pylint: disable=arguments-differ
-        """Register a remote class.
+        """
+        Register a remote class for distributed execution.
 
         Parameters
         ----------
         class_type : Type
-            Class to use on server side.
+            The Problem class to use on the server side.
+        *args : tuple
+            Additional positional arguments passed to the server class constructor.
+        **kwargs : dict
+            Additional keyword arguments passed to the server class constructor.
 
         Returns
         -------
         str
-            typeid to use as the ``ProblemClient`` argument.
+            The typeid string to use as the ``ProblemClient`` argument.
 
         Raises
         ------
         ValueError
-            if class is already registerd
+            Raised if the class typeid is already registered.
         """
         typeid = class_type.__name__
         if typeid in cls._registry:
@@ -45,7 +60,16 @@ class ServerManager(BaseManager):
 
 
 class RemoteException(Exception):
-    """Exception raised when remote process fails."""
+    """
+    Exception raised when a remote process fails.
+
+    This exception wraps the traceback and error details from the remote
+    server process to help diagnose failures in distributed execution.
+
+    See Also
+    --------
+    ProblemClient : Uses this exception to communicate remote errors.
+    """
 
 
 def _method(self, method_name, *args, **kwargs):
@@ -70,7 +94,32 @@ def _method(self, method_name, *args, **kwargs):
 
 
 def redirect_icoco_to_server(cls):
-    """Redirect ICoCo methods to server.
+    """
+    Decorator that redirects ICoCo methods to the remote server.
+
+    This decorator dynamically assigns all ICoCo protocol methods to the
+    decorated class, routing each call through the ``_method`` helper to
+    the underlying remote problem instance. It also removes any abstract
+    method restrictions from the class.
+
+    Parameters
+    ----------
+    cls : type
+        The class to decorate. Must have an ``__abstractmethods__`` attribute.
+
+    Returns
+    -------
+    type
+        The decorated class with ICoCo methods redirected to server.
+
+    Raises
+    ------
+    AttributeError
+        Raised if the class does not have an ``__abstractmethods__`` attribute.
+
+    See Also
+    --------
+    _method : The helper function that performs the actual method redirection.
     """
     def create_icoco_method(method_name):
         return lambda self, *args, **kwargs: _method(self, method_name, *args, **kwargs)
@@ -85,25 +134,45 @@ def redirect_icoco_to_server(cls):
 
 @redirect_icoco_to_server
 class ProblemClient(Problem):
-    """Server-Client implementation of ICoCo problem."""
+    """
+    Server-Client implementation of ICoCo Problem for distributed execution.
+
+    This class acts as a proxy that delegates all ICoCo method calls to a
+    remote server process running the actual Problem implementation. It enables
+    visualization without slowing down the main simulation.
+
+    Examples
+    --------
+    >>> typeid = ServerManager.register(MyProblem)
+    >>> client = ProblemClient(typeid=typeid, arg1=val1)
+    >>> client.initialize()
+
+    See Also
+    --------
+    ServerManager : Registers and starts the remote problem server.
+    """
 
     # ******************************************************
     # section Problem
     # ******************************************************
     def __init__(self, typeid: str, *args, **kwargs) -> None:
-        """Constructor.
+        """
+        Initialize the ProblemClient proxy.
 
         Notes
         -----
             Internal set up and initialization of the code should not be done here,
-            but rather in initialize() method.
+            but rather in the ``initialize()`` method on the server side.
 
         Parameters
         ----------
         typeid : str
-            one of the typeid provided to the register method of ``ServerManager`` class.
-
-        The other parameters will be passed to the callable associated to the typeid.
+            One of the typeid strings provided by the ``ServerManager.register()``
+            method.
+        *args : tuple
+            Positional arguments passed to the remote server class constructor.
+        **kwargs : dict
+            Keyword arguments passed to the remote server class constructor.
         """
         self._server: Problem = typeid
         self._args = args
@@ -113,14 +182,26 @@ class ProblemClient(Problem):
         super().__init__()
 
     def __del__(self):
+        """
+        Cleanup: shutdown the remote server manager when this client is garbage collected.
+        """
         if self._manager is not None:
             self._manager.shutdown()
 
     @property
     def _problem(self) -> Problem:
+        """
+        Lazy-initialized property that returns the remote server instance.
+
+        The server is started on first access and cached for subsequent calls.
+
+        Returns
+        -------
+        Problem
+            The remote Problem instance running on the server process.
+        """
         if self._manager is None:
             self._manager = ServerManager()
             self._manager.start()  # pylint: disable=consider-using-with
             self._server = getattr(self._manager, self._server)(*self._args, **self._kwargs)
-            # print("type(self._server)", type(self._server))
         return self._server

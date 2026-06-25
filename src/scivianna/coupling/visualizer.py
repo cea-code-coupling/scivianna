@@ -32,20 +32,64 @@ import medcoupling as mc
 
 
 class CouplingPanel(BaseModel):
+    """
+    Base model for coupling visualization panels.
+
+    This class defines the common properties shared by all coupling panel types,
+    including name, update policy, interface configuration, and field templates.
+
+    Attributes
+    ----------
+    name : str
+        Plot panel name.
+    update_policy : UpdatePolicy
+        Code interface management definition.
+    interface : Type[GenericInterface]
+        Code interface type.
+    template : List[Tuple[str, any]] | None
+        Template per displayable field (used for field projection).
+
+    Example
+    -------
+    >>> panel = CouplingPanel(
+    ...     name="temperature",
+    ...     update_policy=UpdatePolicy.UPDATE_DATA,
+    ...     interface=MyInterface
+    ... )
+    """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
-    """Plot panel name"""
     update_policy: UpdatePolicy
-    """Code interface management definition"""
     interface: Type[GenericInterface]
-    """Code interface"""
     template: List[Tuple[str, any]] | None = None
-    """Template per displayable field (used of field projection)"""
 
     @field_validator("interface", mode="before")
     @classmethod
     def resolve_interface(cls, v):
+        """
+        Validate and resolve the interface attribute.
+
+        Converts string interface identifiers to their corresponding
+        interface classes using the global INTERFACES registry.
+
+        Parameters
+        ----------
+        v : any
+            The interface value to validate (type or string).
+
+        Returns
+        -------
+        Type[GenericInterface]
+            The resolved interface class.
+
+        Raises
+        ------
+        ValueError
+            Raised if the string identifier is not found in scivianna INTERFACES.
+        TypeError
+            Raised if the value is neither a type nor a string.
+        """
         if isinstance(v, type):
             return v
         if isinstance(v, str):
@@ -56,6 +100,44 @@ class CouplingPanel(BaseModel):
         raise TypeError(f"interface must be str or type, got {type(v).__name__}")
 
 class FieldPanel(CouplingPanel):
+    """
+    Panel configuration for 2D field visualization.
+
+    Extends CouplingPanel with 2D geometry-specific properties including
+    coordinate system vectors, axis bounds, and display settings.
+
+    Attributes
+    ----------
+    interface : Type[Geometry2D]
+        2D Geometry code interface type.
+    u : tuple[float, float, float] | None
+        Horizontal axis vector.
+    v : tuple[float, float, float] | None
+        Vertical axis vector.
+    u_min : float | None
+        Horizontal axis lower bound.
+    u_max : float | None
+        Horizontal axis upper bound.
+    v_min : float | None
+        Vertical axis lower bound.
+    v_max : float | None
+        Vertical axis upper bound.
+    w : float | None
+        Displayed frame normal vector coordinate (center goes to
+        u_min * u + v_min * v + w * u^v).
+    color_map : str | None
+        Plot color map name.
+
+    Example
+    -------
+    >>> panel = FieldPanel(
+    ...     name="temperature_field",
+    ...     interface=Geometry2D,
+    ...     u=(1.0, 0.0, 0.0),
+    ...     v=(0.0, 1.0, 0.0),
+    ...     color_map="viridis"
+    ... )
+    """
     interface: Type[Geometry2D]
     """2D Geometry code interface"""
 
@@ -82,6 +164,34 @@ class FieldPanel(CouplingPanel):
 
 
 class ValuePanel(CouplingPanel):
+    """
+    Panel configuration for 1D value visualization.
+
+    Extends CouplingPanel with 1D plot-specific properties including
+    axis bounds and data interface type.
+
+    Attributes
+    ----------
+    min_time : Optional[NonNegativeFloat]
+        1D plot minimum horizontal axis value.
+    max_time : Optional[PositiveFloat]
+        1D plot maximum horizontal axis value.
+    min_value : Optional[NonNegativeFloat]
+        1D plot minimum vertical axis value.
+    max_value : Optional[PositiveFloat]
+        1D plot maximum vertical axis value.
+    interface : Union[Type[Value1DAtLocation], Type[ValueAtLocation]]
+        1D data code interface type.
+
+    Example
+    -------
+    >>> panel = ValuePanel(
+    ...     name="pressure_at_point",
+    ...     interface=ValueAtLocation,
+    ...     min_time=0.0,
+    ...     max_time=10.0
+    ... )
+    """
     min_time: Optional[NonNegativeFloat] = None
     """1D plot minimum horizontal axis value"""
     max_time: Optional[PositiveFloat] = None
@@ -96,9 +206,31 @@ class ValuePanel(CouplingPanel):
     """1D data code interface"""
 
 class GridLayoutData(BaseModel):
-    grid: List[List[Optional[Union[FieldPanel, ValuePanel]]]]
-    """Grid of the plots"""
+    """
+    Grid layout configuration for visualization panels.
 
+    Defines a 2D grid structure where each cell contains either a FieldPanel,
+    ValuePanel, or None (for empty cells). Includes automatic validation to
+    ensure panel names are unique.
+
+    Attributes
+    ----------
+    grid : List[List[Optional[Union[FieldPanel, ValuePanel]]]]
+        2D grid of visualization panels.
+    title : str
+        Title for the layout.
+
+    Example
+    -------
+    >>> layout = GridLayoutData(
+    ...     title="Temperature Distribution",
+    ...     grid=[
+    ...         [field_panel_1, field_panel_2],
+    ...         [None, value_panel]
+    ...     ]
+    ... )
+    """
+    grid: List[List[Optional[Union[FieldPanel, ValuePanel]]]]
     title: str
 
     @model_validator(mode="after")
@@ -116,10 +248,33 @@ class GridLayoutData(BaseModel):
         return self
 
 class SplitLayoutData(BaseModel):
+    """
+    Recursive split layout configuration for visualization panels.
+
+    Defines a hierarchical tree structure where panels can be split vertically
+    or horizontally. Supports nested layouts for complex visual arrangements.
+    Includes automatic validation to ensure panel names are unique.
+
+    Attributes
+    ----------
+    split : List[Union[FieldPanel, ValuePanel, "SplitLayoutData"]]
+        List of child elements (panels or nested split layouts).
+    vertical_cut : bool
+        Direction of the cut between panels: True for vertical separator,
+        False for horizontal separator.
+    name : str
+        Name identifier for the layout section.
+
+    Example
+    -------
+    >>> layout = SplitLayoutData(
+    ...     name="analysis_view",
+    ...     vertical_cut=True,
+    ...     split=[field_panel, value_panel]
+    ... )
+    """
     split: List[Union[FieldPanel, ValuePanel, "SplitLayoutData"]]
-    """Intricated plit layout data"""
     vertical_cut: bool
-    """Direction of the cut between two panels in the list, if True, the line separating is vertical."""
 
     name: str
 
@@ -136,17 +291,22 @@ class SplitLayoutData(BaseModel):
         return self
 
     def get_panels(self,) -> List[Union[FieldPanel, ValuePanel]]:
-        """Returns a list of all FieldPanel and ValuePanel present in self and children
+        """
+        Get all FieldPanel and ValuePanel objects in this layout and children.
+
+        Recursively traverses the split layout tree to collect all leaf
+        panel objects (FieldPanel and ValuePanel).
 
         Returns
         -------
         List[Union[FieldPanel, ValuePanel]]
-            List of actual panels contained
+            List of all actual panels contained in the layout hierarchy.
 
         Raises
         ------
         TypeError
-            One of the contained objects is not implemented.
+            Raised if one of the contained objects is not implemented
+            (i.e., not a FieldPanel, ValuePanel, or SplitLayoutData).
         """
         panels = []
         for e in self.split:
@@ -159,17 +319,22 @@ class SplitLayoutData(BaseModel):
         return panels
 
     def get_serializable(self,) -> "SplitLayoutData":
-        """Returns a serializable version of self (interfaces are replaced by its string key)
+        """
+        Get a serializable version of this layout.
+
+        Replaces interface type objects with their string keys so the
+        layout can be serialized to JSON. Recursively processes all nested
+        SplitLayoutData objects.
 
         Returns
         -------
         SplitLayoutData
-            Serializable version of self
+            A new SplitLayoutData instance with serializable interface references.
 
         Raises
         ------
         TypeError
-            Self contains a not implemented type
+            Raised if self contains a not implemented type.
         """
         splits = []
         for element in self.split:
@@ -189,6 +354,29 @@ class SplitLayoutData(BaseModel):
         return SplitLayoutData(split = splits, vertical_cut=self.vertical_cut, name = self.name)
 
     def build_item(self, panels: Dict[str, VisualizationPanel]) -> SplitLayout:
+        """
+        Build a SplitLayout widget from the panel configuration.
+
+        Recursively constructs Panel widgets from the layout data using
+        the provided visualization panel dictionary.
+
+        Parameters
+        ----------
+        panels : Dict[str, VisualizationPanel]
+            Dictionary mapping panel names to VisualizationPanel instances.
+
+        Returns
+        -------
+        SplitLayout
+            The constructed SplitLayout widget.
+
+        Raises
+        ------
+        ValueError
+            Raised if the split list is empty.
+        TypeError
+            Raised if contained objects are not implemented types.
+        """
         direction = SplitDirection.VERTICAL if self.vertical_cut else SplitDirection.HORIZONTAL
 
         if len(self.split) == 0:
@@ -226,6 +414,27 @@ class SplitLayoutData(BaseModel):
 def get_serializable_data(
     visualiser_data: Union[GridLayoutData, SplitLayoutData]
 ) -> Union[GridLayoutData, SplitLayoutData]:
+    """
+    Get a serializable version of the visualization layout data.
+
+    Converts interface type objects to their string keys for JSON serialization.
+    Handles both GridLayoutData and SplitLayoutData input types.
+
+    Parameters
+    ----------
+    visualiser_data : Union[GridLayoutData, SplitLayoutData]
+        The visualization layout data to serialize.
+
+    Returns
+    -------
+    Union[GridLayoutData, SplitLayoutData]
+        A new layout instance with serializable interface references.
+
+    Raises
+    ------
+    AssertionError
+        Raised if an interface is not registered in scivianna interfaces.
+    """
     if isinstance(visualiser_data, SplitLayoutData):
         return visualiser_data.get_serializable()
 
@@ -244,17 +453,59 @@ def get_serializable_data(
 
 
 class GridStackProblem(LayoutProblem):
+    """
+    ICoCo Problem for grid-stack visualization layouts.
+
+    Extends LayoutProblem to support GridStackLayout-based visualizations
+    where panels are arranged in a fixed grid structure.
+    """
+
     def __init__(self, working_directory: Path, show_server: bool = True, start: bool = True):
+        """
+        Initialize the GridStackProblem.
+
+        Parameters
+        ----------
+        working_directory : Path
+            Directory for saving layout data and temporary files.
+        show_server : bool, optional
+            Whether to show the Panel server window (default: True).
+        start : bool, optional
+            Whether to start a server to access the layout (default: True).
+        """
         super().__init__(layout=None, show_server = show_server, start = start)
 
         self._working_directory = working_directory
 
     def setDataFile(self, datafile):
+        """
+        Set the data file path for the layout configuration.
+
+        Parameters
+        ----------
+        datafile : Path or str
+            Path to the layout configuration file.
+
+        Returns
+        -------
+        Result of parent setDataFile call.
+
+        Raises
+        ------
+        TypeError
+            Raised if datafile is not a Path or string.
+        """
         if not isinstance(datafile, (Path, str)):
             raise TypeError(f"expected Path, got {type(datafile)}.")
         return super().setDataFile(Path(datafile))
 
     def initialize(self):
+        """
+        Initialize the GridStackProblem visualization.
+
+        Reads the layout configuration from the data file path and creates
+        the GridStackLayout with appropriate visualization panels.
+        """
         import os
 
         print(f"server pid = {os.getpid()}")
@@ -340,17 +591,60 @@ class GridStackProblem(LayoutProblem):
 
 
 class SplitLayoutProblem(LayoutProblem):
+    """
+    ICoCo Problem for split-tree visualization layouts.
+
+    Extends LayoutProblem to support SplitLayout-based visualizations
+    where panels are arranged in a recursive tree structure with
+    horizontal or vertical splits.
+    """
+
     def __init__(self, working_directory: Path, show_server: bool = True, start: bool = True):
+        """
+        Initialize the SplitLayoutProblem.
+
+        Parameters
+        ----------
+        working_directory : Path
+            Directory for saving layout data and temporary files.
+        show_server : bool, optional
+            Whether to show the Panel server window (default: True).
+        start : bool, optional
+            Whether to start a server to access the layout (default: True).
+        """
         super().__init__(layout=None, show_server = show_server, start = start)
 
         self._working_directory = working_directory
 
     def setDataFile(self, datafile):
+        """
+        Set the data file path for the layout configuration.
+
+        Parameters
+        ----------
+        datafile : Path or str
+            Path to the layout configuration file.
+
+        Returns
+        -------
+        Result of parent setDataFile call.
+
+        Raises
+        ------
+        TypeError
+            Raised if datafile is not a Path or string.
+        """
         if not isinstance(datafile, (Path, str)):
             raise TypeError(f"expected Path, got {type(datafile)}.")
         return super().setDataFile(Path(datafile))
 
     def initialize(self):
+        """
+        Initialize the SplitLayoutProblem visualization.
+
+        Reads the layout configuration from the data file path and creates
+        the SplitLayout with appropriate visualization panels.
+        """
         import os
 
         print(f"server pid = {os.getpid()}")
@@ -420,23 +714,40 @@ def get_problem(
         show: bool = True,
         start: bool = True
     ) -> Tuple[Union[GridStackProblem, SplitLayoutProblem], str]:
-    """Creates the visualisation objects from a working dir
+    """
+    Create visualization objects from a working directory and layout data.
+
+    This function creates the appropriate ICoCo problem (GridStackProblem or
+    SplitLayoutProblem) based on the input data type, optionally running
+    it in a separate server process for better performance.
 
     Parameters
     ----------
-    working_directory : str
-        Directory where the med files are
+    working_directory : Path
+        Directory where the MED files and visualization config are stored.
     data_to_view : Union[GridLayoutData, SplitLayoutData]
-        Data to diplay
-    use_server : bool
-        Use a server to have the visualizer running on another process, by default True
-    show : bool
-        Display the server on start
+        Layout data defining what to display.
+    use_server : bool, optional
+        Whether to use a separate server process for the visualizer
+        (default: True). Running in a server prevents the visualizer from
+        slowing down the main simulation.
+    show : bool, optional
+        Whether to display the server window on start (default: True).
+    start : bool, optional
+        Whether to start a server to access the layout (default: True).
 
     Returns
     -------
-    GridStackProblem
-        Icoco problem for the visualizer
+    Tuple[Union[GridStackProblem, SplitLayoutProblem], str]
+        A tuple containing:
+
+        - The ICoCo problem instance for the visualizer.
+        - The path to the serialized visualization data file (visu.json).
+
+    Examples
+    --------
+    >>> layout = GridLayoutData(title="Test", grid=[[field_panel]])
+    >>> problem, data_file = get_problem(Path("."), layout)
     """
     data_to_view = get_serializable_data(
         visualiser_data = data_to_view

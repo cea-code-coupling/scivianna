@@ -65,13 +65,27 @@ from scivianna.utils.serialization import save_gridstack_to_zip, save_layout_to_
 
 
 class Value:
+    """
+    Container for ICoCo value name constants used in the coupling system.
+
+    Attributes
+    ----------
+    UPDATE_RATE : str
+        Key for the update rate parameter. Defines how frequently updates
+        are performed (1 update per UPDATE_RATE calls to solveTimeStep).
+    """
 
     UPDATE_RATE = "UPDATE_RATE"
-    """Int value to define the update frequency (done 1/UPDATE_RATE calls to solveTimeStep)"""
 
 
 class LayoutProblem(Problem):
-    """Set tracking active session IDs for connection monitoring."""
+    """
+    ICoCo Problem implementation for the C3PO coupling visualizer.
+
+    This class extends the ICoCo Problem interface to provide visualization
+    capabilities through Panel. It manages the simulation time stepping,
+    field data exchange, and connection monitoring for client sessions.
+    """
 
     def __init__(
         self,
@@ -80,6 +94,25 @@ class LayoutProblem(Problem):
         show_server: bool = True,
         start: bool = True
     ):
+        """
+        ICoCo Problem implementation for the C3PO coupling visualizer.
+
+        This class extends the ICoCo Problem interface to provide visualization
+        capabilities through Panel. It manages the simulation time stepping,
+        field data exchange, and connection monitoring for client sessions.
+
+        Parameters
+        ----------
+        layout : GenericLayout
+            The layout containing visualization panels to manage.
+        title : str, optional
+            Title for the visualizer window (default: "C3PO Coupling visualizer").
+        show_server : bool, optional
+            Whether to show the Panel server window (default: True).
+        start : bool, optional
+            Whether to start the server immediately (default: True).
+        """
+
         self._working_directory: Path = None
         self._active_connections: set = set()
         self.layout: GenericLayout = layout
@@ -121,24 +154,28 @@ class LayoutProblem(Problem):
         self.data_file_path = datafile
 
     def initialize(self) -> bool:
-        """(Mandatory) Initialize the current problem instance.
+        """
+        Initialize the current problem instance.
 
         In this method the code should allocate all its internal structures and be ready to execute.
-        File reads, memory allocations, and other operations likely to fail should be performed
-        here, and not in the constructor (and not in the setDataFile() or in the setMPIComm()
-        methods either).
-        This method must be called only once (after a potential call to setMPIComm() and/or
-        setDataFile()) and cannot be called again before terminate() has been performed.
+
+        File reads, memory allocations, and other operations likely to fail
+        should be performed here, and not in the constructor (and not in the
+        setDataFile() or in the setMPIComm() methods either).
+
+        This method must be called only once (after a potential call to
+        setMPIComm() and/or setDataFile()) and cannot be called again before
+        terminate() has been performed.
 
         Returns
         -------
         bool
-            true if all OK, otherwise false.
+            True if all OK, otherwise False.
 
         Raises
         ------
         WrongContext
-            exception if called multiple times or after initialize().
+            Raised if called multiple times or after initialize().
         """
         print("\n\nVisualizer initializing\n\n")
         ip_adress = socket.gethostbyname(socket.gethostname())
@@ -171,7 +208,11 @@ class LayoutProblem(Problem):
         return True
 
     def _on_session_created(self, session_context):
-        """Callback called when a new client session is created.
+        """
+        Callback called when a new client session is created.
+
+        Adds the session ID to the active connections set and registers
+        a destruction callback to track when the session ends.
 
         Parameters
         ----------
@@ -183,7 +224,11 @@ class LayoutProblem(Problem):
         print(f"[LayoutProblem] New connection: {session_context.id}. Active connections: {len(self._active_connections)}")
 
     def _on_session_destroyed(self, session_context):
-        """Callback called when a client session is destroyed.
+        """
+        Callback called when a client session is destroyed.
+
+        Removes the session ID from the active connections set to track
+        disconnections.
 
         Parameters
         ----------
@@ -194,7 +239,8 @@ class LayoutProblem(Problem):
         print(f"[LayoutProblem] Connection closed: {session_context.id}. Active connections: {len(self._active_connections)}")
 
     def wait_for_disconnect(self, poll_interval: float = 0.5) -> None:
-        """Wait until all client connections have been disconnected.
+        """
+        Wait until all client connections have been disconnected.
 
         This method blocks the calling thread until no active connections remain.
         It polls at the specified interval to check for remaining connections.
@@ -202,7 +248,6 @@ class LayoutProblem(Problem):
         Parameters
         ----------
         poll_interval : float, optional
-
             Time in seconds between connection checks (default: 0.5).
         """
         print(f"[LayoutProblem] Waiting for {len(self._active_connections)} active connection(s) to disconnect...")
@@ -211,18 +256,22 @@ class LayoutProblem(Problem):
         print("[LayoutProblem] All connections disconnected.")
 
     def terminate(self) -> None:
-        """(Mandatory) Terminate the current problem instance and release all allocated resources.
+        """
+        Terminate the current problem instance and release all allocated resources.
 
         Terminate the computation, free the memory and save whatever needs to be saved.
-        This method is called once at the end of the computation or after a non-recoverable error.
-        No other ICoCo method except setDataFile(), setMPIComm() and initialize() may be called
-        after this.
+
+        This method is called once at the end of the computation or after
+        a non-recoverable error. No other ICoCo method except setDataFile(),
+        setMPIComm() and initialize() may be called after this.
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
-            exception if called inside the TIME_STEP_DEFINED context (see Problem documentation).
+            Raised if called before initialize() or after terminate().
+        WrongContext
+            Raised if called inside the TIME_STEP_DEFINED context
+            (see Problem documentation).
         """
         self._dt = -1.0
         self.time = 0.0
@@ -247,79 +296,91 @@ class LayoutProblem(Problem):
         self.server.stop()
 
     def presentTime(self) -> float:
-        """(Mandatory) Return the current time of the simulation.
+        """
+        Return the current time of the simulation.
 
-        Can be called any time between initialize() and terminate().
-        The current time can only change during a call to validateTimeStep() or to reset_time().
+        This method can be called any time between initialize() and terminate().
+        The current time can only change during a call to validateTimeStep() or
+        to reset_time().
 
         Returns
         -------
         float
-            the current (physical) time of the simulation
+            The current (physical) time of the simulation.
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
+            Raised if called before initialize() or after terminate().
         """
         return self.time
 
     def computeTimeStep(self) -> Tuple[float, bool]:
-        """(Mandatory) Return the next preferred time step (time increment) for this code, and
-        whether the code wants to stop.
+        """
+        Return the next preferred time step and whether to stop.
 
-        Both data are only indicative, the supervisor is not required to take them into account.
-        This method is however marked as mandatory, since most of the coupling schemes expect the
-        code to provide this information (those schemes then typically compute the minimum of the
-        time steps of all the codes being coupled). Hence a possible implementation is to return a
-        huge value, if a precise figure can not be computed.
+        Both values are only indicative; the supervisor is not required to
+        take them into account. This method is marked as mandatory since most
+        of the coupling schemes expect the code to provide this information
+        (those schemes then typically compute the minimum of the time steps
+        of all the codes being coupled).
 
-        Can be called whenever the code is outside the TIME_STEP_DEFINED context (see Problem
-        documentation).
+        This method can be called whenever the code is outside the
+        TIME_STEP_DEFINED context (see Problem documentation).
 
         Returns
         -------
         Tuple[float, bool]
-            - the preferred time step for this code (only valid if stop is false).
-            - stop set to true if the code wants to stop. It can be used for example to indicate
-              that, according to a certain criterion, the end of the transient computation is
-              reached from the code point of view.
+            A tuple containing:
+
+            - The preferred time step for this code (only valid if stop is False).
+            - Stop flag set to True if the code wants to stop. It can be used
+              to indicate that, according to a certain criterion, the end of
+              the transient computation is reached from the code point of view.
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
-            exception if called inside the TIME_STEP_DEFINED context (see Problem documentation).
+            Raised if called before initialize() or after terminate().
+        WrongContext
+            Raised if called inside the TIME_STEP_DEFINED context
+            (see Problem documentation).
         """
         return 1e8, False
 
     def initTimeStep(self, dt: float) -> bool:
-        """(Mandatory) Provide the next time step (time increment) to be used by the code.
+        """
+        Provide the next time step (time increment) to be used by the code.
 
-        After this call (if successful), the computation time step is defined to ]t, t + dt] where
-        t is the value returned by presentTime(). The code enters the TIME_STEP_DEFINED context.
+        After this call (if successful), the computation time step is defined
+        to ]t, t + dt] where t is the value returned by presentTime(). The code
+        enters the TIME_STEP_DEFINED context.
 
-        A time step = 0.0 may be used when the stationaryMode is set to true for codes solving
-        directly for the steady-state.
+        A time step of 0.0 may be used when the stationaryMode is set to True
+        for codes solving directly for the steady-state.
 
         Parameters
         ----------
         dt : float
-            dt the time step to be used by the code
+            The time step to be used by the code.
 
         Returns
         -------
         bool
-            false means that given time step is not compatible with the code time scheme.
+            False means the given time step is not compatible with the code
+            time scheme.
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
-            exception if called inside the TIME_STEP_DEFINED context (see Problem documentation).
-            exception if called several times without resolution.
+            Raised if called before initialize() or after terminate().
+        WrongContext
+            Raised if called inside the TIME_STEP_DEFINED context
+            (see Problem documentation).
+        WrongContext
+            Raised if called several times without resolution.
         WrongArgument
-            exception if dt is invalid (dt < 0.0).
+            Raised if dt is invalid (dt < 0.0).
         """
 
         if self._dt is not None and self._dt < 0.0:
@@ -345,23 +406,30 @@ class LayoutProblem(Problem):
         self._dt = dt
 
     def solveTimeStep(self) -> bool:
-        """(Mandatory) Perform the computation on the current time interval.
+        """
+        Perform the computation on the current time interval.
 
-        Can be called whenever the code is inside the TIME_STEP_DEFINED context
-        (see Problem documentation).
+        This method can be called whenever the code is inside the
+        TIME_STEP_DEFINED context (see Problem documentation).
+
+        If the update rate has been reached, it marks panels for
+        recomputation and triggers a visual update.
 
         Returns
         -------
         bool
-            true if computation was successful, false otherwise.
+            True if computation was successful, False otherwise.
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
-            exception if called outside the TIME_STEP_DEFINED context (see Problem documentation).
-            exception exception if called several times without a call to validateTimeStep() or to
-            abortTimeStep().
+            Raised if called before initialize() or after terminate().
+        WrongContext
+            Raised if called outside the TIME_STEP_DEFINED context
+            (see Problem documentation).
+        WrongContext
+            Raised if called several times without a call to
+            validateTimeStep() or abortTimeStep().
         """
         if self._up_skipped == self._up_rate:
             # here we should transfer data and update the visu
@@ -371,21 +439,28 @@ class LayoutProblem(Problem):
         return True
 
     def validateTimeStep(self) -> None:
-        """(Mandatory) Validate the computation performed by solveTimeStep.
+        """
+        Validate the computation performed by solveTimeStep.
 
-        Can be called whenever the code is inside the TIME_STEP_DEFINED context (see Problem
-        documentation).
+        This method can be called whenever the code is inside the
+        TIME_STEP_DEFINED context (see Problem documentation).
 
         After this call:
-        - the present time has been advanced to the end of the computation time step
-        - the computation time step is undefined (the code leaves the TIME_STEP_DEFINED context).
+
+        - The present time has been advanced to the end of the computation
+          time step.
+        - The computation time step is undefined (the code leaves the
+          TIME_STEP_DEFINED context).
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
-            exception if called outside the TIME_STEP_DEFINED context (see Problem documentation).
-            exception if called before the solveTimeStep() method.
+            Raised if called before initialize() or after terminate().
+        WrongContext
+            Raised if called outside the TIME_STEP_DEFINED context
+            (see Problem documentation).
+        WrongContext
+            Raised if called before the solveTimeStep() method.
         """
         if self._up_skipped == self._up_rate:
             self.layout.time_widget.add_time_value(self.time)
@@ -399,67 +474,118 @@ class LayoutProblem(Problem):
             self._up_skipped += 1
 
     def abortTimeStep(self):
+        """
+        Abort the current time step computation.
+
+        Resets the time step to None without validating the computation.
+        """
         self._dt = None
 
     def setStationaryMode(self, stationaryMode: bool) -> None:
-        """(Mandatory) Set whether the code should compute a stationary solution or a transient one.
+        """
+        Set whether the code should compute a stationary or transient solution.
 
-        New in version 2 of ICoCo. By default the code is assumed to be in stationary mode False
-        (i.e. set up for a transient computation).
-        If set to True, solveTimeStep() can be used either to solve a time step in view of an
-        asymptotic solution, or to solve directly for the steady-state. In this last case, a time
-        step = 0. can be used with initTimeStep() (whose call is always needed).
-        The stationary mode status of the code can only be modified by this method (or by a call to
-        terminate() followed by initialize()).
+        New in version 2 of ICoCo. By default the code is assumed to be in
+        stationary mode False (i.e., set up for a transient computation).
+
+        If set to True, solveTimeStep() can be used either to solve a time step
+        in view of an asymptotic solution, or to solve directly for the
+        steady-state. In this last case, a time step of 0. can be used with
+        initTimeStep() (whose call is always needed).
+
+        The stationary mode status of the code can only be modified by this
+        method (or by a call to terminate() followed by initialize()).
 
         Parameters
         ----------
         stationaryMode : bool
-            true if the code should compute a stationary solution.
+            True if the code should compute a stationary solution.
 
         Raises
         ------
         WrongContext
-            called inside the TIME_STEP_DEFINED context (see Problem documentation).
-            called before initialize() or after terminate().
+            Raised if called inside the TIME_STEP_DEFINED context
+            (see Problem documentation).
+        WrongContext
+            Raised if called before initialize() or after terminate().
         """
         self.stationary = stationaryMode
 
     def getStationaryMode(self) -> bool:
-        """(Mandatory) Indicate whether the code should compute a stationary solution or a
-        transient one.
+        """
+        Indicate whether the code should compute a stationary or transient solution.
 
         See also setStationaryMode().
 
-        Can be called whenever the code is outside the TIME_STEP_DEFINED context
-        (see Problem documentation).
+        This method can be called whenever the code is outside the
+        TIME_STEP_DEFINED context (see Problem documentation).
 
         Returns
         -------
         bool
-            true if the code has been set to compute a stationary solution.
+            True if the code has been set to compute a stationary solution.
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
-            exception if called inside the TIME_STEP_DEFINED context (see Problem documentation).
+            Raised if called before initialize() or after terminate().
+        WrongContext
+            Raised if called inside the TIME_STEP_DEFINED context
+            (see Problem documentation).
         """
         return self.stationary
 
     def getValueType(self, name: str) -> ValueType:
+        """
+        Get the value type for a given parameter name.
 
+        Parameters
+        ----------
+        name : str
+            The name of the parameter to query.
+
+        Returns
+        -------
+        ValueType
+            The ICoCo value type corresponding to the name.
+
+        Raises
+        ------
+        NotImplemetedError
+            Raised if the name is not recognized.
+        """
         if name == Value.UPDATE_RATE:
             return ValueType.Int
 
         super().getValueType(name=name)
 
     def getInputValuesNames(self):
+        """
+        Get the list of input value names.
 
+        Returns
+        -------
+        list of str
+            List of input value parameter names.
+        """
         return [Value.UPDATE_RATE]
 
     def setInputIntValue(self, name: str, val: float):
+        """
+        Set an integer input value by name.
 
+        Parameters
+        ----------
+        name : str
+            Name of the scalar value to set.
+        val : float
+            Value passed to the code.
+
+        Raises
+        ------
+        WrongArgument
+            Raised if the scalar name is invalid.
+        """
         if name == Value.UPDATE_RATE:
             self._up_rate = val
             return
@@ -469,78 +595,86 @@ class LayoutProblem(Problem):
     def getInputMEDDoubleFieldTemplate(
         self, name: str
     ) -> medcoupling.MEDCouplingFieldDouble:
-        """(Optional) Retrieve an empty shell for an input field. This shell can be filled by the
-        caller and then be given to the code via setInputField(). The field has the MEDDoubleField
-        format.
+        """
+        Retrieve an empty shell for an input field.
 
-        The code uses this method to populate 'afield' with all the data that represents the context
-        of the field (i.e. its support mesh, its discretization -- on nodes, on elements, ...).
-        The remaining job for the caller of this method is to fill the actual values of the field
-        itself.
-        When this is done the field can be sent back to the code through the method setInputField().
-        This method is not mandatory but is useful to know the mesh, discretization... on which an
-        input field is expected.
+        This shell can be filled by the caller and then given to the code via
+        setInputField(). The field has the MEDDoubleField format.
 
-        See Problem documentation for more details on the time semantic of a field.
+        The code uses this method to populate 'afield' with all the data that
+        represents the context of the field (i.e., its support mesh, its
+        discretization -- on nodes, on elements, ...). The remaining job for the
+        caller is to fill the actual values of the field itself. When this is
+        done, the field can be sent back to the code through setInputField().
+
+        This method is not mandatory but is useful to know the mesh,
+        discretization, etc. on which an input field is expected.
+
+        See Problem documentation for more details on the time semantic of a
+        field.
 
         Parameters
         ----------
         name : str
-            name of the field for which we would like the empty shell
+            Name of the field for which we would like the empty shell. The format
+            should be "visualization_panel@field_name".
 
         Returns
         -------
         medcoupling.MEDCouplingFieldDouble
-            field object (in MEDDoubleField format) that will be populated with all the contextual
-            information.
-            Any previous information in this object will be discarded.
+            Field object (in MEDDoubleField format) that will be populated with
+            all the contextual information. Any previous information in this
+            object will be discarded.
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
+            Raised if called before initialize() or after terminate().
         WrongArgument
-            exception if the field name is invalid.
+            Raised if the field name is invalid.
         """
         visualization_panel, field_name = name.split("@")
 
         slave = self.layout.get_panel(visualization_panel).get_slave()
-
-        # if field_name not in slave.get_labels():
-        #     raise ValueError(
-        #         f"Unknown requested field '{field_name}' for panel {visualization_panel}, available fields: {list(slave.get_labels())}. Make sure the key requested by the exchanger is defined as panel_name@field_name"
-        #     )
 
         return slave.get_template(field_name)
 
     def setInputMEDDoubleField(
         self, name: str, afield: medcoupling.MEDCouplingFieldDouble
     ) -> None:
-        """(Optional) Provide the code with input data in the form of a MEDDoubleField.
+        """
+        Provide the code with input data in the form of a MEDDoubleField.
 
-        The method getInputFieldTemplate(), if implemented, may be used first to prepare an empty
-        shell of the field to pass to the code.
+        The method getInputFieldTemplate(), if implemented, may be used first
+        to prepare an empty shell of the field to pass to the code.
 
-        See Problem documentation for more details on the time semantic of a field.
+        See Problem documentation for more details on the time semantic of a
+        field.
 
         Parameters
         ----------
         name : str
-            name of the field that is given to the code.
+            Name of the field that is given to the code. The format should be
+            "visualization_panel@field_name".
         afield : medcoupling.MEDCouplingFieldDouble
-            field object (in MEDDoubleField format) containing the input data to be read by the
-            code. The name of the field set on this instance (with the Field::setName() method)
-            should not be checked. However its time value should be to ensure it is within the
-            proper time interval ]t, t+dt].
+            Field object (in MEDDoubleField format) containing the input data to
+            be read by the code. The name of the field set on this instance (with
+            the Field::setName() method) should not be checked. However its time
+            value should ensure it is within the proper time interval ]t, t+dt].
+
+        Returns
+        -------
+        None
 
         Raises
         ------
         WrongContext
-            exception if called before initialize() or after terminate().
+            Raised if called before initialize() or after terminate().
         WrongArgument
-            exception if the field name ('name' parameter) is invalid.
-            exception if the time property of 'afield' does not belong to the currently computed
-            time step ]t, t + dt]
+            Raised if the field name ('name' parameter) is invalid.
+        WrongArgument
+            Raised if the time property of 'afield' does not belong to the
+            currently computed time step ]t, t + dt].
         """
 
         print("setting fields...")
@@ -572,23 +706,30 @@ class LayoutProblem(Problem):
         return return_val
 
     def setInputDoubleValue(self, name: str, val: float) -> None:
-        """(Optional) Provide the code with a scalar double data.
+        """
+        Provide the code with a scalar double data.
 
-        See Problem documentation for more details on the time semantic of a scalar value.
+        See Problem documentation for more details on the time semantic of a
+        scalar value.
 
         Parameters
         ----------
         name : str
-            name of the scalar value that is given to the code.
+            Name of the scalar value that is given to the code. The format should
+            be "visualization_panel@field_name".
         val : float
-            value passed to the code.
+            Value passed to the code.
+
+        Returns
+        -------
+        None
 
         Raises
         ------
         WrongArgument
-            exception if the scalar name ('name' parameter) is invalid.
+            Raised if the scalar name ('name' parameter) is invalid.
         WrongContext
-            exception if called before initialize() or after terminate().
+            Raised if called before initialize() or after terminate().
         """
 
         visualization_panel, field_name = name.split("@")
