@@ -6,7 +6,7 @@ from scivianna_example.c3po_coupling.coupling import get_panel
 from scivianna.plotter_1d.bokeh_1d_plotter import BokehPlotter1D
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 import scivianna.utils
-from scivianna.utils.serialization import load_gridstack_from_zip
+from scivianna.utils.serialization import load_gridstack_from_zip, load_layout_from_zip
 from scivianna.notebook_tools import _serve_panel
 from scivianna.constants import CELL_VALUES
 
@@ -18,21 +18,32 @@ def cleanup():
     yield
     shutil.rmtree(working_directory, ignore_errors=True)
 
-def test_run_coupling(cleanup):
-    get_panel(computation_time = 0.001, use_server = False)
+# 1. Define the fixture with params
+@pytest.fixture(params=[True, False])
+def grid(request):
+    # Return True or False based on the parameter
+    return request.param
+
+def test_run_coupling(cleanup, grid):
+    get_panel(computation_time = 0.001, use_server = False, grid = grid)
 
 
-def test_run_coupling_with_server(cleanup):
-    get_panel(computation_time = 0.001)
+def test_run_coupling_with_server(cleanup, grid):
+    get_panel(computation_time = 0.001, grid = grid)
 
 
-def test_reload_coupling(cleanup):
+def test_reload_coupling(cleanup, grid):
     scivianna.utils._testing = True
-    get_panel(computation_time = 0.001, use_server = False, working_directory=working_directory)
+    get_panel(computation_time = 0.001, use_server = False, working_directory=working_directory, grid = grid)
 
-    layout = load_gridstack_from_zip(
-        working_directory / "save_layout.zip"
-    )
+    if grid:
+        layout = load_gridstack_from_zip(
+            working_directory / "save_layout.zip"
+        )
+    else:
+        layout = load_layout_from_zip(
+            working_directory / "save_layout.zip"
+        )
 
     assert layout.time_widget is not None
 
@@ -40,7 +51,7 @@ def test_reload_coupling(cleanup):
 
     layout.time_widget.time_slider.value = 0.
     assert set(list(layout.visualisation_panels.keys())) == set(("MAX", "Field value"))
-    
+
     assert isinstance(layout.visualisation_panels["MAX"].plotter, BokehPlotter1D)
     assert isinstance(layout.visualisation_panels["Field value"].plotter, Bokeh2DPolygonPlotter)
 
@@ -49,8 +60,8 @@ def test_reload_coupling(cleanup):
 
 if __name__ == "__main__":
     get_panel(
-        computation_time = 0.01, 
-        use_server = False, 
+        computation_time = 0.01,
+        use_server = False,
         working_directory=working_directory
     )
 

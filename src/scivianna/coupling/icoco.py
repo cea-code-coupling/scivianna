@@ -58,8 +58,10 @@ import socket
 from scivianna.enums import UpdatePolicy
 from scivianna.interface.generic_interface import CouplingInterface
 from scivianna.layout.generic_layout import GenericLayout
+from scivianna.layout.split import SplitLayout
+from scivianna.layout.gridstack import GridStackLayout
 from scivianna.panel.panel_1d import Panel1D
-from scivianna.utils.serialization import save_gridstack_to_zip
+from scivianna.utils.serialization import save_gridstack_to_zip, save_layout_to_zip
 
 
 class Value:
@@ -224,7 +226,12 @@ class LayoutProblem(Problem):
         self._up_skipped = 0
 
         if self._working_directory is not None:
-            save_gridstack_to_zip(self.layout, Path(self._working_directory) / "save_layout")
+            if isinstance(self.layout, GridStackLayout):
+                save_gridstack_to_zip(self.layout, Path(self._working_directory) / "save_layout")
+            elif isinstance(self.layout, SplitLayout):
+                save_layout_to_zip(self.layout, Path(self._working_directory) / "save_layout")
+            else:
+                raise TypeError(f"Layout type {type(self.layout)} not implemented.")
 
         # Wait for all client connections to disconnect before stopping the server
         self.wait_for_disconnect()

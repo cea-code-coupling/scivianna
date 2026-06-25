@@ -4,17 +4,19 @@ from c3po.physicsDrivers.ICOCODriver import ICOCODriver
 import c3po
 
 import scivianna
+from scivianna.constants import X, Z
 from scivianna_example.c3po_coupling.fake_driver import DecreasingFieldProblem
-from scivianna.coupling.visualizer import VisualizerData, FieldPanel, ValuePanel, get_grid_stack_problem, UpdatePolicy
+from scivianna.coupling.visualizer import GridLayoutData, SplitLayoutData, FieldPanel, ValuePanel, get_problem, UpdatePolicy
 
 from scivianna.interface.med_interface import MEDInterface
 from scivianna.interface.time_dataframe import TimeDataFrame
 
 def get_panel(
         working_directory: Path = Path("./results"),
-        computation_time = .01, 
+        computation_time = .01,
         use_server = True,
         show = False,
+        grid = False,
         *args, **kwargs
     ):
     # Building of objects driving codes
@@ -23,31 +25,56 @@ def get_panel(
     )
     fieldDriver.initialize()
 
-    visualizer_data = VisualizerData(
-        grid=[
-            # first line
-            [
+    if grid:
+        visualizer_data = GridLayoutData(
+            grid=[
+                # first line
+                [
+                    FieldPanel(
+                        name = "Field value",
+                        interface = MEDInterface,
+                        update_policy = UpdatePolicy.APPEND_DATA,
+                        template = [
+                            ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
+                        ],
+                        u=X,
+                        v=Z
+                    ),
+                    ValuePanel(
+                        name = "MAX",
+                        interface = TimeDataFrame,
+                        update_policy = UpdatePolicy.APPEND_DATA
+                    ),
+                ]
+            ],
+            title="C3PO coupling demo",
+        )
+    else:
+        visualizer_data = SplitLayoutData(
+            split = [
                 FieldPanel(
                     name = "Field value",
                     interface = MEDInterface,
                     update_policy = UpdatePolicy.APPEND_DATA,
                     template = [
                         ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
-                    ]
+                    ],
+                    u=X,
+                    v=Z
                 ),
                 ValuePanel(
                     name = "MAX",
                     interface = TimeDataFrame,
                     update_policy = UpdatePolicy.APPEND_DATA
                 ),
-            ]
-        ],
-        title="C3PO coupling demo",
-    )
+            ],
+            vertical_cut=True,
+            name="C3PO coupling demo",
+        )
 
     os.makedirs(working_directory, exist_ok=True)
-    visu_problem, visu_data_file = get_grid_stack_problem(
-        working_directory = working_directory, 
+    visu_problem, visu_data_file = get_problem(
+        working_directory = working_directory,
         data_to_view = visualizer_data,
         use_server = use_server,
         show = show
@@ -94,7 +121,7 @@ def get_panel(
     # Building of a ExplicitCoupler object
     transientCoupler = ExplicitCoupler(
         {
-            "PHY": fieldDriver, 
+            "PHY": fieldDriver,
             "VISU": myVIZDriver
         },
         {
@@ -111,4 +138,4 @@ def get_panel(
 
 
 if __name__ == "__main__":
-    get_panel()
+    get_panel(show=True, computation_time=10.)
