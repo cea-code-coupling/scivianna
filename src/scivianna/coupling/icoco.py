@@ -77,7 +77,8 @@ class LayoutProblem(Problem):
         self,
         layout: GenericLayout,
         title="C3PO Coupling visualizer",
-        show_server: bool = True
+        show_server: bool = True,
+        start: bool = True
     ):
         self._working_directory: Path = None
         self._active_connections: set = set()
@@ -92,11 +93,13 @@ class LayoutProblem(Problem):
         self.data_file_path = None
         self.title = title
         self.show_server = show_server
+        self.start = start
 
         atexit.register(self.terminate)
 
         # Register session lifecycle callbacks to track active connections
-        pn.state.on_session_created(self._on_session_created)
+        if start:
+            pn.state.on_session_created(self._on_session_created)
 
     def setDataFile(self, datafile: str) -> None:
         """(Optional) Provide the relative path of a data file to be used by the code.
@@ -156,6 +159,7 @@ class LayoutProblem(Problem):
             show = self.show_server,
             threaded=True,
             title=self.title,
+            start = self.start
         )
 
         self.panels_to_recompute: List[str] = []

@@ -244,8 +244,8 @@ def get_serializable_data(
 
 
 class GridStackProblem(LayoutProblem):
-    def __init__(self, working_directory: Path, show_server: bool = True):
-        super().__init__(layout=None, show_server = show_server)
+    def __init__(self, working_directory: Path, show_server: bool = True, start: bool = True):
+        super().__init__(layout=None, show_server = show_server, start = start)
 
         self._working_directory = working_directory
 
@@ -340,8 +340,8 @@ class GridStackProblem(LayoutProblem):
 
 
 class SplitLayoutProblem(LayoutProblem):
-    def __init__(self, working_directory: Path, show_server: bool = True):
-        super().__init__(layout=None, show_server = show_server)
+    def __init__(self, working_directory: Path, show_server: bool = True, start: bool = True):
+        super().__init__(layout=None, show_server = show_server, start = start)
 
         self._working_directory = working_directory
 
@@ -417,8 +417,9 @@ def get_problem(
         working_directory: Path,
         data_to_view: Union[GridLayoutData, SplitLayoutData],
         use_server: bool = True,
-        show: bool = True
-    ) -> Union[GridStackProblem, SplitLayoutProblem]:
+        show: bool = True,
+        start: bool = True
+    ) -> Tuple[Union[GridStackProblem, SplitLayoutProblem], str]:
     """Creates the visualisation objects from a working dir
 
     Parameters
@@ -456,12 +457,13 @@ def get_problem(
         problem = ProblemClient(
             typeid=typeid,
             working_directory=working_directory,
-            show_server = show
+            show_server = show,
+            start = start
         )  # pylint: disable=abstract-class-instantiated
     else:
         if isinstance(data_to_view, GridLayoutData):
-            problem = GridStackProblem(working_directory=working_directory, show_server = show)
+            problem = GridStackProblem(working_directory=working_directory, show_server = show, start = start)
         elif isinstance(data_to_view, SplitLayoutData):
-            problem = SplitLayoutProblem(working_directory=working_directory, show_server = show)
+            problem = SplitLayoutProblem(working_directory=working_directory, show_server = show, start = start)
 
     return problem, data_file

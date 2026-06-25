@@ -14,6 +14,11 @@ from scivianna_example.mandelbrot.mandelbrot import (
 )
 import scivianna_example.mandelbrot.mandelbrot as mandelbrot
 
+from scivianna_example.c3po_coupling.coupling import (
+    get_panel as coupling_example,
+)
+import scivianna_example.c3po_coupling.coupling as coupling
+
 
 from pathlib import Path
 
@@ -26,10 +31,12 @@ def make_demo(return_slaves=False) -> pmui.Page:
         europe_panel, slaves_europe = europe_example(None, return_slaves)
         medcoupling_panel, slaves_medcoupling = medcoupling_example(None, return_slaves)
         mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(None, return_slaves)
+        coupling_panel, slaves_coupling = coupling_example(computation_time = .01, return_slaves=return_slaves, start = False, use_server=False)
     else:
         europe_panel = europe_example(None)
         medcoupling_panel = medcoupling_example(None)
         mandelbrot_panel = mandelbrot_example(None)
+        coupling_panel = coupling_example(computation_time = .01, start = False, use_server=False)
 
     with open(Path(europe_grid.__file__).parent / "description.md", "r") as f:
         europe_with_description = pmui.Row(
@@ -46,10 +53,15 @@ def make_demo(return_slaves=False) -> pmui.Page:
             mandelbrot_panel.main_frame, pmui.Typography(f.read(), width=300)
         )
 
+    with open(Path(coupling.__file__).parent / "description.md", "r") as f:
+        coupling_with_description = pmui.Row(
+            coupling_panel.main_frame, pmui.Typography(f.read(), width=300)
+        )
+
     description_file = Path(scivianna_example.__file__).parent / "demo_description.md"
 
     image = pn.pane.Image(Path(scivianna_example.__file__).parent / "image/tuto_visu_serma.png", sizing_mode = "stretch_both")
-    
+
     with open(description_file, 'r') as f:
         help = pn.Column(pmui.Typography(f.read()), image, sizing_mode = "stretch_both")
 
@@ -58,6 +70,7 @@ def make_demo(return_slaves=False) -> pmui.Page:
         "Europe example": europe_with_description,
         "Medcoupling example": medcoupling_with_description,
         "Mandelbrot example": mandelbrot_with_description,
+        "Coupling example": coupling_with_description,
     }
 
     icons = {
@@ -65,12 +78,13 @@ def make_demo(return_slaves=False) -> pmui.Page:
         "Europe example": "line_axis",
         "Medcoupling example": "dashboard",
         "Mandelbrot example": "grid_4x4",
+        "Coupling example": "player-play",
     }
 
     demo = Demonstrator(guis, icons)
 
     if return_slaves:
-        return demo, slaves_medcoupling + slaves_europe + slaves_mandelbrot
+        return demo, slaves_medcoupling + slaves_europe + slaves_mandelbrot + slaves_coupling
     else:
         return demo
 
