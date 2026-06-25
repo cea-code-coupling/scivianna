@@ -50,7 +50,7 @@ If a color bar is used, you can decide to center it on zero.
         self.field_color_selector = pmui.MultiChoice(
             name="Displayed plot", options=fields_list, value=[fields_list[0]], width=280
         )
-        
+
         self.x_scale = pmui.Select(
             name="X scale", options=["lin", "log"], value="lin", width=280
         )
@@ -108,10 +108,10 @@ If a color bar is used, you can decide to center it on zero.
             self.x_scale,
             self.y_scale
         )
-    
+
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
-        
+
         Returns
         -------
         dict
@@ -122,31 +122,44 @@ If a color bar is used, you can decide to center it on zero.
             "x_scale": self.x_scale.value,
             "y_scale": self.y_scale.value,
         }
-    
+
     @classmethod
     def from_json(cls, extension: "LineSelector", info_dict: dict) -> "LineSelector":
         """Restores the extension from its information dict.
-        
+
         Parameters
         ----------
         extension : LineSelector
             Extension instance to restore
         info_dict : dict
             Dictionary containing extension state information
-            
+
         Returns
         -------
         LineSelector
             Restored extension
         """
         extension._restoring = True
-        
+
         if info_dict.get("field") is not None:
             extension.field_color_selector.value = info_dict["field"]
         if info_dict.get("x_scale") is not None:
             extension.x_scale.value = info_dict["x_scale"]
         if info_dict.get("y_scale") is not None:
             extension.y_scale.value = info_dict["y_scale"]
-        
+
         extension._restoring = False
         return extension
+
+    def on_coupling_update(self):
+        """Function called at the end of a coupling time step
+        """
+        labels = self.slave.get_labels()
+        if set(labels) != set(self.field_color_selector.options):
+            self.field_color_selector.options = list(
+                self.slave.get_labels()
+            )
+
+    def on_field_change(self, field_name):
+        if isinstance(field_name, list):
+            self.field_color_selector.value = field_name

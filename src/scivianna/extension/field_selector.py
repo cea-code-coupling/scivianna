@@ -309,10 +309,10 @@ If a color bar is used, you can decide to center it on zero.
             Name of the new displayed field
         """
         self.field_color_selector.value = field_name
-    
+
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
-        
+
         Returns
         -------
         dict
@@ -323,31 +323,40 @@ If a color bar is used, you can decide to center it on zero.
             "colormap": self.color_map_selector.value_name,
             "center_colormap_on_zero": self.center_colormap_on_zero_tick.value,
         }
-    
+
     @classmethod
     def from_json(cls, extension: "FieldSelector", info_dict: dict) -> "FieldSelector":
         """Restores the extension from its information dict.
-        
+
         Parameters
         ----------
         extension : FieldSelector
             Extension instance to restore
         info_dict : dict
             Dictionary containing extension state information
-            
+
         Returns
         -------
         FieldSelector
             Restored extension
         """
         extension._restoring = True
-        
+
         if info_dict.get("field") is not None:
             extension.field_color_selector.value = info_dict["field"]
-        
+
         extension.color_map_selector.value_name = info_dict.get("colormap", "BuRd")
         extension.center_colormap_on_zero_tick.value = info_dict.get("center_colormap_on_zero", False)
-        
+
         extension._restoring = False
-        
+
         return extension
+
+    def on_coupling_update(self):
+        """Function called at the end of a coupling time step
+        """
+        labels = self.slave.get_labels()
+        if set(labels) != set(self.field_color_selector.options):
+            self.field_color_selector.options = list(
+                self.slave.get_labels()
+            )

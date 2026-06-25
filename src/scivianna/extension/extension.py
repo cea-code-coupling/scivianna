@@ -164,6 +164,13 @@ class Extension:
         """
         pass
 
+    def on_coupling_update(
+        self,
+    ):
+        """Function called at the end of a coupling time step
+        """
+        pass
+
     def provide_options(self,) -> Dict[str, Any]:
         """Provide a set of options to give to the slave for its update
 
@@ -173,7 +180,7 @@ class Extension:
             Options dictionnary
         """
         return {}
-    
+
     def make_gui(self,) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
@@ -183,28 +190,28 @@ class Extension:
             Viewable to display in the extension tab
         """
         return None
-    
+
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
-        
+
         Returns
         -------
         dict
             Information dictionary
         """
         return {}
-    
+
     @classmethod
     def from_json(cls, extension: "Extension", info_dict: dict) -> "Extension":
         """Restores the extension from its information dict.
-        
+
         Parameters
         ----------
         extension : Extension
             Extension instance to restore
         info_dict : dict
             Dictionary containing extension state information
-            
+
         Returns
         -------
         Extension

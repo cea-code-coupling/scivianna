@@ -45,11 +45,11 @@ class Panel1D(VisualizationPanel):
             Name of the panel.
         """
         self.plotter = BokehPlotter1D()
-        
+
         super().__init__(slave, name, extensions.copy())
 
         self.copy_index = 1
-        
+
         self.fields = slave.get_labels()
 
         self.__data_to_update: bool = False
@@ -71,23 +71,16 @@ class Panel1D(VisualizationPanel):
                 Field changed trigering event
             """
             if self.field_change_callback is not None and\
-                    len(self.field_color_selector.value) > 0:
-                self.field_change_callback(self.field_color_selector.value[0])
+                    len(self.fields_list) > 0:
+                self.field_change_callback(self.fields_list)
             self.recompute(event)
 
-        fields_list = self.slave.get_labels()
-        self.field_color_selector = pn.widgets.MultiChoice(
-            name="Color field",
-            options=fields_list,
-            value=[fields_list[0]],
-        )
-        self.field_color_selector.param.watch(field_changed, "value")
-
+        self.fields_list = self.slave.get_labels()
+        self.visible_fields_list = [self.slave.get_labels()[0]]
+        self.visible_series_list = []
         self.__new_data = {}
 
-        self.__get_series(self.field_color_selector.value[0])
-        self.async_update_data()
-        self.plotter.set_visible(self.field_color_selector.value)
+        self.recompute()
 
         self.periodic_recompute_added = False
 
@@ -96,21 +89,19 @@ class Panel1D(VisualizationPanel):
         self,
     ):
         """Update the figures and buttons based on what was added in self.__new_data. This function is called between two servers ticks to prevent multi-users collisions."""
-        
         if "field_names" in self.__new_data:
-            self.__data_to_update = False
-            
-            self.field_color_selector.value = self.__new_data["field_names"]
+            self.visible_fields_list = self.__new_data["field_names"]
             self.__new_data = {}
-            self.async_update_data()
+            self.__get_series(self.visible_fields_list)
+            self.__data_to_update = True
 
-        elif self.__data_to_update:
+        if self.__data_to_update:
             for key in self.series:
                 if self.series[key] is not None:
                     # Can be None if the async happens at the same time as the next recompute
                     self.plotter.update_plot(key, self.series[key])
 
-            self.plotter.set_visible(list(self.series.keys()))
+            self.plotter.set_visible(self.visible_series_list)
 
             self.__data_to_update = False
 
@@ -125,13 +116,11 @@ class Panel1D(VisualizationPanel):
         event : Any
             Event to make the function linkable to a button
         """
-
-        if len(self.field_color_selector.value) > 0:
+        if len(self.visible_fields_list) > 0:
             self.__data_to_update = True
 
             self.series.clear()
-            for key in self.field_color_selector.value:
-                self.__get_series(key)
+            self.__get_series(self.visible_fields_list)
 
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
@@ -152,19 +141,29 @@ class Panel1D(VisualizationPanel):
             for k, value in coupling_options.items():
                 options[k] = value
 
-        series = self.slave.get_1D_value(
-            position = self.position,
-            cell_index = self.cell_id, 
-            material_name = None, 
-            field = key, 
-            options = options
-        )
-
-        if isinstance(series, list):
-            for serie in series:
-                self.series[serie.name] = serie
+        if isinstance(key, (str, int)):
+            keys = [key]
         else:
-            self.series[series.name] = series
+            keys = key.copy()
+
+        self.visible_series_list.clear()
+
+        for key in keys:
+            series = self.slave.get_1D_value(
+                position = self.position,
+                cell_index = self.cell_id,
+                material_name = None,
+                field = key,
+                options = options
+            )
+
+            if isinstance(series, list):
+                for serie in series:
+                    self.series[serie.name] = serie
+                    self.visible_series_list.append(serie.name)
+            else:
+                self.series[series.name] = series
+                self.visible_series_list.append(series.name)
 
     def duplicate(self, keep_name: bool = False) -> "Panel1D":
         """Get a copy of the panel. A panel of the same type is generated, the current display too, but a new slave process is created.
@@ -217,19 +216,21 @@ class Panel1D(VisualizationPanel):
             Accept a wrong field (nothing happens)
         """
         fields: List[str] = []
+        self.fields_list = self.slave.get_labels()
+
         if isinstance(field_names, list):
             for field_name in field_names:
-                if field_name not in self.field_color_selector.options:
+                if field_name not in self.fields_list:
                     continue
                 else:
                     fields.append(field_name)
         else:
-            if field_names not in self.field_color_selector.options:
+            if field_names not in self.fields_list:
                 pass
             else:
                 fields.append(field_names)
 
-        if fields != [] and set(fields) != set(self.field_color_selector.value):
+        if fields != [] and set(fields) != set(self.visible_fields_list):
             self.__new_data["field_names"] = fields
 
             self.__data_to_update = True
@@ -237,6 +238,9 @@ class Panel1D(VisualizationPanel):
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
             elif scivianna.utils._testing:
                 self.async_update_data()
+            else:
+                # A set field was probably called before opening the gui
+                self.visible_fields_list = fields
 
     def provide_field_change_callback(self, callback: Callable):
         """Stores a function to call everytime the displayed field is changed.
@@ -293,15 +297,17 @@ class Panel1D(VisualizationPanel):
             "name": self.panel_name,
             "position": self.position,
             "cell_id": self.cell_id,
-            "field_names": self.field_color_selector.value,
+            "field_names": self.fields_list,
+            "visible_field_names": self.visible_fields_list,
+            "serie_names": self.visible_series_list,
             "sync_field": self.sync_field,
             "update_event": self.update_event,
         }
 
     @classmethod
     def from_json(
-        cls, 
-        info_dict: Dict, 
+        cls,
+        info_dict: Dict,
         slave: ComputeSlave,
         extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
     ) -> "Panel1D":
@@ -328,7 +334,7 @@ class Panel1D(VisualizationPanel):
         )
         panel.position = info_dict["position"]
         panel.cell_id = info_dict["cell_id"]
-        panel.set_field(info_dict["field_names"])
+        panel.set_field(info_dict["visible_field_names"])
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
         return panel

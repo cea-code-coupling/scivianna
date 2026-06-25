@@ -50,10 +50,10 @@ def test_reload_coupling(cleanup, grid):
     assert layout.time_widget.time_slider.options == [0., 0.0005]
 
     layout.time_widget.time_slider.value = 0.
-    assert set(list(layout.visualisation_panels.keys())) == set(("MAX", "Field value"))
+    assert set(list(layout.visualisation_panels.keys())) == set(["Field", "Temperature"])
 
-    assert isinstance(layout.visualisation_panels["MAX"].plotter, BokehPlotter1D)
-    assert isinstance(layout.visualisation_panels["Field value"].plotter, Bokeh2DPolygonPlotter)
+    assert isinstance(layout.visualisation_panels["Temperature"].plotter, BokehPlotter1D)
+    assert isinstance(layout.visualisation_panels["Field"].plotter, Bokeh2DPolygonPlotter)
 
     for panel in layout.visualisation_panels.values():
         panel.get_slave().terminate()

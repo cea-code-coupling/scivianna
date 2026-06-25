@@ -676,17 +676,10 @@ class LayoutProblem(Problem):
             Raised if the time property of 'afield' does not belong to the
             currently computed time step ]t, t + dt].
         """
-
-        print("setting fields...")
         visualization_panel, field_name = name.split("@")
 
         panel = self.layout.get_panel(visualization_panel)
         slave = panel.get_slave()
-
-        # if field_name not in slave.get_labels():
-        #     raise ValueError(
-        #         f"Unknown requested field {field_name} for panel  {visualization_panel}, available fields: {list(slave.get_labels())}. Make sure the key requested by the exchanger is defined as panel_name@field_name"
-        #     )
 
         #   The time is set before the field
         slave.set_time(self.time)

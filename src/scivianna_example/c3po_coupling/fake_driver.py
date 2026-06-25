@@ -36,7 +36,7 @@ class DecreasingFieldProblem(Problem):
                     "Iteration": self.fields_iterations[value_label][0][0],
                     "Order": self.fields_iterations[value_label][0][1],
                 }
-        
+
         self.field: medcoupling.MEDCouplingFieldDouble = medcoupling.ReadField(
             medcoupling.ON_CELLS,
             file_path,
@@ -365,13 +365,14 @@ class DecreasingFieldProblem(Problem):
             return self.field.getMaxValue()
         if name == "MIN":
             return self.field.getMinValue()
+        if name == "AVERAGE":
+            return self.field.getAverageValue()
         return 0.
-    
+
     def getOutputMEDDoubleField(self, name):
         if name == "VALUE":
             return self.field
         raise ValueError(f"Requested field {name}, only VALUE is available.")
-    
+
     def getSolveStatus(self,):
         return True
-    

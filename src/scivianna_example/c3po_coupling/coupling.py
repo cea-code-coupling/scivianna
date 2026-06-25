@@ -105,19 +105,21 @@ def get_panel(
                 # first line
                 [
                     FieldPanel(
-                        name = "Field value",
+                        name = "Field",
                         interface = MEDInterface,
                         update_policy = UpdatePolicy.APPEND_DATA,
                         template = [
                             ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
                         ],
                         u=X,
-                        v=Z
+                        v=Z,
+                        displayed_field = "Field value"
                     ),
                     ValuePanel(
-                        name = "MAX",
+                        name = "Temperature",
                         interface = TimeDataFrame,
-                        update_policy = UpdatePolicy.APPEND_DATA
+                        update_policy = UpdatePolicy.APPEND_DATA,
+                        displayed_fields=["MIN", "AVERAGE", "MAX"]
                     ),
                 ]
             ],
@@ -127,19 +129,21 @@ def get_panel(
         visualizer_data = SplitLayoutData(
             split = [
                 FieldPanel(
-                    name = "Field value",
+                    name = "Field",
                     interface = MEDInterface,
                     update_policy = UpdatePolicy.APPEND_DATA,
                     template = [
                         ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
                     ],
                     u=X,
-                    v=Z
+                    v=Z,
+                    displayed_field = "Field value"
                 ),
                 ValuePanel(
-                    name = "MAX",
+                    name = "Temperature",
                     interface = TimeDataFrame,
-                    update_policy = UpdatePolicy.APPEND_DATA
+                    update_policy = UpdatePolicy.APPEND_DATA,
+                    displayed_fields=["MIN", "AVERAGE", "MAX"]
                 ),
             ],
             vertical_cut=True,
@@ -164,13 +168,17 @@ def get_panel(
         method=c3po.DirectMatching(),
 
         fieldsToGet=[(fieldDriver, "VALUE")],
-        fieldsToSet=[(myVIZDriver, "Field value@Field value")],
+        fieldsToSet=[(myVIZDriver, "Field@Field value")],
 
         valuesToGet=[
             (fieldDriver, "MAX"),
+            (fieldDriver, "AVERAGE"),
+            (fieldDriver, "MIN"),
         ],
         valuesToSet=[
-            (myVIZDriver, "MAX@MAX"),
+            (myVIZDriver, "Temperature@MAX"),
+            (myVIZDriver, "Temperature@AVERAGE"),
+            (myVIZDriver, "Temperature@MIN"),
         ],
     )
 
@@ -263,4 +271,4 @@ def get_panel(
 
 
 if __name__ == "__main__":
-    get_panel(show=True, computation_time=10.)
+    get_panel(show=True, computation_time=0.1)

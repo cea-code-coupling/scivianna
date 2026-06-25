@@ -63,7 +63,8 @@ setup(
         "panel_material_ui",
         "geopandas<1.1",
         "dill",
-        "pandas"
+        "pandas",
+        "panel-splitjs"
     ],
     extras_require={
         "default": [],

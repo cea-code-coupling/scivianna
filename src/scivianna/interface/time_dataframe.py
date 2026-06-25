@@ -71,9 +71,9 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
 
         if field in self.df.columns:
             return self.df[field]
-        
+
         raise ValueError(f"Field {field} not found, dataframe contains {self.df.columns.tolist()}")
-    
+
     def set_time(self, time:float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.
 

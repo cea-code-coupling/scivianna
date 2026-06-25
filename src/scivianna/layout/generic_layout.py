@@ -1,4 +1,4 @@
-import functools 
+import functools
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple, Type, Union
 
@@ -91,7 +91,7 @@ class GenericLayout:
 
         self.gui.drawer.param.watch(self.outline_panels, "open")
         self.gui.drawer.param.watch(self.toggle_outlines, "open")
-        
+
         for panel in self.visualisation_panels.values():
             self.register_panel(panel)
 
@@ -111,7 +111,7 @@ class GenericLayout:
             # 2: assuming the two first are the button to open and close the tab
             self.button_columns[panel.panel_name] = [b[0] for b in panel.gui.buttons]
             self.side_bars[panel.panel_name] = [b[1] for b in panel.gui.buttons]
-            
+
             for button, side_bar in zip(self.button_columns[panel.panel_name], self.side_bars[panel.panel_name]):
                 self.gui.register_new_extension(button, side_bar)
 
@@ -120,7 +120,7 @@ class GenericLayout:
             panel.figure.button.on_click(functools.partial(self.button_change_to_frame, frame_name=panel.panel_name))
         else:
             raise ValueError(f"Tried registering {panel}, only VisualizationPanel instances are accepted.")
-        
+
     @pn.io.hold()
     def change_code_interface(self, event):
         """Replaces the panel to one linked to the code interface
@@ -132,7 +132,7 @@ class GenericLayout:
         """
         current_frame = self.current_frame
         code_interface = self.layout_extension.interface_selector.value
-        
+
         interface_key = list(self.available_interfaces.keys())[
             [
                 val.value if isinstance(val, GenericInterfaceEnum) else str(val)
@@ -179,7 +179,7 @@ class GenericLayout:
         for key in self.side_bars:
             for b in self.button_columns[key]:
                 b.visible = key == self.current_frame
-        
+
         self.gui.change_drawer(None, self.gui.active_extension)
         self.outline_panels()
 
@@ -209,7 +209,7 @@ class GenericLayout:
             raise ValueError(
                 f"Frame {frame_name} not in options, available keys : {list(self.visualisation_panels.keys())}"
             )
-        
+
     def outline_panels(self, *args, **kwargs):
         """Updates the figures outline colors
         """
@@ -217,12 +217,12 @@ class GenericLayout:
         for frame in self.visualisation_panels:
             if colorize:
                 self.visualisation_panels[frame].outline_color(
-                    "var(--design-primary-color, var(--panel-primary-color))" 
-                    if (frame == self.current_frame) 
+                    "var(--design-primary-color, var(--panel-primary-color))"
+                    if (frame == self.current_frame)
                     else "lightgray")
             else:
                 self.visualisation_panels[frame].outline_color(None)
-                
+
 
     def duplicate(self, horizontal: bool):
         """Split the panel, the new panel is a copy of the first, all panels are duplicated.
@@ -300,7 +300,15 @@ class GenericLayout:
         """Marks all panels to recompute, and calls the recompute function."""
         for panel in self.visualisation_panels:
             self.panels_to_recompute.append(panel)
+
+        for panel in self.panels_to_recompute:
+            for extension in self.visualisation_panels[panel].extensions:
+                extension.on_coupling_update()
+
+        self.time_widget.on_coupling_update()
+        self.layout_extension.on_coupling_update()
         self.recompute()
+
 
     @pn.io.hold()
     async def async_update_data(
@@ -332,7 +340,7 @@ class GenericLayout:
             description="Change side bar and coordinate bar to current plot."
         )
 
-    def on_clic_callback(self, 
+    def on_clic_callback(self,
         screen_location: Tuple[float, float],
         space_location: Tuple[float, float, float],
         cell_id: Union[str, int],
@@ -352,7 +360,7 @@ class GenericLayout:
             if panel.update_event == UpdateEvent.CLIC or (isinstance(panel.update_event, list) and UpdateEvent.CLIC in panel.update_event):
                 panel.recompute_at(space_location, cell_id)
 
-    def mouse_move_callback(self, 
+    def mouse_move_callback(self,
         screen_location: Tuple[float, float],
         space_location: Tuple[float, float, float],
         cell_id: Union[str, int],
@@ -412,7 +420,7 @@ class GenericLayout:
 
     def button_change_to_frame(self, event, frame_name: str):
         """Triggers a frame change from clicking on a button
-        
+
         Parameters
         ----------
         event : Any
@@ -429,7 +437,7 @@ class GenericLayout:
         """Returns the panel to display
         """
         return self.main_frame
-    
+
     def show(self, *args, **kwargs):
         return self.main_frame.show(*args, **kwargs)
 

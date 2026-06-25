@@ -107,10 +107,10 @@ The file loader extension lets you browse files on the server file system to pro
             *self.file_loader_list,
             margin=(0, 0, 10, 10),
         )
-    
+
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
-        
+
         Returns
         -------
         dict
@@ -123,25 +123,25 @@ The file loader extension lets you browse files on the server file system to pro
         return {
             "loaded_files": loaded_files
         }
-    
+
     @classmethod
     def from_json(cls, extension: "FileLoader", info_dict: dict) -> "FileLoader":
         """Restores the extension from its information dict.
-        
+
         Parameters
         ----------
         extension : FileLoader
             Extension instance to restore
         info_dict : dict
             Dictionary containing extension state information
-            
+
         Returns
         -------
         FileLoader
             Restored extension
         """
         extension._restoring = True
-        
+
         # Note: Files are not reloaded here as they may not exist at restore time
         # The loaded_files info is stored for reference but files need to be loaded manually
         loaded_files = info_dict.get("loaded_files", {})
@@ -151,6 +151,6 @@ The file loader extension lets you browse files on the server file system to pro
                 # Set the selected file path in the browser if it exists
                 if os.path.exists(file_path):
                     browser.selected_file = file_path
-        
+
         extension._restoring = False
         return extension

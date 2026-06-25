@@ -46,8 +46,6 @@ class CouplingPanel(BaseModel):
         Code interface management definition.
     interface : Type[GenericInterface]
         Code interface type.
-    template : List[Tuple[str, any]] | None
-        Template per displayable field (used for field projection).
 
     Example
     -------
@@ -127,6 +125,8 @@ class FieldPanel(CouplingPanel):
         u_min * u + v_min * v + w * u^v).
     color_map : str | None
         Plot color map name.
+    displayed_fields : str
+        Displayed field when the GUI is opened.
 
     Example
     -------
@@ -135,7 +135,8 @@ class FieldPanel(CouplingPanel):
     ...     interface=Geometry2D,
     ...     u=(1.0, 0.0, 0.0),
     ...     v=(0.0, 1.0, 0.0),
-    ...     color_map="viridis"
+    ...     color_map="viridis",
+    ...     displayed_field="power"
     ... )
     """
     interface: Type[Geometry2D]
@@ -162,6 +163,8 @@ class FieldPanel(CouplingPanel):
     color_map: str | None = None
     """Plot color map"""
 
+    displayed_field: str
+    """Displayed field on GUI opening"""
 
 class ValuePanel(CouplingPanel):
     """
@@ -182,6 +185,8 @@ class ValuePanel(CouplingPanel):
         1D plot maximum vertical axis value.
     interface : Union[Type[Value1DAtLocation], Type[ValueAtLocation]]
         1D data code interface type.
+    displayed_fields : List[str]
+        List of displayed fields when the GUI is opened.
 
     Example
     -------
@@ -189,7 +194,8 @@ class ValuePanel(CouplingPanel):
     ...     name="pressure_at_point",
     ...     interface=ValueAtLocation,
     ...     min_time=0.0,
-    ...     max_time=10.0
+    ...     max_time=10.0,
+    ...     displayed_fields=["min", "max"]
     ... )
     """
     min_time: Optional[NonNegativeFloat] = None
@@ -204,6 +210,8 @@ class ValuePanel(CouplingPanel):
 
     interface: Union[Type[Value1DAtLocation], Type[ValueAtLocation]]
     """1D data code interface"""
+    displayed_fields: List[str]
+    """Displayed fields on GUI opening"""
 
 class GridLayoutData(BaseModel):
     """
@@ -543,9 +551,11 @@ class GridStackProblem(LayoutProblem):
                     slave_1d = ComputeSlave(element.interface)
 
                     slave_1d.set_time(0.)
-                    slave_1d.update_data(name, np.nan)
+                    for field in element.displayed_fields:
+                        slave_1d.update_data(field, np.nan)
 
                     visualisation_panels[name] = Panel1D(slave_1d, name)
+                    visualisation_panels[name].set_field(element.displayed_fields)
 
                 elif isinstance(element, FieldPanel):
                     element: FieldPanel
@@ -559,8 +569,6 @@ class GridStackProblem(LayoutProblem):
                             slave_2d.set_template(template_name, value)
 
                     visualisation_panels[name] = Panel2D(slave_2d, name=name)
-                    if element.template is not None:
-                        visualisation_panels[name].set_field(element.template[-1][0])
 
                     visualisation_panels[name].set_coordinates(
                         u = element.u,
@@ -573,6 +581,8 @@ class GridStackProblem(LayoutProblem):
                     )
                     if element.color_map is not None:
                         visualisation_panels[name].set_colormap(element.color_map)
+
+                    visualisation_panels[name].set_field(element.displayed_field)
                 else:
                     raise
 
@@ -669,9 +679,11 @@ class SplitLayoutProblem(LayoutProblem):
                 slave_1d = ComputeSlave(element.interface)
 
                 slave_1d.set_time(0.)
-                slave_1d.update_data(name, np.nan)
+                for field in element.displayed_fields:
+                    slave_1d.update_data(field, np.nan)
 
                 visualisation_panels[name] = Panel1D(slave_1d, name)
+                visualisation_panels[name].set_field(element.displayed_fields)
 
             elif isinstance(element, FieldPanel):
                 element: FieldPanel
@@ -685,8 +697,6 @@ class SplitLayoutProblem(LayoutProblem):
                         slave_2d.set_template(template_name, value)
 
                 visualisation_panels[name] = Panel2D(slave_2d, name=name)
-                if element.template is not None:
-                    visualisation_panels[name].set_field(element.template[-1][0])
 
                 visualisation_panels[name].set_coordinates(
                     u = element.u,
@@ -699,6 +709,10 @@ class SplitLayoutProblem(LayoutProblem):
                 )
                 if element.color_map is not None:
                     visualisation_panels[name].set_colormap(element.color_map)
+
+                visualisation_panels[name].set_field(element.displayed_field)
+            else:
+                raise
 
         self.layout = SplitLayout(data_to_view.build_item(
             visualisation_panels

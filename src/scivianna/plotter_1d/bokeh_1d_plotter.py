@@ -66,6 +66,7 @@ class BokehPlotter1D(Plotter1D):
         serie : pd.Series
             Sata to plot
         """
+        print(f"Plotting {name}")
         if len(serie.values) == 2 and list(serie.values) == ["min", "max"]:
             serie = pd.Series(list(self.get_y_bounds()), index=serie.index, name=serie.name)
         if len(serie.index) == 2 and list(serie.index) == ["min", "max"]:
@@ -77,8 +78,8 @@ class BokehPlotter1D(Plotter1D):
                                                 "y": serie.values.tolist(),
                                             }
                                         )
-        self.line_dict[name] = self.fig.line(x="x", 
-                        y="y", 
+        self.line_dict[name] = self.fig.line(x="x",
+                        y="y",
                         line_width=2,
                         source=self.source_data_dict[name],
                         legend_label=str(name),
@@ -113,7 +114,7 @@ class BokehPlotter1D(Plotter1D):
             })
         else:
             self.plot(name, serie)
-    
+
     @pn.io.hold()
     def set_visible(
         self,
@@ -142,8 +143,8 @@ class BokehPlotter1D(Plotter1D):
                 else:
                     li.visible = False
 
-        self.hover.update(renderers = [self.line_dict[glyph_name] 
-                                        for glyph_name in names 
+        self.hover.update(renderers = [self.line_dict[glyph_name]
+                                        for glyph_name in names
                                         if glyph_name in self.line_dict])
         self.visible = names
 
@@ -178,25 +179,25 @@ class BokehPlotter1D(Plotter1D):
         min_val = np.nan
         max_val = np.nan
 
-        y_mins = [np.nanmin(self.source_data_dict[name].data["y"]) 
-                    for name in self.visible 
+        y_mins = [np.nanmin(self.source_data_dict[name].data["y"])
+                    for name in self.visible
                     if (name in self.source_data_dict) and not (
-                            isinstance(self.source_data_dict[name].data["y"][0], str) 
+                            isinstance(self.source_data_dict[name].data["y"][0], str)
                             or np.count_nonzero(~np.isnan(self.source_data_dict[name].data["y"])) == 0
                         )]
         y_maxs = [np.nanmax(self.source_data_dict[name].data["y"])
-                    for name in self.visible 
+                    for name in self.visible
                     if (name in self.source_data_dict) and not (
-                            isinstance(self.source_data_dict[name].data["y"][0], str) 
+                            isinstance(self.source_data_dict[name].data["y"][0], str)
                             or np.count_nonzero(~np.isnan(self.source_data_dict[name].data["y"])) == 0
                         )]
-        
+
         if len(y_mins) != 0:
             min_val = np.nanmin(y_mins)
             max_val = np.nanmax(y_maxs)
-        
+
         return min_val, max_val
-        
+
     def get_x_bounds(self,) -> Tuple[float, float]:
         """Returns the bounds of the displayed data along the X axis
 
@@ -209,24 +210,24 @@ class BokehPlotter1D(Plotter1D):
         max_val = np.nan
 
         x_mins = [np.nanmin(self.source_data_dict[name].data["x"])
-                    for name in self.visible 
+                    for name in self.visible
                     if (name in self.source_data_dict) and not (
-                            isinstance(self.source_data_dict[name].data["x"][0], str) 
+                            isinstance(self.source_data_dict[name].data["x"][0], str)
                             or np.count_nonzero(~np.isnan(self.source_data_dict[name].data["x"])) == 0
                         )]
         x_maxs = [np.nanmax(self.source_data_dict[name].data["x"])
-                    for name in self.visible 
+                    for name in self.visible
                     if (name in self.source_data_dict) and not (
-                            isinstance(self.source_data_dict[name].data["x"][0], str) 
+                            isinstance(self.source_data_dict[name].data["x"][0], str)
                             or np.count_nonzero(~np.isnan(self.source_data_dict[name].data["x"])) == 0
                         )]
 
         if len(x_mins) != 0:
             min_val = np.nanmin(x_mins)
             max_val = np.nanmax(x_maxs)
-        
+
         return min_val, max_val
-    
+
     def set_x_scale(self, scale: str):
         """Sets the X axis scale to either log or lin
 
@@ -236,7 +237,7 @@ class BokehPlotter1D(Plotter1D):
             Scale to set
         """
         self.fig.x_scale = LogScale() if scale == "log" else LinearScale()
-    
+
     def set_y_scale(self, scale: str):
         """Sets the Y axis scale to either log or lin
 
