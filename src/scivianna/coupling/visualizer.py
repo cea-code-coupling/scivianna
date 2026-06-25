@@ -240,6 +240,8 @@ class GridLayoutData(BaseModel):
 
         for line in self.grid:
             for element in line:
+                if element is None:
+                    continue
                 if element.name in found_names:
                     raise ValueError(f"name {element.name} appears at least twice.")
 
@@ -443,8 +445,9 @@ def get_serializable_data(
         serializable_grid.append([])
 
         for element in line:
-            assert element.interface in INTERFACES.values(), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
-            element.interface = list(INTERFACES.keys())[list(INTERFACES.values()).index(element.interface)]
+            if element is not None:
+                assert element.interface in INTERFACES.values(), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
+                element.interface = list(INTERFACES.keys())[list(INTERFACES.values()).index(element.interface)]
 
             serializable_grid[-1].append(element)
 
