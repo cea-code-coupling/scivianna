@@ -49,6 +49,8 @@ class SplitItem:
 
     direction: SplitDirection
     """Direction of the split between the two panels"""
+    factor: float = .5
+    """Initial location of the split (.5 = 50%)"""
 
 
 class SplitLayout(GenericLayout):
@@ -108,12 +110,12 @@ class SplitLayout(GenericLayout):
     def change_code_interface(self, event):
         super().change_code_interface(event)
         current_frame = self.current_frame
-    
+
         self.update_interface_in_split_item(current_frame, self.visualisation_panels[current_frame], self.split_item)
 
         if self.code_interface_to_update:
             self.reset_interface()
-            
+
         self.change_current_frame()
 
     def current_split_item(
@@ -184,22 +186,24 @@ class SplitLayout(GenericLayout):
         if isinstance(split_item, SplitItem):
             if split_item.direction == SplitDirection.VERTICAL:
                 return SplitJSVertical(
-                    left=self.build_split_item(split_item.panel_1),
-                    right=self.build_split_item(split_item.panel_2),
+                    self.build_split_item(split_item.panel_1),
+                    self.build_split_item(split_item.panel_2),
                     sizing_mode="stretch_both",
+                    sizes=(int(split_item.factor * 100), int((1-split_item.factor) * 100)),
                     margin=0,
                 )
             else:
                 return SplitJSHorizontal(
-                    bottom=self.build_split_item(split_item.panel_1),
-                    top=self.build_split_item(split_item.panel_2),
+                    self.build_split_item(split_item.panel_1),
+                    self.build_split_item(split_item.panel_2),
                     sizing_mode="stretch_both",
+                    sizes=(int(split_item.factor * 100), int((1-split_item.factor) * 100)),
                     margin=0,
                 )
-            
+
         elif isinstance(split_item, VisualizationPanel):
             return split_item.figure
-        
+
         else:
             raise TypeError(
                 f"SplitItem or VisualizationPanel expected, found {type(split_item)}"
@@ -240,7 +244,7 @@ class SplitLayout(GenericLayout):
             raise TypeError(
                 f"SplitItem or VisualizationPanel expected, found {type(split_item)}"
             )
-        
+
     def get_panels_dict(self, split_item: SplitItem) -> Dict[str, VisualizationPanel]:
         """Returns all provided VisualizationPanels in a dictionnary
 
@@ -255,10 +259,10 @@ class SplitLayout(GenericLayout):
             VisualizationPanels dictionnary
         """
         visualisation_panels : Dict[str, VisualizationPanel] = {}
-        
+
         if isinstance(split_item, VisualizationPanel):
             visualisation_panels[split_item.panel_name] = split_item
-        
+
         elif isinstance(split_item, SplitItem):
             if isinstance(split_item.panel_1, SplitItem):
                 visualisation_panels = {**visualisation_panels, **self.get_panels_dict(split_item.panel_1)}
@@ -268,10 +272,10 @@ class SplitLayout(GenericLayout):
                 visualisation_panels = {**visualisation_panels, **self.get_panels_dict(split_item.panel_2)}
             else:
                 visualisation_panels[split_item.panel_2.panel_name] = split_item.panel_2
-                
+
         return visualisation_panels
 
-    
+
     @pn.io.hold()
     def reset_interface(self,):
         """Rebuilds the interface based on up-to-date SplitItem
@@ -286,7 +290,7 @@ class SplitLayout(GenericLayout):
 
         self.set_to_frame(self.current_frame)
         self.change_current_frame()
-            
+
     @pn.io.hold()
     def duplicate(self, horizontal: bool):
         """Split the panel, the new panel is a copy of the first, all panels are duplicated.
@@ -343,19 +347,19 @@ class SplitLayout(GenericLayout):
     #
     def save_to_zip(self, file_path: Union[str, Path], include_files: bool = True):
         """Saves the layout configuration and slave data to a zip file.
-        
+
         The zip file contains:
-        - layout.json: JSON file describing the layout structure, current frame, 
+        - layout.json: JSON file describing the layout structure, current frame,
           and for each slave: panel name, slave info, and associated interface name
         - data/: Folder containing serialized data for each slave
-        
+
         Parameters
         ----------
         file_path : Union[str, Path]
             Path to the zip file to create
         include_files : bool = True
             If True, includes loaded files in the slave serialization
-            
+
         Returns
         -------
         Path
@@ -365,13 +369,13 @@ class SplitLayout(GenericLayout):
 
     @classmethod
     def restore_from_zip(
-        cls, 
-        file_path: Union[str, Path], 
+        cls,
+        file_path: Union[str, Path],
         include_files: bool = True,
         additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {}
     ) -> "SplitLayout":
         """Restores a SplitLayout from a zip file.
-        
+
         Parameters
         ----------
         file_path : Union[str, Path]
@@ -380,14 +384,14 @@ class SplitLayout(GenericLayout):
             If True, includes loaded files in the slave deserialization
         additional_interfaces : Dict = {}
             Additional interfaces to register
-            
+
         Returns
         -------
         SplitLayout
             Restored SplitLayout instance
         """
         return load_layout_from_zip(
-            file_path, 
-            include_files, 
-            additional_interfaces            
+            file_path,
+            include_files,
+            additional_interfaces
         )

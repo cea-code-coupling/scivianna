@@ -416,7 +416,8 @@ class SplitLayoutData(BaseModel):
                 item = SplitItem(
                     item,
                     new_panel,
-                    direction=direction
+                    direction=direction,
+                    factor = 1 / (len(self.split) - i + 1)
                 )
 
             return item

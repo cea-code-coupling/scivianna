@@ -27,7 +27,7 @@ country_cat = {
     "Potential candidates": ["XK"],
     "East countries": ["AM", "BY", "AZ"],
     "European Neighbourhood Policy (ENP)-South countries": ["DZ", "LB","SY","EG", "LY","TN","IL", "MA","JO","PS"],
-    "Other countries":["AR","AU","BR","CA","CN_X_HK","HK","IN","JP","MX","NG","NZ","RU","SG","ZA","KR","TW","UK","US",]	
+    "Other countries":["AR","AU","BR","CA","CN_X_HK","HK","IN","JP","MX","NG","NZ","RU","SG","ZA","KR","TW","UK","US",]
 }
 
 
@@ -368,7 +368,8 @@ def make_europe_panel(_, return_slaves: bool = False) -> SplitLayout:
         SplitItem(
             map_panel,
             line_panel,
-            SplitDirection.VERTICAL
+            SplitDirection.VERTICAL,
+            factor=.6
         ),
         additional_interfaces={"EuropeGrid": EuropeGridInterface, "TimeSeries": CountryTimeSeriesInterface},
     )
