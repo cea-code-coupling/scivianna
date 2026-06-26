@@ -778,7 +778,8 @@ class LayoutProblem(Problem):
             Raised if called before initialize() or after terminate().
         """
 
-        visualization_panel, field_name = name.split("@")
+        visualization_panel = name.split("@")[0]
+        field_name = name.replace(f"{visualization_panel}@", "")
 
         panel = self.layout.get_panel(visualization_panel)
         slave = panel.get_slave()
