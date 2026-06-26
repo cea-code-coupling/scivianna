@@ -1,6 +1,6 @@
 import functools
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple, Type, Union
+from typing import Callable, Dict, List, Literal, Tuple, Type, Union
 
 import panel as pn
 import panel_material_ui as pmui
@@ -19,6 +19,8 @@ from scivianna.utils.interface_tools import (
     GenericInterfaceEnum,
     get_interface_default_panel,
 )
+
+pn.extension(notifications=True)
 
 
 card_style = {}
@@ -100,6 +102,8 @@ class GenericLayout:
 
         self.last_hover_id = None
         """Last hovered cell to trigger change if applicable"""
+
+        self.notifications: List[Tuple[Literal["success", "info", "error"], str, float]] = []
 
     @pn.io.hold()
     def register_panel(self, panel: VisualizationPanel):
@@ -319,7 +323,9 @@ class GenericLayout:
             self.visualisation_panels[panel].recompute()
             self.visualisation_panels[panel].async_update_data()
         self.panels_to_recompute.clear()
+
         if self.periodic_recompute_added:
+            self._process_notifications()
             self.add_periodic_update()
 
     def mark_to_recompute(self, panels_to_recompute):
@@ -443,3 +449,20 @@ class GenericLayout:
 
     def servable(self, *args, **kwargs):
         return self.main_frame.servable(*args, **kwargs)
+
+    def _process_notifications(self):
+        """
+        Process pending notifications from the queue.
+
+        This method runs on the UI thread (called periodically via pn.periodic_callback)
+        and displays any queued notifications.
+        """
+        for notif_type, message, timeout in self.notifications:
+            if notif_type == "success":
+                pn.state.notifications.success(message, duration=timeout)
+            elif notif_type == "error":
+                pn.state.notifications.error(message, duration=timeout)
+            elif notif_type == "info":
+                pn.state.notifications.info(message, duration=timeout)
+
+        self.notifications.clear()

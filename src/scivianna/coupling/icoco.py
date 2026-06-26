@@ -76,7 +76,9 @@ class Value:
     """
 
     UPDATE_RATE = "UPDATE_RATE"
-
+    NOTIFICATION_SUCCESS = "NOTIFICATION_SUCCESS"
+    NOTIFICATION_INFO = "NOTIFICATION_INFO"
+    NOTIFICATION_ERROR = "NOTIFICATION_ERROR"
 
 class LayoutProblem(Problem):
     """
@@ -127,7 +129,6 @@ class LayoutProblem(Problem):
         self.title = title
         self.show_server = show_server
         self.start = start
-
         atexit.register(self.terminate)
 
         # Register session lifecycle callbacks to track active connections
@@ -250,6 +251,9 @@ class LayoutProblem(Problem):
         poll_interval : float, optional
             Time in seconds between connection checks (default: 0.5).
         """
+        if self._active_connections:
+            self.layout.notifications.append(("success", "COUPLING COMPLETE. CLOSE YOUR BROWSER TAB TO TERMINATE THE SIMULATION.", 0))
+
         print(f"[LayoutProblem] Waiting for {len(self._active_connections)} active connection(s) to disconnect...")
         while len(self._active_connections) > 0:
             time.sleep(poll_interval)
@@ -435,7 +439,6 @@ class LayoutProblem(Problem):
             # here we should transfer data and update the visu
             self.layout.mark_to_recompute(self.panels_to_recompute)
             self.panels_to_recompute.clear()
-
         return True
 
     def validateTimeStep(self) -> None:
@@ -556,6 +559,12 @@ class LayoutProblem(Problem):
         """
         if name == Value.UPDATE_RATE:
             return ValueType.Int
+        if name in [
+            Value.NOTIFICATION_SUCCESS,
+            Value.NOTIFICATION_INFO,
+            Value.NOTIFICATION_ERROR
+        ]:
+            return "String"
 
         super().getValueType(name=name)
 
@@ -568,7 +577,12 @@ class LayoutProblem(Problem):
         list of str
             List of input value parameter names.
         """
-        return [Value.UPDATE_RATE]
+        return [
+            Value.UPDATE_RATE,
+            Value.NOTIFICATION_SUCCESS,
+            Value.NOTIFICATION_INFO,
+            Value.NOTIFICATION_ERROR
+        ]
 
     def setInputIntValue(self, name: str, val: float):
         """
@@ -591,6 +605,43 @@ class LayoutProblem(Problem):
             return
 
         super().setInputIntValue(name=name, val=val)
+
+    def setInputStringValue(self, name: str, val: str):
+        """
+        Set an string input value by name.
+
+        Parameters
+        ----------
+        name : str
+            Name of the scalar value to set.
+        val : float
+            Value passed to the code.
+
+        Raises
+        ------
+        WrongArgument
+            Raised if the scalar name is invalid.
+        """
+        if val == "":
+            return
+
+        if name == Value.NOTIFICATION_SUCCESS:
+            self.layout.notifications.append(
+                ("success", val, 5000)
+            )
+            return
+        elif name == Value.NOTIFICATION_INFO:
+            self.layout.notifications.append(
+                ("info", val, 5000)
+            )
+            return
+        elif name == Value.NOTIFICATION_ERROR:
+            self.layout.notifications.append(
+                ("error", val, 5000)
+            )
+            return
+
+        super().setInputStringValue(name=name, val=val)
 
     def getInputMEDDoubleFieldTemplate(
         self, name: str
