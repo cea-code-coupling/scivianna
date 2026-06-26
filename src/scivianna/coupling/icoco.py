@@ -189,6 +189,8 @@ class LayoutProblem(Problem):
         port = sock.getsockname()[1]
         sock.close()
 
+        self.layout.open_time_panel()
+
         self.server = pn.serve(
             self.layout.main_frame,
             address=ip_adress,

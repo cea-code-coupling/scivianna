@@ -13,7 +13,7 @@ class GUI:
     """ Class defining the panels sidebar and managing the extensions
     """
     def __init__(
-        self, 
+        self,
         extensions: List[Extension]
     ):
         """Constructor of the panels GUI
@@ -27,6 +27,7 @@ class GUI:
         button_margin_x = 2
         button_margin_y = 5
         self.button_margin = (button_margin_x, button_margin_y)
+        self.registered_extensions = {}
 
         self.extensions = extensions
 
@@ -56,8 +57,8 @@ class GUI:
         )
 
         self.drawer = pmui.Drawer(
-            self.drawer_column, 
-            size=300, 
+            self.drawer_column,
+            size=300,
             variant="persistent",
             sizing_mode="stretch_height",
             open=False
@@ -143,7 +144,7 @@ class GUI:
             margin=0,
             sizing_mode="stretch_height",
         )
-    
+
     def add_extension(self, extension: Extension):
         """Adds an Extension instance to the GUI
 
@@ -152,7 +153,7 @@ class GUI:
         extension : Extension
             Extension to add to the GUI
         """
-        self.register_new_extension(
+        self.registered_extensions[extension] = [
             pmui.IconButton(
                 icon=extension.icon,
                 size=extension.iconsize,
@@ -170,6 +171,9 @@ class GUI:
                 ),
                 extension.make_gui(),
             )
+        ]
+        self.register_new_extension(
+            *self.registered_extensions[extension]
         )
 
     def register_new_extension(self, button: pmui.IconButton, col: pn.Column):
@@ -187,10 +191,10 @@ class GUI:
         self.buttons.append(ext)
         col.visible = False
         self.options_widget.append(button)
-        
+
         # Adding col first to keep the selection at the bottom
         self.drawer_column.insert(0, col)
-        
+
         button.on_click(partial(self.change_drawer, extension=ext))
 
 

@@ -466,3 +466,10 @@ class GenericLayout:
                 pn.state.notifications.info(message, duration=timeout)
 
         self.notifications.clear()
+
+    def open_time_panel(self):
+        """Changes current GUI to the coupling extension
+        """
+        self.gui.change_drawer(
+            None, self.gui.registered_extensions[self.time_widget]
+        )
