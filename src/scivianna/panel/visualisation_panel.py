@@ -50,9 +50,9 @@ class VisualizationPanel(pn.viewable.Viewer):
     """
 
     def __init__(
-            self, 
-            slave: ComputeSlave, 
-            name="", 
+            self,
+            slave: ComputeSlave,
+            name="",
             extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
         ):
         """Visualization panel constructor
@@ -66,15 +66,15 @@ class VisualizationPanel(pn.viewable.Viewer):
         extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
             List of extensions loaded with the visualizer. Can be either extension classes or tuples of (class, state_dict).
         """
-        #         
+        #
         #   Initializing attributes
-        #         
+        #
         super().__init__()
-        
+
         self.panel_coupling_extension: Extension = None
         self.panel_name = name
         self.copy_index = 1
-        
+
         self.slave = slave
         self.slave.allow_errors = True
 
@@ -87,17 +87,17 @@ class VisualizationPanel(pn.viewable.Viewer):
         self.__new_data = {}
         """New data to set in the colorbar and in the columndatasources"""
 
-        # 
+        #
         #   Saving code interface properties
-        #         
+        #
         code_interface: Type[Geometry2D] = self.slave.code_interface
-        
-        # 
+
+        #
         #   Extensions creation
-        #         
+        #
         self.extension_classes = []
         extension_states = {}
-        
+
         # Process extensions - can be classes or (class, state) tuples
         for ext in extensions:
             if isinstance(ext, tuple):
@@ -106,7 +106,7 @@ class VisualizationPanel(pn.viewable.Viewer):
                 extension_states[ext_class.__name__] = ext_state
             else:
                 self.extension_classes.append(ext)
-        
+
         # Add interface extensions
         for extension in code_interface.extensions:
             if not issubclass(extension, Extension):
@@ -114,9 +114,9 @@ class VisualizationPanel(pn.viewable.Viewer):
             if not extension in self.extension_classes:
                 self.extension_classes.append(extension)
 
-        # 
+        #
         #   Building layout
-        #         
+        #
         self.extensions = []
         for e in self.extension_classes:
             ext = e(self.slave, self.plotter, self)
@@ -131,7 +131,7 @@ class VisualizationPanel(pn.viewable.Viewer):
         self.gui_panel = self.gui.make_panel()
 
         self.button = pmui.IconButton(icon=(Path(scivianna.__file__).parent / "icon" / "settings_applications.svg").read_text().strip(), icon_size = "1em", margin=0)
-        self.title_typo = pmui.Typography("## "+self.panel_name, margin=0)
+        self.title_typo = pmui.Typography("**"+self.panel_name+"**", margin=0)
 
         self.figure = Overlay(
             figure = self.plotter.make_panel(),
@@ -141,7 +141,7 @@ class VisualizationPanel(pn.viewable.Viewer):
             styles={"border": "2px solid lightgray"}
         )
         self.figure.hide_buttons()
-        
+
         pn.io.push_notebook(self.figure)
 
 
@@ -182,11 +182,11 @@ class VisualizationPanel(pn.viewable.Viewer):
         return self.slave
 
 
-    # 
+    #
     # #
     # #     API to provide in the panels
     # #
-    # 
+    #
     def recompute(
         self, *args, **kwargs
     ):
@@ -304,7 +304,7 @@ class VisualizationPanel(pn.viewable.Viewer):
         self.copy_index += 1
 
         return new_name
-    
+
     def trigger_on_file_load(self, file_path: str, file_label: str):
         for extension in self.extensions:
             extension.on_file_load(file_path, file_label)

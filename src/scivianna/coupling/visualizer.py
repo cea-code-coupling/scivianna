@@ -413,11 +413,12 @@ class SplitLayoutData(BaseModel):
                     new_panel = panels[self.split[i].name]
                 else:
                     raise TypeError(f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(self.split[0])}")
+
                 item = SplitItem(
                     item,
                     new_panel,
                     direction=direction,
-                    factor = 1 / (len(self.split) - i + 1)
+                    factor = i / (i + 1)
                 )
 
             return item
