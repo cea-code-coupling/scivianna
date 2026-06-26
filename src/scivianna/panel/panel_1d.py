@@ -338,3 +338,31 @@ class Panel1D(VisualizationPanel):
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
         return panel
+
+    def set_xscale(self, scale: str):
+        """Sets the X axis scale to either log or lin
+
+        Parameters
+        ----------
+        scale : str
+            Scale to set
+        """
+        self.plotter.set_x_scale(scale)
+        for ext in self.extensions:
+            ext.on_scale_change(
+                "x", scale
+            )
+
+    def set_yscale(self, scale: str):
+        """Sets the Y axis scale to either log or lin
+
+        Parameters
+        ----------
+        scale : str
+            Scale to set
+        """
+        self.plotter.set_y_scale(scale)
+        for ext in self.extensions:
+            ext.on_scale_change(
+                "y", scale
+            )

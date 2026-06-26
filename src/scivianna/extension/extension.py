@@ -171,6 +171,20 @@ class Extension:
         """
         pass
 
+    def on_scale_change(
+        self, axis_name: str, value: str
+    ):
+        """Function called When the scale is changed
+
+        Parameters
+        ----------
+        axis_name : str
+            Name of the axis changing its scale
+        value : str
+            New scale value
+        """
+        pass
+
     def provide_options(self,) -> Dict[str, Any]:
         """Provide a set of options to give to the slave for its update
 

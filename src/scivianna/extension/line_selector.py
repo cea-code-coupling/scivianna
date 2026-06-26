@@ -160,6 +160,33 @@ If a color bar is used, you can decide to center it on zero.
                 self.slave.get_labels()
             )
 
-    def on_field_change(self, field_name):
+    def on_field_change(self, field_name: str):
+        """Function called when the user requests a displayed field change
+
+        Parameters
+        ----------
+        field_name : str
+            Name of the new displayed field
+        """
         if isinstance(field_name, list):
             self.field_color_selector.value = field_name
+
+    def on_scale_change(
+        self, axis_name: str, value: str
+    ):
+        """Function called When the scale is changed
+
+        Parameters
+        ----------
+        axis_name : str
+            Name of the axis changing its scale
+        value : str
+            New scale value
+        """
+        self._restoring = True
+        if axis_name == "x":
+            self.x_scale.value = value
+        elif axis_name == "y":
+            self.x_scale.value = value
+
+        self._restoring = False

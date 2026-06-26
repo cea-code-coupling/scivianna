@@ -1,7 +1,7 @@
 from enum import Enum, auto
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Type, Tuple
+from typing import Dict, List, Literal, Optional, Union, Type, Tuple
 
 from scivianna.coupling.problem_server import ServerManager, ProblemClient
 from scivianna.enums import UpdatePolicy
@@ -207,6 +207,11 @@ class ValuePanel(CouplingPanel):
     """1D plot minimum vertical axis value"""
     max_value: Optional[PositiveFloat] = None
     """1D plot maximum vertical axis value"""
+
+    x_scale: Literal["lin", "log"] = "lin"
+    """Horizontal axis scale (linear or log)"""
+    y_scale: Literal["lin", "log"] = "lin"
+    """Vertical axis scale (linear or log)"""
 
     interface: Union[Type[Value1DAtLocation], Type[ValueAtLocation]]
     """1D data code interface"""
@@ -558,6 +563,7 @@ class GridStackProblem(LayoutProblem):
 
                     visualisation_panels[name] = Panel1D(slave_1d, name)
                     visualisation_panels[name].set_field(element.displayed_fields)
+                    visualisation_panels[name].set_yscale(element.y_scale)
 
                 elif isinstance(element, FieldPanel):
                     element: FieldPanel
@@ -686,6 +692,7 @@ class SplitLayoutProblem(LayoutProblem):
 
                 visualisation_panels[name] = Panel1D(slave_1d, name)
                 visualisation_panels[name].set_field(element.displayed_fields)
+                visualisation_panels[name].set_yscale(element.y_scale)
 
             elif isinstance(element, FieldPanel):
                 element: FieldPanel
