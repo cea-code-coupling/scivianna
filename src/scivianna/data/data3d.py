@@ -43,10 +43,10 @@ class Data3D(DataContainer):
         """
         data_ = Data3D()
         data_.polydata = polydata
-        data_.cell_ids = [p.cell_id for p in polydata]
-        data_.cell_values = [np.nan] * len(polydata)
-        data_.cell_colors = np.zeros((len(polydata), 4)) + 255
-        data_.cell_edge_colors = np.zeros((len(polydata), 4)) + 50
+        data_.cell_ids = polydata.cell_data["cell_id"]
+        data_.cell_values = [np.nan] * len(data_.cell_ids)
+        data_.cell_colors = np.zeros((len(data_.cell_ids), 4)) + 255
+        data_.cell_edge_colors = np.zeros((len(data_.cell_ids), 4)) + 50
         return data_
     
     def copy(self) -> "Data3D":
@@ -89,6 +89,7 @@ class Data3D(DataContainer):
         # RGB colors (drop alpha if present and normalize to [0, 1])
         colors = np.asarray(self.cell_colors, dtype=float)
 
+        print(colors.shape)
         if colors.shape[1] == 4:
             colors = colors[:, :3]
 

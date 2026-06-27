@@ -8,7 +8,7 @@ import multiprocessing as mp
 import panel as pn
 import panel_material_ui as pmui
 import pickle
-
+import tempfile
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -827,7 +827,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         def medcouplingumesh_to_vtk_polydata(
             mesh: medcoupling.MEDCouplingUMesh
-        ) -> vtk.vtkPolyData:
+        ) -> "vtk.vtkPolyData":
             """Convert a MEDCouplingUMesh to vtkPolyData.
 
             Parameters
@@ -840,12 +840,34 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             vtk.vtkPolyData
                 The converted vtkPolyData.
             """
-            vtk_mesh = mesh.buildVTKUnstructuredGrid()
+            # Create a temporary file to store the VTK output
+            with tempfile.NamedTemporaryFile(suffix=".vtk", delete=False) as tmp_file:
+                temp_file_path = tmp_file.name
+
+            # Write the MEDCouplingUMesh to a VTK file
+            mesh.writeVTK(temp_file_path)
+
+            # Read the VTK file using VTK
+            vtk_reader = vtk.vtkUnstructuredGridReader()
+            vtk_reader.SetFileName(temp_file_path)
+            vtk_reader.Update()
+            vtk_mesh = vtk_reader.GetOutput()
+
+            # Convert to vtkPolyData
             vtk_polydata = vtk.vtkPolyData()
             vtk_polydata.SetPoints(vtk_mesh.GetPoints())
             vtk_polydata.SetPolys(vtk_mesh.GetCells())
-            return vtk_polydata
 
+            # Add cell_id cell data with range from 0 to cell count
+            num_cells = vtk_polydata.GetNumberOfCells()
+            cell_ids = vtk.vtkUnsignedIntArray()
+            cell_ids.SetName("cell_id")
+            cell_ids.SetNumberOfValues(num_cells)
+            for i in range(num_cells):
+                cell_ids.SetValue(i, i)
+            vtk_polydata.GetCellData().SetScalars(cell_ids)
+
+            return vtk_polydata
         # Get time from options, default to 0 if absent
         time = options.get("time", 0.0)
 

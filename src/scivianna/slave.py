@@ -227,7 +227,7 @@ def worker(
 
             #   Geometry3D functions
             elif task == SlaveCommand.COMPUTE_3D_DATA:
-                options = data[0]
+                coloring_label, options = data
                 if not isinstance(code_, Geometry3D):
                     raise TypeError(
                         f"The requested panel is not associated to an Geometry3D, found class {type(code_)}."
@@ -238,7 +238,7 @@ def worker(
                 )
 
                 dict_value_per_cell = code_.get_3d_value_dict(
-                    value_label=options["coloring_label"],
+                    value_label=coloring_label,
                     cells=data.cell_ids,
                     options=options,
                     caller=options.get("caller", "API"),
@@ -672,6 +672,7 @@ class ComputeSlave:
     #   Geometry3D functions
     def compute_3D_data(
         self,
+        coloring_label: str,
         options: Dict[str, Any]
     ) -> Tuple[Data3D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
@@ -692,6 +693,7 @@ class ComputeSlave:
             [
                 SlaveCommand.COMPUTE_3D_DATA,
                 [
+                    coloring_label,
                     options,
                 ],
             ]

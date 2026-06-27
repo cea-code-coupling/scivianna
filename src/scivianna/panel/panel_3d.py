@@ -208,6 +208,7 @@ class Panel3D(VisualizationPanel):
                 options[key] = value
 
         computed_data = self.slave.compute_3D_data(
+            self.displayed_field,
             options,
         )
 

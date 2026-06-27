@@ -20,7 +20,7 @@ def get_panel(geo, title: str = "", *args, return_slaves=False, **kwargs) -> Vis
     else:
         raise TypeError(f"Provided type {type(geo)} not implemented")
 
-    med_panel = Panel3D(slave)
+    med_panel = Panel3D(slave, name="3D Demo")
     if return_slaves:
         return SplitLayout(med_panel), [med_panel.get_slave()]
     else:
