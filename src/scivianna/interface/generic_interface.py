@@ -4,6 +4,7 @@ import pandas as pd
 from typing import Any, List, Tuple, Dict, Union
 
 from scivianna.data.data2d import Data2D
+from scivianna.data.data3d import Data3D
 from scivianna.enums import VisualizationMode, GeometryType, DataType
 
 from typing import TYPE_CHECKING
@@ -247,6 +248,59 @@ class Geometry2DGrid(Geometry2D):
     """
     rasterized: bool = True
     """Boolean telling if the geometry is made by rasterizing a 2D grid (displays the line count in the GUI)."""
+
+
+class Geometry3D(GenericInterface):
+    """ Interface parent class for classes that can compute geometry 3D polygons.
+    """
+    def compute_3D_data(
+        self,
+        options: Dict[str, Any]
+    ) -> Tuple[Data3D, bool]:
+        """Returns a list of polygons that defines the geometry in a given frame
+
+        Parameters
+        ----------
+        options : Dict[str, Any]
+            Additional options for frame computation.
+
+        Returns
+        -------
+        Data3D
+            Geometry to display
+        bool
+            Were the polygons updated compared to the past call
+        """
+        raise NotImplementedError()
+
+    def get_3d_value_dict(
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+
+        Raises
+        ------
+        NotImplementedError
+            Function to override in the code interfaces
+        """
+        raise NotImplementedError()
+
 
 
 class ValueAtLocation(GenericInterface):
