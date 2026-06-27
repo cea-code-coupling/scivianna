@@ -1,3 +1,5 @@
+from typing import Tuple, Callable
+
 from scivianna.component.vtk_plotter import VTKPlotter
 from scivianna.data.data3d import Data3D
 
@@ -23,8 +25,9 @@ class Plotter3D:
         data : Data3D
             Data3D object containing the geometry and data to plot
         """
-        data.update_cell_data()
-        self.plotter.update_polydata(data.polydata)
+        if data is not None:
+            data.update_cell_data()
+            self.plotter.update_polydata(data.polydata)
 
     def update_plot(
         self,
@@ -37,8 +40,9 @@ class Plotter3D:
         data : Data3D
             Data3D object containing the geometry and data to plot
         """
-        data.update_cell_data()
-        self.plotter.update_colors(data.polydata)
+        if data is not None:
+            data.update_cell_data()
+            self.plotter.update_colors(data.polydata)
 
     def make_panel(self,):
         """Returns teh viewable displayed in the 3D panel
@@ -49,3 +53,47 @@ class Plotter3D:
             3D potter
         """
         return self.plotter
+
+    def update_colorbar(self, display: bool, range: Tuple[float, float]):
+        """Displays or hide the color bar, if display, updates its range
+
+        Parameters
+        ----------
+        display : bool
+            Display or hides the color bar
+        range : Tuple[float, float]
+            New colormap range
+        """
+        pass
+
+    def set_color_map(self, color_map_name: str):
+        """Sets the colorbar color map name
+
+        Parameters
+        ----------
+        color_map_name : str
+            Color map name
+        """
+        pass
+
+    def provide_on_mouse_move_callback(self, callback: Callable):
+        """Stores a function to call everytime the user moves the mouse on the plot.
+        Functions arguments are location, cell_id.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.on_mouse_move_callback = callback
+
+    def provide_on_clic_callback(self, callback: Callable):
+        """Stores a function to call everytime the user clics on the plot.
+        Functions arguments are location, cell_id.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.on_clic_callback = callback
