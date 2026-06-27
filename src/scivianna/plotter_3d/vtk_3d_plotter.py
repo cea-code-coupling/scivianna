@@ -41,4 +41,11 @@ class Plotter3D:
         self.plotter.update_colors(data.polydata)
 
     def make_panel(self,):
+        """Returns teh viewable displayed in the 3D panel
+
+        Returns
+        -------
+        pn.viewable.Viewable
+            3D potter
+        """
         return self.plotter
