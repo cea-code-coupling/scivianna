@@ -9,18 +9,22 @@ import panel as pn
 import panel_material_ui as pmui
 import pickle
 
+
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.slave import ComputeSlave
     from scivianna.plotter_2d.generic_plotter import Plotter2D
 
 import scivianna
+
+from scivianna.data.data2d import Data2D
+from scivianna.data.data3d import Data3D
+
+from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.extension.extension import Extension
 import scivianna.icon
-from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface
+from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface, Geometry3D
 from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
-from scivianna.enums import GeometryType, VisualizationMode
 
 import medcoupling
 
@@ -351,7 +355,7 @@ This extension allows defining the medcoupling field display parameters.
         return extension
 
 
-class MEDInterface(Geometry2DPolygon, CouplingInterface):
+class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
     file_path: str
     """MEDCoupling .med file path saved to read MedCouplingFields later."""
 
@@ -403,6 +407,11 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         self.current_time = 0.0
         """Current simulation time"""
         self.templates = {}
+        
+        self.data3d: Dict[str, Data3D] = {}
+        """Dictionary with caller as key storing past computed data3D for each caller"""
+        self.last_computed_3d_time = -1
+        """Last computed 3D time"""
 
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
@@ -795,6 +804,165 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             return VisualizationMode.NONE
 
         return VisualizationMode.FROM_VALUE
+
+    def compute_3D_data(
+        self,
+        options: Dict[str, Any]
+    ) -> Tuple[Data3D, bool]:
+        """Returns a list of polygons that defines the geometry in a given frame
+
+        Parameters
+        ----------
+        options : Dict[str, Any]
+            Additional options for frame computation.
+
+        Returns
+        -------
+        Data3D
+            Geometry to display
+        bool
+            Were the polygons updated compared to the past call
+        """
+        import vtk
+
+        def medcouplingumesh_to_vtk_polydata(
+            mesh: medcoupling.MEDCouplingUMesh
+        ) -> vtk.vtkPolyData:
+            """Convert a MEDCouplingUMesh to vtkPolyData.
+
+            Parameters
+            ----------
+            mesh : medcoupling.MEDCouplingUMesh
+                The MEDCouplingUMesh to convert.
+
+            Returns
+            -------
+            vtk.vtkPolyData
+                The converted vtkPolyData.
+            """
+            vtk_mesh = mesh.buildVTKUnstructuredGrid()
+            vtk_polydata = vtk.vtkPolyData()
+            vtk_polydata.SetPoints(vtk_mesh.GetPoints())
+            vtk_polydata.SetPolys(vtk_mesh.GetCells())
+            return vtk_polydata
+
+        # Get time from options, default to 0 if absent
+        time = options.get("time", 0.0)
+
+        if len(self.mesh) == 0:
+            self.data3d = Data3D.from_polydata(None)
+            return self.data3d, True
+
+        current_mesh, _ = self._get_mesh_at_time(time)
+
+        if time == self.last_computed_3d_time and self.data3d is not None:
+            print("Skipping 3D mesh computation.")
+            return self.data3d, False
+
+        if profile_time:
+            start_time = time.time()
+
+        self.last_computed_3d_time = time
+        self.data3d = Data3D.from_polydata(medcouplingumesh_to_vtk_polydata(current_mesh))
+
+        if profile_time:
+            print(f"Compute 3D mesh time {time.time() - start_time}")
+
+        return self.data3d, True
+
+    def get_3d_value_dict(
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+        """
+        if profile_time:
+            start_time = time.time()
+
+        if value_label == MESH:
+            return {str(v): np.nan for v in cells}
+
+        if "Iteration" not in options:
+            print(f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}")
+            options["Iteration"] = self.fields_iterations[value_label][0][0]
+
+        if "Order" not in options:
+            print(f"Order not found in medcoupling option, setting {self.fields_iterations[value_label][0][1]}")
+            options["Order"] = self.fields_iterations[value_label][0][1]
+
+        # Get time from options, default to 0 if absent
+        coupling_time = options.get("time", 0.0)
+        print(f"Coupling time : {coupling_time}")
+
+        field_np_array = None
+
+        # Array already loaded in fields
+        if value_label in self.fields and len(self.fields[value_label]) > 0:
+            # Get field data at specified time
+            field_np_array, _ = self._get_field_at_time(value_label, coupling_time)
+
+        # Loading it if available
+        else:
+            print(f"Reading MEDCouplingFieldDouble in {self.file_path}")
+            if value_label in self.fields_iterations:
+                # if "Iteration" in options and "Order" in options and (options["Iteration"], options["Order"]) in self.fields_iterations[value_label]:
+                if True:
+                    field_name = value_label.split("@")[0]
+                    field: medcoupling.MEDCouplingFieldDouble = medcoupling.ReadField(
+                        medcoupling.ON_CELLS,
+                        self.file_path,
+                        self.meshnames[0],
+                        0,
+                        field_name,
+                        options["Iteration"],
+                        options["Order"],
+                    )
+                    field_array: medcoupling.DataArrayDouble = field.getArray()
+                    field_np_array: np.ndarray = field_array.toNumPyArray()
+
+                    if "@" in value_label:
+                        components: List[str] = field_array.getInfoOnComponents()
+                        field_np_array = field_np_array[
+                            :, components.index(value_label.split("@")[1])
+                        ]
+                    else:
+                        field_np_array = field_np_array
+
+            if field_np_array is not None:
+                # Store as list of (array, time) tuples
+                self.fields[value_label] = [(field_np_array, coupling_time)]
+
+        if field_np_array is not None:
+            values = field_np_array[cells.tolist()]
+
+            value_dict = dict(zip(np.array(cells).astype(str), values))
+
+            if profile_time:
+                print(f"Get value dict time: {coupling_time.time() - start_time}")
+            return value_dict
+
+        # Allowing the field not to be defined at start, in which case we return only the mesh
+        if "time" in options:
+            return {str(v): np.nan for v in cells}
+        
+        raise NotImplementedError(
+            f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
+        )
 
     def get_file_input_list(self) -> List[Tuple[str, str]]:
         """Returns a list of file label and its description for the GUI

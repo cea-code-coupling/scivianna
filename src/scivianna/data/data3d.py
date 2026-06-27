@@ -1,13 +1,14 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, TYPE_CHECKING
 import numpy as np
 from scivianna.data.data_container import DataContainer
 
-import vtk
+if TYPE_CHECKING:
+    import vtk
 
 
 class Data3D(DataContainer):
     """Data class containing the 3D geometry data""" 
-    polydata: vtk.vtkPolyData
+    polydata: "vtk.vtkPolyData"
     """VTK polydata defining the geometry""" 
     cell_ids: List[Union[int, str]]
     """List of contained cell ids""" 
@@ -17,17 +18,17 @@ class Data3D(DataContainer):
     """List of contained cell colors""" 
     cell_edge_colors: List[Tuple[int, int, int]]
     """List of contained cell edge colors""" 
-    
+
     def __init__(self):
         """Empty constructor of the Data3D class.""" 
-        self.polydata = None 
-        self.cell_ids = [] 
-        self.cell_values = [] 
-        self.cell_colors = [] 
-        self.cell_edge_colors = [] 
-   
-    @classmethod 
-    def from_polydata(cls, polydata: vtk.vtkPolyData):
+        self.polydata = None
+        self.cell_ids = []
+        self.cell_values = []
+        self.cell_colors = []
+        self.cell_edge_colors = []
+
+    @classmethod
+    def from_polydata(cls, polydata: "vtk.vtkPolyData") -> "Data3D":
         """Build a Data3D object from a vtk.vtkPolyData 
         
         Parameters 
@@ -50,6 +51,7 @@ class Data3D(DataContainer):
     
     def copy(self) -> "Data3D":
         """Returns a deep copy of self."""
+        import vtk
         data3D = Data3D()
 
         poly = vtk.vtkPolyData()
