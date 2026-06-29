@@ -181,6 +181,9 @@ class LayoutProblem(Problem):
         print("\n\nVisualizer initializing\n\n")
         ip_adress = socket.gethostbyname(socket.gethostname())
 
+        for panel in self.layout.visualisation_panels:
+            assert "@" not in panel, f"Character @ can't be in a panel name, found {panel}."
+
         """
             Catching a free port to provide to pn.serve
         """
