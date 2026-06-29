@@ -135,6 +135,12 @@ class LayoutProblem(Problem):
         if start:
             pn.state.on_session_created(self._on_session_created)
 
+    @staticmethod
+    def _split_name(name: str) -> tuple[str, str]:
+        """Gets visualization panel name and field name."""
+        visualization_panel = name.split("@")[0]
+        return visualization_panel, name.replace(f"{visualization_panel}@", "")
+
     def setDataFile(self, datafile: str) -> None:
         """(Optional) Provide the relative path of a data file to be used by the code.
 
@@ -689,7 +695,7 @@ class LayoutProblem(Problem):
         WrongArgument
             Raised if the field name is invalid.
         """
-        visualization_panel, field_name = name.split("@")
+        visualization_panel, field_name = self._split_name(name)
 
         slave = self.layout.get_panel(visualization_panel).get_slave()
 
@@ -732,7 +738,8 @@ class LayoutProblem(Problem):
             Raised if the time property of 'afield' does not belong to the
             currently computed time step ]t, t + dt].
         """
-        visualization_panel, field_name = name.split("@")
+
+        visualization_panel, field_name = self._split_name(name)
 
         panel = self.layout.get_panel(visualization_panel)
         slave = panel.get_slave()
@@ -781,8 +788,7 @@ class LayoutProblem(Problem):
             Raised if called before initialize() or after terminate().
         """
 
-        visualization_panel = name.split("@")[0]
-        field_name = name.replace(f"{visualization_panel}@", "")
+        visualization_panel, field_name = self._split_name(name)
 
         panel = self.layout.get_panel(visualization_panel)
         slave = panel.get_slave()
