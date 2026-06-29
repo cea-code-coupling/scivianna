@@ -129,7 +129,8 @@ class LayoutProblem(Problem):
         self.title = title
         self.show_server = show_server
         self.start = start
-        atexit.register(self.terminate)
+        self._initialized = False
+        atexit.register(self._terminate)
 
         # Register session lifecycle callbacks to track active connections
         if start:
@@ -217,7 +218,9 @@ class LayoutProblem(Problem):
         self.time = 0.0
         self._up_rate = 1
         self._up_skipped = 0
-        return True
+
+        self._initialized = True
+        return self._initialized
 
     def _on_session_created(self, session_context):
         """
@@ -288,6 +291,16 @@ class LayoutProblem(Problem):
             Raised if called inside the TIME_STEP_DEFINED context
             (see Problem documentation).
         """
+        if not self._terminate():
+            raise WrongContext(method="terminate",
+                               precondition="called before initialize() or after terminate()",
+                               prob="LayoutProblem")
+
+
+    def _terminate(self) -> bool:
+        if not self._initialized:
+            return False
+
         self._dt = -1.0
         self.time = 0.0
         self._up_rate = 1
@@ -309,6 +322,10 @@ class LayoutProblem(Problem):
             panel.get_slave().terminate()
 
         self.server.stop()
+
+        self.data_file_path = None
+        self._initialized = False
+        return True
 
     def presentTime(self) -> float:
         """
