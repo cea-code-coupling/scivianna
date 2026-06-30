@@ -63,15 +63,15 @@ This extension allows you run coupling simulations.
             visible = False
         )
         self.display_last = pmui.Checkbox(
-            name = "Display last time", 
+            label = "Display last time",
             value = True,
             width = 280,
             visible = False
         )
         self.time_slider = pmui.DiscreteSlider(
-            name = "Time selector", 
-            value = 0., 
-            options = [0.], 
+            label = "Time selector",
+            value = 0.,
+            options = [0.],
             description="Time at which display the results",
             width = 260,
             show_value=False,
@@ -150,7 +150,7 @@ This extension allows you run coupling simulations.
         option_dict["time"] = self.time_slider.value
 
         return option_dict
-    
+
     def add_time_value(self, value: float):
         """Adds a new time value to the slide widget
 
@@ -165,9 +165,9 @@ This extension allows you run coupling simulations.
             self.time_slider.value = round(value, 8)
 
     def to_json(self) -> dict:
-        """Returns a dictionary with the information required to rebuild the extension. 
+        """Returns a dictionary with the information required to rebuild the extension.
         The show_play_button is willingly not saved as it doesn't make sense to restore it.
-        
+
         Returns
         -------
         dict
@@ -178,19 +178,19 @@ This extension allows you run coupling simulations.
             "time_slider_value": self.time_slider.value,
             "display_last_value": self.display_last.value
         }
-    
+
     @classmethod
     def from_json(cls, extension: "CouplingExtension", info_dict: dict) -> "CouplingExtension":
         """Restores the extension from its information dict.
         The show_play_button is willingly not saved as it doesn't make sense to restore it.
-        
+
         Parameters
         ----------
         extension : CouplingExtension
             Extension instance to restore
         info_dict : dict
             Dictionary containing extension state information
-            
+
         Returns
         -------
         CouplingExtension

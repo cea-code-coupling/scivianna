@@ -82,11 +82,11 @@ You can also hide/show the axes on the plot and force a plot update.
         )
         self.hide_show_button.on_click(self.toggle_axis_visibility)
 
-        # 
+        #
         #   Bounds widgets
-        #     
+        #
         self.x0_inp = pmui.FloatInput(
-            name="u_min",
+            label="u_min",
             value=0,
             start=-1e6,
             end=1e6,
@@ -95,7 +95,7 @@ You can also hide/show the axes on the plot and force a plot update.
             align="center",
         )
         self.y0_inp = pmui.FloatInput(
-            name="v_min",
+            label="v_min",
             value=0,
             start=-1e6,
             end=1e6,
@@ -104,7 +104,7 @@ You can also hide/show the axes on the plot and force a plot update.
             align="center",
         )
         self.x1_inp = pmui.FloatInput(
-            name="u_max",
+            label="u_max",
             value=1,
             start=-1e6,
             end=1e6,
@@ -113,7 +113,7 @@ You can also hide/show the axes on the plot and force a plot update.
             align="center",
         )
         self.y1_inp = pmui.FloatInput(
-            name="v_max",
+            label="v_max",
             value=1,
             start=-1e6,
             end=1e6,
@@ -122,7 +122,7 @@ You can also hide/show the axes on the plot and force a plot update.
             align="center",
         )
         self.w_inp = pmui.FloatInput(
-            name="w", value=.5, start=-1e6, end=1e6, step=0.1, width=125, margin=5, align="center"
+            label="w", value=.5, start=-1e6, end=1e6, step=0.1, width=125, margin=5, align="center"
         )
         self.recompute_button = pmui.Button(
             label = "Update plot",
@@ -147,26 +147,26 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
         self.w_inp.param.watch(update_w, "value")
 
-        # 
+        #
         #   Vectors widgets
-        #     
+        #
         self.u0_inp = pmui.FloatInput(
-            name="u0", value=1, start=0, end=1, width=125, margin=5
+            label="u0", value=1, start=0, end=1, width=125, margin=5
         )
         self.u1_inp = pmui.FloatInput(
-            name="u1", value=0, start=0, end=1, width=125, margin=5
+            label="u1", value=0, start=0, end=1, width=125, margin=5
         )
         self.u2_inp = pmui.FloatInput(
-            name="u2", value=0, start=0, end=1, width=125, margin=5
+            label="u2", value=0, start=0, end=1, width=125, margin=5
         )
         self.v0_inp = pmui.FloatInput(
-            name="v0", value=0, start=0, end=1, width=125, margin=5
+            label="v0", value=0, start=0, end=1, width=125, margin=5
         )
         self.v1_inp = pmui.FloatInput(
-            name="v1", value=1, start=0, end=1, width=125, margin=5
+            label="v1", value=1, start=0, end=1, width=125, margin=5
         )
         self.v2_inp = pmui.FloatInput(
-            name="v2", value=0, start=0, end=1, width=125, margin=5
+            label="v2", value=0, start=0, end=1, width=125, margin=5
         )
 
         def xplus_fn(event):
@@ -188,7 +188,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.xplus = pmui.Button(name="X+", button_type="success", width=50)
+        self.xplus = pmui.Button(label="X+", color="success", width=50)
         self.xplus.on_click(xplus_fn)
 
         def yplus_fn(event):
@@ -210,7 +210,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.yplus = pmui.Button(name="Y+", button_type="success", width=50)
+        self.yplus = pmui.Button(label="Y+", color="success", width=50)
         self.yplus.on_click(yplus_fn)
 
         def zplus_fn(event):
@@ -232,7 +232,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.zplus = pmui.Button(name="Z+", button_type="success", width=50)
+        self.zplus = pmui.Button(label="Z+", color="success", width=50)
         self.zplus.on_click(zplus_fn)
 
         u = pmui.Column(self.u0_inp, self.u1_inp, self.u2_inp, margin=0)
@@ -262,8 +262,8 @@ You can also hide/show the axes on the plot and force a plot update.
         self.axes_card = pmui.Card(
             pmui.Column(
             pmui.Typography("2D plot plane vectors"),
-            self.axis_buttons, 
-            pn.Row(u, v, margin=0), 
+            self.axis_buttons,
+            pn.Row(u, v, margin=0),
             margin=0),
             title="Axes vectors",
             width=300,
@@ -288,7 +288,7 @@ You can also hide/show the axes on the plot and force a plot update.
         else:
             self.plotter.display_borders(False)
             self.borders_displayed = False
-            
+
     def make_gui(self,) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
@@ -301,7 +301,7 @@ You can also hide/show the axes on the plot and force a plot update.
             pmui.Typography("Hide/show axis"),
             self.recompute_button,
             self.hide_show_button,
-            self.w_col, 
+            self.w_col,
             self.bounds_card,
             self.axes_card,
             margin=0
@@ -309,8 +309,8 @@ You can also hide/show the axes on the plot and force a plot update.
 
     def on_range_change(self, u_bounds, v_bounds, w_value):
         if [
-            *u_bounds, 
-            *v_bounds, 
+            *u_bounds,
+            *v_bounds,
             w_value
         ] != [
             self.x0_inp.value,
@@ -322,7 +322,7 @@ You can also hide/show the axes on the plot and force a plot update.
             self.__new_data["x0"], self.__new_data["x1"] = u_bounds
             self.__new_data["y0"], self.__new_data["y1"] = v_bounds
             self.__new_data["w"] = w_value
-            
+
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
             elif scivianna.utils._testing:
@@ -384,10 +384,10 @@ You can also hide/show the axes on the plot and force a plot update.
 
         # Definition of U and V coords
         self.bounds_card.visible = geom_type in [GeometryType._2D, GeometryType._3D]
-        
+
         # Definition of the normal coordinate
         self.w_inp.visible = geom_type in [GeometryType._3D, GeometryType._3D_INFINITE]
-            
+
     def trigger_update(self, *args, **kwargs):
         if self._restoring:
             return
@@ -419,10 +419,10 @@ You can also hide/show the axes on the plot and force a plot update.
         v = v / np.linalg.norm(v)
 
         return u, v
-    
+
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
-        
+
         Returns
         -------
         dict
@@ -436,18 +436,18 @@ You can also hide/show the axes on the plot and force a plot update.
             "v_bounds": [self.y0_inp.value, self.y1_inp.value],
             "w_value": self.w_inp.value,
         }
-    
+
     @classmethod
     def from_json(cls, extension: "Axes", info_dict: dict) -> "Axes":
         """Restores the extension from its information dict.
-        
+
         Parameters
         ----------
         extension : Axes
             Extension instance to restore
         info_dict : dict
             Dictionary containing extension state information
-            
+
         Returns
         -------
         Axes
@@ -457,26 +457,26 @@ You can also hide/show the axes on the plot and force a plot update.
 
         extension.borders_displayed = info_dict.get("borders_displayed", False)
         print(info_dict)
-        
+
         u_vector = info_dict.get("u_vector", [1, 0, 0])
         extension.u0_inp.value = u_vector[0]
         extension.u1_inp.value = u_vector[1]
         extension.u2_inp.value = u_vector[2]
-        
+
         v_vector = info_dict.get("v_vector", [0, 1, 0])
         extension.v0_inp.value = v_vector[0]
         extension.v1_inp.value = v_vector[1]
         extension.v2_inp.value = v_vector[2]
-        
+
         u_bounds = info_dict.get("u_bounds", [0, 1])
         extension.x0_inp.value = u_bounds[0]
         extension.x1_inp.value = u_bounds[1]
-        
+
         v_bounds = info_dict.get("v_bounds", [0, 1])
         extension.y0_inp.value = v_bounds[0]
         extension.y1_inp.value = v_bounds[1]
-        
+
         extension.w_inp.value = info_dict.get("w_value", 0.5)
-        
+
         extension._restoring = False
         return extension

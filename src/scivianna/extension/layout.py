@@ -57,7 +57,7 @@ This extension allows you to split panels to visualize several fields/geometries
         ]
 
         self.interface_selector = pn.widgets.Select(
-            name="Code",
+            label="Code",
             options=interface_options,
             value=interface_options[
                 list(self.layout.available_interfaces.values())
@@ -71,7 +71,7 @@ This extension allows you to split panels to visualize several fields/geometries
             Current edited frame selector
         """
         self.frame_selector = pn.widgets.Select(
-            name="Visualizer selector",
+            label="Visualizer selector",
             options=list(self.layout.visualisation_panels.keys()),
             value=list(self.layout.visualisation_panels.keys())[0],
             width = 280,
@@ -156,10 +156,10 @@ This extension allows you to split panels to visualize several fields/geometries
 
     def change_code_interface(self, *args, **kwargs):
         self.layout.change_code_interface()
-        
+
     def set_to_frame(self, *args, **kwargs):
         self.layout.set_to_frame(self.frame_selector.value)
-        
+
     @pn.io.hold()
     def change_to_frame(self, frame_name: str):
         self.frame_selector.options = list(self.layout.visualisation_panels.keys())
