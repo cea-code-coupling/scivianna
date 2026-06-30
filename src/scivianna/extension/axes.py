@@ -203,9 +203,9 @@ The following keys are binded:
         self.size_u_inp.param.watch(update_size_u, "value")
         self.size_v_inp.param.watch(update_size_v, "value")
 
-        # 
+        #
         #   Vectors widgets
-        #     
+        #
         self.u0_inp = pmui.FloatInput(
             label="u0", value=1, start=-1, end=1, width=125, margin=5
         )
@@ -319,8 +319,8 @@ The following keys are binded:
         self.axes_card = pmui.Card(
             pmui.Column(
             pmui.Typography("2D plot plane vectors"),
-            self.axis_buttons, 
-            pn.Row(u, v, margin=0), 
+            self.axis_buttons,
+            pn.Row(u, v, margin=0),
             margin=0),
             title="Axes vectors",
             width=300,
@@ -345,7 +345,7 @@ The following keys are binded:
         else:
             self.plotter.display_borders(False)
             self.borders_displayed = False
-            
+
     def make_gui(self,) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
@@ -500,10 +500,10 @@ The following keys are binded:
         v = v / np.linalg.norm(v)
 
         return u, v
-    
+
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
-        
+
         Returns
         -------
         dict
@@ -517,18 +517,18 @@ The following keys are binded:
             "size_u": self.size_u_inp.value,
             "size_v": self.size_v_inp.value,
         }
-    
+
     @classmethod
     def from_json(cls, extension: "Axes", info_dict: dict) -> "Axes":
         """Restores the extension from its information dict.
-        
+
         Parameters
         ----------
         extension : Axes
             Extension instance to restore
         info_dict : dict
             Dictionary containing extension state information
-            
+
         Returns
         -------
         Axes
@@ -542,7 +542,7 @@ The following keys are binded:
         extension.u0_inp.value = u_vector[0]
         extension.u1_inp.value = u_vector[1]
         extension.u2_inp.value = u_vector[2]
-        
+
         v_vector = info_dict.get("v_vector", [0, 1, 0])
         extension.v0_inp.value = v_vector[0]
         extension.v1_inp.value = v_vector[1]
