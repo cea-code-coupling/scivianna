@@ -13,6 +13,7 @@ class Plotter3D:
             sizing_mode="stretch_both",
             margin=0
         )
+        self.plotter.set_clip_enabled = True
 
     def plot(
         self,

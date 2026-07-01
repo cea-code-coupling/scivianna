@@ -21,6 +21,10 @@ def get_panel(geo, title: str = "3D", *args, return_slaves=False, **kwargs) -> V
         raise TypeError(f"Provided type {type(geo)} not implemented")
 
     med_panel = Panel3D(slave, name="3D Demo")
+    
+    if "INTEGRATED_POWER" in slave.get_labels():
+        med_panel.set_field("INTEGRATED_POWER")
+
     if return_slaves:
         return SplitLayout(med_panel), [med_panel.get_slave()]
     else:

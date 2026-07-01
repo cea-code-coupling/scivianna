@@ -5,6 +5,7 @@ import panel as pn
 import param
 import os
 
+from scivianna.extension.slice_3d import Slice3D
 from scivianna.extension.extension import Extension
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
@@ -26,7 +27,7 @@ if profile_time:
 
 pn.config.inline = True
 
-default_extensions = [FileLoader, FieldSelector]
+default_extensions = [FileLoader, FieldSelector, Slice3D]
 
 
 class Panel3D(VisualizationPanel):
