@@ -11,7 +11,7 @@ from scivianna.interface.med_interface import MEDInterface
 from scivianna.notebook_tools import _serve_panel
 
 
-def get_panel(geo, title: str = "", *args, return_slaves=False, **kwargs) -> VisualizationPanel:
+def get_panel(geo, title: str = "3D", *args, return_slaves=False, **kwargs) -> VisualizationPanel:
     slave = ComputeSlave(MEDInterface)
     if geo is None:
         slave.read_file(Path(scivianna.__file__).parent / "input_file" / "power.med", GEOMETRY)
@@ -28,4 +28,12 @@ def get_panel(geo, title: str = "", *args, return_slaves=False, **kwargs) -> Vis
 
 
 if __name__ == "__main__":
-    _serve_panel(get_panel_function=get_panel)
+    if True:
+        _serve_panel(get_panel_function=get_panel)
+    else:
+        slave = ComputeSlave(MEDInterface)
+        slave.read_file(Path(scivianna.__file__).parent / "input_file" / "power.med", GEOMETRY)
+
+        data, _ = slave.compute_3D_data({}, "INTEGRATED_POWER")
+
+        data.update_cell_data()

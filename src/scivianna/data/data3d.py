@@ -3,12 +3,12 @@ import numpy as np
 from scivianna.data.data_container import DataContainer
 
 if TYPE_CHECKING:
-    import vtk
+    import pyvista as pv
 
 
 class Data3D(DataContainer):
     """Data class containing the 3D geometry data""" 
-    polydata: "vtk.vtkPolyData"
+    polydata: Union["pv.PolyData", "pv.UnstructuredGrid"]
     """VTK polydata defining the geometry""" 
     cell_ids: List[Union[int, str]]
     """List of contained cell ids""" 
@@ -70,7 +70,8 @@ class Data3D(DataContainer):
         assert len(self.cell_ids) == len( self.cell_colors ), "The Data3D object must have the same number of cell id and colors"
         assert len(self.cell_values) == len( self.cell_colors ), "The Data3D object must have the same number of cell values and colors"
         assert len(self.cell_values) == len( self.cell_edge_colors ), "The Data3D object must have the same number of cell values and edge colors"
-        assert len(self.cell_values) == self.polydata.GetPolys().GetNumberOfCells(), "The Data3D object must have the same number of cell values and polygons"
+
+        assert len(self.cell_values) == self.polydata.GetNumberOfCells(), "The Data3D object must have the same number of cell values and polygons"
 
         if any(isinstance(item, str) for item in self.cell_values):
             assert all( isinstance(item, str) for item in self.cell_values ), "If any of the values is a string, they all must be strings"

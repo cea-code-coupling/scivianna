@@ -25,8 +25,11 @@ class Plotter3D:
         data : Data3D
             Data3D object containing the geometry and data to plot
         """
+        print(f"Plotting {data}")
         if data is not None:
             data.update_cell_data()
+            print(data.polydata)
+            print(len(data.cell_ids))
             self.plotter.update_polydata(data.polydata)
 
     def update_plot(

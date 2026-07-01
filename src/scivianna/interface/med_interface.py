@@ -657,7 +657,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 PolygonElement(
                     exterior_polygon=PolygonCoords(x_coords=u_vals, y_coords=v_vals),
                     holes=[],
-                    cell_id=str(cell),
+                    cell_id=int(cell),
                 )
             )
 
@@ -716,7 +716,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             start_time = time.time()
 
         if value_label == MESH:
-            return {str(v): np.nan for v in cells}
+            return {int(v): np.nan for v in cells}
 
         if "Iteration" not in options:
             print(f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}")
@@ -781,7 +781,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         # Allowing the field not to be defined at start, in which case we return only the mesh
         if "time" in options:
-            return {str(v): np.nan for v in cells}
+            return {int(v): np.nan for v in cells}
         
         raise NotImplementedError(
             f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
@@ -823,51 +823,169 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         bool
             Were the polygons updated compared to the past call
         """
-        import vtk
+        import pyvista as pv
+        MC_TO_PV_CELLTYPE = {
+            medcoupling.NORM_POINT1: pv.CellType.VERTEX,
+            medcoupling.NORM_QUAD4: pv.CellType.QUAD,
+            medcoupling.NORM_TRI3: pv.CellType.TRIANGLE,
+            medcoupling.NORM_HEXA8: pv.CellType.HEXAHEDRON,
+            medcoupling.NORM_SEG2: pv.CellType.LINE,
+            medcoupling.NORM_SEG3: pv.CellType.QUADRATIC_EDGE,
+            medcoupling.NORM_TETRA4: pv.CellType.TETRA,
+            medcoupling.NORM_POLYGON: pv.CellType.POLYGON,
+            medcoupling.NORM_QPOLYG: pv.CellType.QUADRATIC_POLYGON,
+            medcoupling.NORM_POLYHED: pv.CellType.POLYHEDRON,
+        }
 
-        def medcouplingumesh_to_vtk_polydata(
-            mesh: medcoupling.MEDCouplingUMesh
-        ) -> "vtk.vtkPolyData":
-            """Convert a MEDCouplingUMesh to vtkPolyData.
+        MC_DIM = {
+            medcoupling.NORM_POINT1: 0,
+            medcoupling.NORM_QUAD4: 2,
+            medcoupling.NORM_TRI3: 2,
+            medcoupling.NORM_HEXA8: 3,
+            medcoupling.NORM_SEG2: 1,
+            medcoupling.NORM_SEG3: 1,
+            medcoupling.NORM_TETRA4: 3,
+            medcoupling.NORM_POLYGON: 2,
+            medcoupling.NORM_QPOLYG: 3,  # only UnstructuredGrid
+            medcoupling.NORM_POLYHED: 3,
+        }
 
-            Parameters
-            ----------
-            mesh : medcoupling.MEDCouplingUMesh
-                The MEDCouplingUMesh to convert.
+        def _mc_ph_to_vtk_fast(connectivity: np.ndarray, offsets: np.ndarray) -> np.ndarray:
+            if len(connectivity) == 0:
+                return np.array([], dtype=int)
+            cell_length = offsets[1:] - offsets[:-1]
+            face_delims = connectivity == -1  # all face seperator
+            face_delims[offsets[:-1]] = True  # all cell seperator
 
-            Returns
-            -------
-            vtk.vtkPolyData
-                The converted vtkPolyData.
-            """
-            # Create a temporary file to store the VTK output
-            with tempfile.NamedTemporaryFile(suffix=".vtk", delete=False) as tmp_file:
-                temp_file_path = tmp_file.name
+            face_offsets = np.r_[np.flatnonzero(face_delims), len(connectivity)]
 
-            # Write the MEDCouplingUMesh to a VTK file
-            mesh.writeVTK(temp_file_path)
+            # Compute number of face per cell
+            cell_delim_in_face_offsets = face_offsets.searchsorted(offsets)
+            num_faces = cell_delim_in_face_offsets[1:] - cell_delim_in_face_offsets[:-1]
 
-            # Read the VTK file using VTK
-            vtk_reader = vtk.vtkUnstructuredGridReader()
-            vtk_reader.SetFileName(temp_file_path)
-            vtk_reader.Update()
-            vtk_mesh = vtk_reader.GetOutput()
+            # Replace -1 and cell_type with face length
+            face_length = face_offsets[1:] - face_offsets[:-1] - 1
+            connectivity[face_delims] = face_length
 
-            # Convert to vtkPolyData
-            vtk_polydata = vtk.vtkPolyData()
-            vtk_polydata.SetPoints(vtk_mesh.GetPoints())
-            vtk_polydata.SetPolys(vtk_mesh.GetCells())
+            inds = np.empty((2 * len(cell_length),), dtype=int)
+            inds[::2] = offsets[:-1]
+            inds[1::2] = offsets[:-1]
 
-            # Add cell_id cell data with range from 0 to cell count
-            num_cells = vtk_polydata.GetNumberOfCells()
-            cell_ids = vtk.vtkUnsignedIntArray()
-            cell_ids.SetName("cell_id")
-            cell_ids.SetNumberOfValues(num_cells)
-            for i in range(num_cells):
-                cell_ids.SetValue(i, i)
-            vtk_polydata.GetCellData().SetScalars(cell_ids)
+            vals = np.empty((2 * len(cell_length),), dtype=int)
+            vals[::2] = cell_length + 1
+            vals[1::2] = num_faces
 
-            return vtk_polydata
+            return np.insert(connectivity, obj=inds, values=vals)
+
+
+        def _to_unstructured(
+            mesh: medcoupling.MEDCouplingUMesh, coords: np.ndarray
+        ) -> pv.UnstructuredGrid:
+            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
+            cell_length = offsets[1:] - offsets[:-1] - 1
+
+            cell_types_idx = offsets[:-1]
+            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
+            mc_cell_types = np.array(connectivity[cell_types_idx])
+
+            # Split off polyhedrons
+            # NOTE: polyhedrons should be higher types id
+            # TODO: I should check that and isolate the POLYHED case...
+            ind_l = np.searchsorted(mc_cell_types, medcoupling.NORM_POLYHED, side="left")
+            ind_r = np.searchsorted(mc_cell_types, medcoupling.NORM_POLYHED, side="right")
+            cell_types = np.array(mc_cell_types)
+
+            # Non polyhedron case
+            types_idx = dict()
+            for mc_type in MC_TO_PV_CELLTYPE:
+                types_idx[mc_type] = cell_types == mc_type
+            for mc_type, pv_type in MC_TO_PV_CELLTYPE.items():
+                cell_types[types_idx[mc_type]] = pv_type
+
+            connectivity_npl = connectivity[: offsets[ind_l]]
+            connectivity_npl[cell_types_idx[:ind_l]] = cell_length[:ind_l]
+            connectivity_npr = connectivity[offsets[ind_r] :]
+            connectivity_npr[cell_types_idx[ind_r:]] = cell_length[ind_r:]
+
+            # Polyhedron case
+            connectivity_ph = _mc_ph_to_vtk_fast(
+                connectivity[offsets[ind_l] : offsets[ind_r]],
+                offsets=offsets[ind_l : ind_r + 1] - offsets[ind_l],
+            )
+
+            # Combination
+            connectivity = np.r_[connectivity_npl, connectivity_npr, connectivity_ph]
+
+            pv_mesh = pv.UnstructuredGrid(connectivity, cell_types, coords)
+            return pv_mesh
+
+
+        def _to_polydata(mesh: medcoupling.MEDCouplingUMesh, coords: np.ndarray) -> pv.PolyData:
+            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
+            cell_length = offsets[1:] - offsets[:-1] - 1
+            cell_types_idx = offsets[:-1]
+
+            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
+            any_type = connectivity[0]
+            connectivity[cell_types_idx] = cell_length
+
+            if MC_DIM[any_type] == 0:
+                return pv.PolyData(coords, verts=connectivity)
+            if MC_DIM[any_type] == 1:
+                return pv.PolyData(coords, lines=connectivity)
+            if MC_DIM[any_type] == 2:
+                return pv.PolyData(coords, faces=connectivity)
+            else:
+                raise Exception(f"{any_type} if not in known types: {MC_DIM=}")
+
+
+        def to_pv(
+            mesh: medcoupling.MEDCouplingUMesh | medcoupling.MEDCouplingFieldDouble,
+        ) -> pv.UnstructuredGrid | pv.PolyData:
+            if isinstance(mesh, medcoupling.MEDCouplingFieldDouble):
+                field: medcoupling.MEDCouplingFieldDouble = mesh
+                mesh = mesh.getMesh()
+            else:
+                field = None
+                fname = None
+
+            # Prepare mesh : make copy and sort cell types
+            mesh = mesh.deepCopyConnectivityOnly()
+            permut = mesh.sortCellsInMEDFileFrmt()
+
+            coords = np.array(mesh.getCoords().toNumPyArray())
+            coords = np.c_[coords, np.zeros((coords.shape[0], 3 - coords.shape[1]))]
+
+            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
+            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
+            last_cell_type = connectivity[offsets[-2]]
+            max_type = MC_DIM[last_cell_type]
+
+            if max_type == 3:
+                pv_mesh = _to_unstructured(mesh, coords)
+            elif max_type < 3:
+                pv_mesh = _to_polydata(mesh, coords)
+            else:
+                raise Exception(f"The coords shape is not valid: {coords.shape=}")
+
+            if field is not None:
+                fname = mesh.getName()
+                farr = field.getArray().toNumPyArray()
+                if fname is None or fname == "":
+                    fname = "Field"
+                if field.getTypeOfField() == medcoupling.ON_CELLS:
+                    permut = permut.toNumPyArray()
+                    p = np.empty_like(permut)
+                    p[permut] = np.arange(permut.size)
+                    pv_mesh.cell_data[fname] = farr[p]
+                elif field.getTypeOfField() == medcoupling.ON_NODES:
+                    pv_mesh.point_data[fname] = farr
+                else:
+                    raise NotImplementedError(f"{field.getTypeOfField()=} is not supported.")
+
+            return pv_mesh
+
+            
         # Get time from options, default to 0 if absent
         time = options.get("time", 0.0)
 
@@ -885,7 +1003,10 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             start_time = time.time()
 
         self.last_computed_3d_time = time
-        self.data3d = Data3D.from_polydata(medcouplingumesh_to_vtk_polydata(current_mesh))
+        pv_mesh = to_pv(current_mesh)
+        pv_mesh.cell_data["cell_id"] = list(range(pv_mesh.GetNumberOfCells()))
+
+        self.data3d = Data3D.from_polydata(pv_mesh)
 
         if profile_time:
             print(f"Compute 3D mesh time {time.time() - start_time}")
@@ -917,7 +1038,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             start_time = time.time()
 
         if value_label == MESH:
-            return {str(v): np.nan for v in cells}
+            return {int(v): np.nan for v in cells}
 
         if "Iteration" not in options:
             print(f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}")
@@ -972,7 +1093,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         if field_np_array is not None:
             values = field_np_array[cells.tolist()]
 
-            value_dict = dict(zip(np.array(cells).astype(str), values))
+            value_dict = dict(zip(np.array(cells).astype(int), values))
 
             if profile_time:
                 print(f"Get value dict time: {coupling_time.time() - start_time}")
@@ -980,7 +1101,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         # Allowing the field not to be defined at start, in which case we return only the mesh
         if "time" in options:
-            return {str(v): np.nan for v in cells}
+            return {int(v): np.nan for v in cells}
         
         raise NotImplementedError(
             f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
