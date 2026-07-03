@@ -234,7 +234,7 @@ class Bokeh2DGridPlotter(Plotter2D):
             self.figure.xaxis.visible = False
             self.figure.yaxis.visible = False
 
-    def update_colorbar(self, display: bool, range: Tuple[float, float]):
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
         """Displays or hide the color bar, if display, updates its range
 
         Parameters
@@ -246,10 +246,10 @@ class Bokeh2DGridPlotter(Plotter2D):
         """
         self.figure_color_bar.visible = display
         if display:
-            self.figure_color_bar.color_mapper.low = range[0]
-            self.figure_color_bar.color_mapper.high = range[1]
+            self.figure_color_bar.color_mapper.low = value_range[0]
+            self.figure_color_bar.color_mapper.high = value_range[1]
 
-        self.figure_color_bar.color_mapper.update(low=range[0], high=range[1])
+        self.figure_color_bar.color_mapper.update(low=value_range[0], high=value_range[1])
 
     def set_color_map(self, color_map_name: str):
         """Sets the colorbar color map name

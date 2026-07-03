@@ -49,13 +49,15 @@ color_maps = {
     "terrain" : ["#333399", "#1175db", "#00b2b2", "#31d56f", "#99ea84", "#fefd98", "#ccbd7d", "#987b61", "#997c76", "#cdbfbb", "#ffffff"],
 }
 
-def get_edges_colors(face_colors:np.ndarray) -> np.ndarray:
+def get_edges_colors(face_colors:np.ndarray, offset: int = 20) -> np.ndarray:
     """Returnds the edge colors from the face colors
 
     Parameters
     ----------
     face_colors : np.ndarray
         Numpy array containing a list of RBG colors ranging from 0 to 255
+    offset : int
+        To how many decrease the edge color
 
     Returns
     -------
@@ -69,9 +71,11 @@ def get_edges_colors(face_colors:np.ndarray) -> np.ndarray:
         return edge_colors
     
     # Darkening the colors
-    edge_colors[:, :3] -= 20
+    edge_colors[:, :3] += offset
 
-    return np.where(edge_colors<0, 0, edge_colors)
+    edge_colors = np.where(edge_colors<0, 0, edge_colors)
+
+    return np.where(edge_colors>255, 255, edge_colors)
 
 def interpolate_cmap_at_values(
     cmap_name: str, values: np.ndarray
