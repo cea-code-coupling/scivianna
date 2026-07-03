@@ -495,11 +495,12 @@ class LayoutProblem(Problem):
         WrongContext
             Raised if called before the solveTimeStep() method.
         """
-        if self._up_skipped == self._up_rate:
-            self.layout.time_widget.add_time_value(self.time)
 
         self.time += self._dt
         self._dt = None
+
+        if self._up_skipped == self._up_rate:
+            self.layout.time_widget.add_time_value(self.time)
 
         if self._up_skipped == self._up_rate:
             self._up_skipped = 0
@@ -764,7 +765,7 @@ class LayoutProblem(Problem):
         slave = panel.get_slave()
 
         #   The time is set before the field
-        slave.set_time(self.time)
+        slave.set_time(self.time + (self._dt if self._dt else 0.0))
         if slave.update_policy == UpdatePolicy.UPDATE_DATA:
             return_val = slave.update_data(field_name, afield)
         elif slave.update_policy == UpdatePolicy.UPDATE_MESH:
@@ -813,7 +814,7 @@ class LayoutProblem(Problem):
         slave = panel.get_slave()
 
         #   The time is set before the field
-        slave.set_time(self.time)
+        slave.set_time(self.time + (self._dt if self._dt else 0.0))
         if slave.update_policy == UpdatePolicy.UPDATE_DATA:
             return_val = slave.update_data(field_name, val)
         elif slave.update_policy == UpdatePolicy.UPDATE_MESH:
