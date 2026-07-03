@@ -60,7 +60,7 @@ You can use the following drop box to change the currently edited panel. Otherwi
         ]
 
         self.interface_selector = pn.widgets.Select(
-            label="Code",
+            name="Code",
             options=interface_options,
             value=interface_options[
                 list(self.layout.available_interfaces.values())
@@ -74,7 +74,7 @@ You can use the following drop box to change the currently edited panel. Otherwi
             Current edited frame selector
         """
         self.frame_selector = pn.widgets.Select(
-            label="Visualizer selector",
+            name="Visualizer selector",
             options=list(self.layout.visualisation_panels.keys()),
             value=list(self.layout.visualisation_panels.keys())[0],
             width = 280,

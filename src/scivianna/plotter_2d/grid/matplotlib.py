@@ -49,18 +49,18 @@ class Matplotlib2DGridPlotter(Plotter2D):
         else:
             plt.axis("off")  # Hide the axis
 
-    def update_colorbar(self, display: bool, range: Tuple[float, float]):
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
         """Displays or hide the color bar, if display, updates its range
 
         Parameters
         ----------
         display : bool
             Display or hides the color bar
-        range : Tuple[float, float]
+        value_range : Tuple[float, float]
             New colormap range
         """
         self.display_colorbar = display
-        self.colorbar_range = range
+        self.colorbar_range = value_range
 
     def set_color_map(self, color_map_name: str):
         """Sets the colorbar color map name
