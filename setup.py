@@ -53,7 +53,6 @@ setup(
     python_requires=">=3.8, <4",
     install_requires=[
         "panel",
-        "rasterio",
         "matplotlib",
         "numpy",
         "shapely",
@@ -72,6 +71,9 @@ setup(
         "agent": [
             "smolagents[openai]",
         ],
+        "grid": [
+            "rasterio",
+        ],
         "3d": [
             "pyvista",
             "scivianna_vtk>=0.1.3"
@@ -84,6 +86,7 @@ setup(
             "nbmake",
         ],
         "coupling": [
+            "medcoupling",
             "salome-c3po",
             "pydantic",
             "icoco~=2.0.0",

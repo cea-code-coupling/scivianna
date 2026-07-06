@@ -49,7 +49,7 @@ color_maps = {
     "terrain" : ["#333399", "#1175db", "#00b2b2", "#31d56f", "#99ea84", "#fefd98", "#ccbd7d", "#987b61", "#997c76", "#cdbfbb", "#ffffff"],
 }
 
-def get_edges_colors(face_colors:np.ndarray, offset: int = 20) -> np.ndarray:
+def get_edges_colors(face_colors:np.ndarray, offset: int = -20) -> np.ndarray:
     """Returnds the edge colors from the face colors
 
     Parameters
@@ -57,7 +57,7 @@ def get_edges_colors(face_colors:np.ndarray, offset: int = 20) -> np.ndarray:
     face_colors : np.ndarray
         Numpy array containing a list of RBG colors ranging from 0 to 255
     offset : int
-        To how many decrease the edge color
+        The colors are defined in RGB with colors from 0 to 255, this offset tells how many decrease the edge color
 
     Returns
     -------
