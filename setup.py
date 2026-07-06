@@ -53,13 +53,11 @@ setup(
     python_requires=">=3.8, <4",
     install_requires=[
         "panel",
-        "rasterio",
         "matplotlib",
         "numpy",
         "shapely",
         "jupyter_bokeh",
         "holoviews",
-        "icoco~=2.0.0",
         "panel_material_ui",
         "geopandas<1.1",
         "dill",
@@ -70,6 +68,9 @@ setup(
         "default": [],
         "agent": [
             "smolagents[openai]",
+        ],
+        "grid": [
+            "rasterio",
         ],
         "pyvista": [
             "pyvista",
@@ -82,8 +83,10 @@ setup(
             "nbmake",
         ],
         "coupling": [
+            "medcoupling",
             "salome-c3po",
-            "pydantic"
+            "pydantic",
+            "icoco~=2.0.0",
         ],
         "doc": [
             "sphinx",

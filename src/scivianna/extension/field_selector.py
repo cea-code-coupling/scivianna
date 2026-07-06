@@ -28,7 +28,7 @@ def set_colors_list(
     options: Dict[str, Any],
     min_value: float = None,
     max_value: float = None,
-    offset: int = 20
+    offset: int = -20
 ):
     """Sets in a Data2D the list of colors for a field per polygon.
 
@@ -51,7 +51,8 @@ def set_colors_list(
     max_value : float
         Force scale maximum value
     offset : int
-        To how many decrease the edge color
+        The colors are defined in RGB with colors from 0 to 255, this offset tells how many decrease the edge color
+
 
     Raises
     ------
@@ -235,7 +236,7 @@ If a color bar is used, you can decide to center it on zero.
 
         self.color_map_selector.width = self.color_map_selector.height
         self.center_colormap_on_zero_tick = pn.widgets.Checkbox(
-            name="Center color map on zero.", value=False,
+            label="Center color map on zero.", value=False,
             visible=slave.get_label_coloring_mode(self.field_color_selector.value) == VisualizationMode.FROM_VALUE,
         )
 

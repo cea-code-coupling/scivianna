@@ -553,5 +553,400 @@ class TestSetColorsList:
             cleanup()
 
 
+
+
+class TestForceRangeFeature:
+    """Test suite for the force range (min/max value) feature."""
+
+    def test_force_range_widgets_exist(self, panel_fixture):
+        """Test that force range widgets are properly initialized."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Check that force range widgets exist
+            assert hasattr(field_sel, 'force_range_column')
+            assert hasattr(field_sel, 'min_value')
+            assert hasattr(field_sel, 'max_value')
+            assert hasattr(field_sel, 'min_activated')
+            assert hasattr(field_sel, 'max_activated')
+
+            # By default, force range should be disabled
+            assert field_sel.min_activated.value is False
+            assert field_sel.max_activated.value is False
+
+            # By default, min/max inputs should be disabled
+            assert field_sel.min_value.disabled is True
+            assert field_sel.max_value.disabled is True
+        finally:
+            cleanup()
+
+    def test_enable_disable_bounds(self, panel_fixture):
+        """Test that enable_disable_bounds correctly enables/disables widgets."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Initially disabled
+            assert field_sel.min_value.disabled is True
+            assert field_sel.max_value.disabled is True
+
+            # Enable min
+            field_sel.min_activated.value = True
+            field_sel.enable_disable_bounds()
+            assert field_sel.min_value.disabled is False
+            assert field_sel.max_value.disabled is True
+
+            # Enable max
+            field_sel.max_activated.value = True
+            field_sel.enable_disable_bounds()
+            assert field_sel.min_value.disabled is False
+            assert field_sel.max_value.disabled is False
+
+            # Disable min
+            field_sel.min_activated.value = False
+            field_sel.enable_disable_bounds()
+            assert field_sel.min_value.disabled is True
+            assert field_sel.max_value.disabled is False
+
+            # Disable max
+            field_sel.max_activated.value = False
+            field_sel.enable_disable_bounds()
+            assert field_sel.min_value.disabled is True
+            assert field_sel.max_value.disabled is True
+        finally:
+            cleanup()
+
+    def test_force_range_in_to_json(self, panel_fixture):
+        """Test that force range values are included in to_json output."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Set some values
+            field_sel.min_value.value = 10.5
+            field_sel.max_value.value = 100.5
+            field_sel.min_activated.value = True
+            field_sel.max_activated.value = False
+
+            # Serialize to JSON
+            json_data = field_sel.to_json()
+
+            # Check that force range values are included
+            assert "min_value" in json_data
+            assert "max_value" in json_data
+            assert "min_activated" in json_data
+            assert "max_activated" in json_data
+            assert json_data["min_value"] == 10.5
+            assert json_data["max_value"] == 100.5
+            assert json_data["min_activated"] is True
+            assert json_data["max_activated"] is False
+        finally:
+            cleanup()
+
+    def test_force_range_from_json_restoration(self, panel_fixture):
+        """Test that force range values are correctly restored from JSON."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Reset to defaults
+            field_sel.min_value.value = None
+            field_sel.max_value.value = None
+            field_sel.min_activated.value = False
+            field_sel.max_activated.value = False
+
+            # Restore from JSON with force range values
+            json_data = {
+                "field": field_sel.field_color_selector.options[0],
+                "colormap": "BuRd",
+                "center_colormap_on_zero": False,
+                "min_value": 25.0,
+                "max_value": 200.0,
+                "min_activated": True,
+                "max_activated": True,
+                "edge_offset": field_sel.edge_offset.value,
+            }
+            FieldSelector.from_json(field_sel, json_data)
+
+            # Check that values were restored
+            assert field_sel.min_value.value == 25.0
+            assert field_sel.max_value.value == 200.0
+            assert field_sel.min_activated.value is True
+            assert field_sel.max_activated.value is True
+
+            # Widgets should be enabled after restoration
+            assert field_sel.min_value.disabled is False
+            assert field_sel.max_value.disabled is False
+        finally:
+            cleanup()
+
+    def test_force_range_applied_to_set_colors_list(self, panel_fixture):
+        """Test that force range values are passed to set_colors_list."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+
+            polygons = [
+                PolygonElement(
+                    exterior_polygon=PolygonCoords(
+                        x_coords=[0.0, 1.0, 1.0, 0.0],
+                        y_coords=[0.0, 0.0, 1.0, 1.0]
+                    ),
+                    holes=[],
+                    cell_id=i
+                )
+                for i in range(3)
+            ]
+
+            data = Data2D.from_polygon_list(polygons)
+            data.cell_values = [10.0, 20.0, 30.0]
+
+            # Set coloring mode to FROM_VALUE
+            def mock_get_coloring_mode(label):
+                return VisualizationMode.FROM_VALUE
+            panel.slave.get_label_coloring_mode = mock_get_coloring_mode
+
+            # Enable force range
+            field_sel.min_activated.value = True
+            field_sel.max_activated.value = True
+            field_sel.min_value.value = 15.0
+            field_sel.max_value.value = 25.0
+
+            # Call on_updated_data
+            field_sel.on_updated_data(data)
+
+            assert np.array_equal(
+                data.cell_colors, 
+                [
+                    [  5,  48,  97, 255],
+                    [247, 246, 246, 255],
+                    [103,   0,  31, 255],
+                ]
+            )
+            
+
+            # The data should have been processed with the forced range
+            assert hasattr(data, 'cell_colors')
+            assert data.cell_colors is not None
+        finally:
+            cleanup()
+
+
+class TestEdgeOffsetFeature:
+    """Test suite for the edge color offset feature."""
+
+    def test_edge_offset_widget_exists(self, panel_fixture):
+        """Test that edge offset widget is properly initialized."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Check that edge offset widget exists
+            assert hasattr(field_sel, 'edge_offset')
+            assert hasattr(field_sel, 'edge_offset_column')
+
+            # Default value should be -20
+            assert field_sel.edge_offset.value == -20
+            assert field_sel.edge_offset.start == -255
+            assert field_sel.edge_offset.end == 255
+            assert field_sel.edge_offset.step == 10
+        finally:
+            cleanup()
+
+    def test_edge_offset_in_to_json(self, panel_fixture):
+        """Test that edge offset value is included in to_json output."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Change edge offset
+            field_sel.edge_offset.value = 50
+
+            # Serialize to JSON
+            json_data = field_sel.to_json()
+
+            # Check that edge offset is included
+            assert "edge_offset" in json_data
+            assert json_data["edge_offset"] == 50
+        finally:
+            cleanup()
+
+    def test_edge_offset_from_json_restoration(self, panel_fixture):
+        """Test that edge offset value is correctly restored from JSON."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Reset to default
+            field_sel.edge_offset.value = -20
+
+            # Restore from JSON with custom edge offset
+            json_data = {
+                "field": field_sel.field_color_selector.options[0],
+                "colormap": "BuRd",
+                "center_colormap_on_zero": False,
+                "min_value": None,
+                "max_value": None,
+                "min_activated": False,
+                "max_activated": False,
+                "edge_offset": 100,
+            }
+            FieldSelector.from_json(field_sel, json_data)
+
+            # Check that edge offset was restored
+            assert field_sel.edge_offset.value == 100
+        finally:
+            cleanup()
+
+    def test_edge_offset_affects_edge_colors(self, panel_fixture):
+        """Test that edge offset value affects the edge colors computation."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+
+            polygons = [
+                PolygonElement(
+                    exterior_polygon=PolygonCoords(
+                        x_coords=[0.0, 1.0, 1.0, 0.0],
+                        y_coords=[0.0, 0.0, 1.0, 1.0]
+                    ),
+                    holes=[],
+                    cell_id=i
+                )
+                for i in range(3)
+            ]
+
+            data = Data2D.from_polygon_list(polygons)
+            data.cell_values = [1.0, 2.0, 3.0]
+
+            # Set coloring mode to FROM_VALUE
+            def mock_get_coloring_mode(label):
+                return VisualizationMode.FROM_VALUE
+            panel.slave.get_label_coloring_mode = mock_get_coloring_mode
+
+            # Test with default offset
+            field_sel.edge_offset.value = -20
+            field_sel.on_updated_data(data)
+            edge_colors = data.cell_edge_colors
+
+            assert np.array_equal(
+                edge_colors, 
+                [
+                    [  0,  28,  77, 255],
+                    [227, 226, 226, 255],
+                    [83,   0,  11, 255],
+                ]
+            )
+            
+        finally:
+            cleanup()
+
+
+class TestFieldSelectorJSONSerialization:
+    """Test suite for FieldSelector to_json / from_json methods."""
+
+    def test_to_json_contains_all_fields(self, panel_fixture):
+        """Test that to_json includes all required fields."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            json_data = field_sel.to_json()
+
+            # Check all expected keys are present
+            expected_keys = {
+                "field",
+                "colormap",
+                "center_colormap_on_zero",
+                "min_value",
+                "max_value",
+                "min_activated",
+                "max_activated",
+                "edge_offset",
+            }
+            assert set(json_data.keys()) == expected_keys
+        finally:
+            cleanup()
+
+    def test_from_json_full_roundtrip(self, panel_fixture):
+        """Test that to_json -> from_json preserves all state."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Set various states
+            initial_field = field_sel.field_color_selector.value
+            field_sel.color_map_selector.value_name = "viridis"
+            field_sel.center_colormap_on_zero_tick.value = True
+            field_sel.min_value.value = 5.0
+            field_sel.max_value.value = 50.0
+            field_sel.min_activated.value = True
+            field_sel.max_activated.value = True
+            field_sel.edge_offset.value = 10
+
+            # Serialize
+            json_data = field_sel.to_json()
+
+            # Restore from JSON
+            FieldSelector.from_json(field_sel, json_data)
+
+            # Check all values were restored
+            assert field_sel.field_color_selector.value == initial_field
+            assert field_sel.color_map_selector.value_name == "viridis"
+            assert field_sel.center_colormap_on_zero_tick.value is True
+            assert field_sel.min_value.value == 5.0
+            assert field_sel.max_value.value == 50.0
+            assert field_sel.min_activated.value is True
+            assert field_sel.max_activated.value is True
+            assert field_sel.edge_offset.value == 10
+        finally:
+            cleanup()
+
+    def test_from_json_backward_compatibility(self, panel_fixture):
+        """Test that from_json works with old JSON format (missing optional fields)."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Old JSON format without force range and edge offset fields
+            old_json_data = {
+                "field": field_sel.field_color_selector.options[0],
+                "colormap": "BuRd",
+                "center_colormap_on_zero": False,
+            }
+
+            # Should not raise an error
+            FieldSelector.from_json(field_sel, old_json_data)
+
+            # Default values should be used for missing fields
+            assert field_sel.color_map_selector.value_name == "BuRd"
+            assert field_sel.center_colormap_on_zero_tick.value is False
+        finally:
+            cleanup()
+
+    def test_from_json_uses_try_finally(self, panel_fixture):
+        """Test that _restoring flag is always reset even if an error occurs."""
+        panel, extensions_dict, cleanup = panel_fixture
+        field_sel = extensions_dict[FieldSelector]
+
+        try:
+            # Set restoring to False first
+            field_sel._restoring = False
+
+            # Valid JSON should set and reset _restoring
+            json_data = field_sel.to_json()
+            FieldSelector.from_json(field_sel, json_data)
+
+            # _restoring should be False after restoration
+            assert field_sel._restoring is False
+        finally:
+            cleanup()
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
