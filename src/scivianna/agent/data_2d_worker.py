@@ -55,6 +55,17 @@ class Data2DWorker(Data2DWorker):
             return self.get_values()
         
         @tool
+        def get_ids() -> np.ndarray:
+            """Returns the ID per 2D cell of the geometry
+
+            Returns
+            -------
+            np.ndarray
+                Numpy array with the value per cell
+            """
+            return self.get_ids()
+        
+        @tool
         def set_alphas(alphas:np.ndarray) -> bool:
             """
             Sets the cells opacity values, expects a numpy array of integers between 0 and 255. return True if it's ok.
@@ -126,7 +137,7 @@ class Data2DWorker(Data2DWorker):
 
         self.smoll_agent = CodeAgent(
                         tools=[execute_code, 
-                               check_valid, get_values, set_alphas, get_colors, set_colors, reset, get_numpy
+                               check_valid, get_values, set_alphas, get_colors, set_colors, get_ids, reset, get_numpy
                                ],  # List of tools available to the agent
                         # final_answer_checks=[code_is_ok],
                         model=ai_server, 

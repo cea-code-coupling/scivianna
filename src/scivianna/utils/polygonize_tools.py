@@ -2,9 +2,14 @@ import math
 from typing import Any, Dict, List, Tuple, Type, Union
 import numpy as np
 
-import rasterio
-import rasterio.features
-from rasterio.transform import Affine 
+try:
+    import rasterio
+    import rasterio.features
+    from rasterio.transform import Affine 
+    rasterio_imported = True
+except ImportError as e:
+    rasterio_imported = False
+    rasterio_error = e
 
 import shapely
 from shapely.geometry.polygon import Polygon
@@ -207,6 +212,9 @@ def numpy_2D_array_to_polygons(x:Union[List[float], np.ndarray],
     List[PolygonElement]
         List of PolygonElements
     """
+    if not rasterio_imported:
+        raise rasterio_error
+    
     if not isinstance(arr, np.ndarray):
         raise TypeError(f"arr must be a numpy array, found {type(arr)}") 
     if type(x) not in (list, np.ndarray):
