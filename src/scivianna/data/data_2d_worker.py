@@ -46,6 +46,16 @@ class Data2DWorker:
         """
         self.data2d.check_valid()
 
+    def get_ids(self,) -> np.ndarray:
+        """Returns the cell ID per 2D cell of the geometry
+
+        Returns
+        -------
+        np.ndarray
+            Numpy array with the ID per cell
+        """
+        return np.array(self.data2d.cell_ids)
+    
     def get_values(self,) -> np.ndarray:
         """Returns the value per 2D cell of the geometry
 
