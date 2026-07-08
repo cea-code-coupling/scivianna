@@ -1,7 +1,7 @@
 from enum import Enum, auto
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union, Type, Tuple
+from typing import Any, Dict, List, Literal, Optional, Union, Type, Tuple
 
 from scivianna.coupling.problem_server import ServerManager, ProblemClient
 from scivianna.enums import UpdatePolicy
@@ -60,7 +60,7 @@ class CouplingPanel(BaseModel):
     name: str
     update_policy: UpdatePolicy
     interface: Type[GenericInterface]
-    template: List[Tuple[str, any]] | None = None
+    template: List[Tuple[str, Any]] | None = None
 
     @field_validator("interface", mode="before")
     @classmethod
