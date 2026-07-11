@@ -211,6 +211,8 @@ class VTKPlotter(JSComponent):
     clip_enabled = param.Boolean(default=False, doc="Enable/disable clip plane visualization")
     clip_origin = param.List(default=[0.0, 0.0, 0.0], doc="Clip plane origin [x, y, z]")
     clip_normal = param.List(default=[0.0, 0.0, 1.0], doc="Clip plane normal [x, y, z]")
+    
+    plane_visible = param.Boolean(default=False, doc="Plane visualization visible")
 
     _esm = "./dist/VTKPlotter.bundle.js"
 
@@ -220,6 +222,10 @@ class VTKPlotter(JSComponent):
     # -------------------------------------------------------------------------
     # Clip Plane Control Methods
     # -------------------------------------------------------------------------
+
+    def set_plane_enabled(self, enabled: bool):
+        """Enable or disable plane visualization."""
+        self.plane_visible = enabled
 
     def set_clip_enabled(self, enabled: bool):
         """Enable or disable clip plane visualization."""
@@ -241,21 +247,6 @@ class VTKPlotter(JSComponent):
         if normal is not None:
             self.clip_normal = list(normal)
 
-    def move_clip_plane(self, offset: float):
-        """
-        Move clip plane along its normal direction.
-
-        Parameters
-        ----------
-        offset : float
-            Distance to move the plane (positive moves in normal direction).
-        """
-        import numpy as np
-        origin = np.array(self.clip_origin)
-        normal = np.array(self.clip_normal)
-        new_origin = origin + normal * offset
-        self.clip_origin = new_origin.tolist()
-
     def set_clip_axis(self, axis: str, sign: int = 1):
         """
         Set clip plane normal to a cardinal direction.
@@ -273,10 +264,6 @@ class VTKPlotter(JSComponent):
             'z': [0, 0, sign],
         }
         self.clip_normal = normals.get(axis, [0, 0, sign])
-
-    def auto_clip_plane(self):
-        """Auto-position clip plane at geometry center (called automatically on load)."""
-        pass  # Auto-positioning is done in JavaScript on initial load
 
     @property
     def clip_plane_state(self) -> dict:
