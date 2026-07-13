@@ -33,7 +33,8 @@ def get_panel(geo, title: str = "3D", *args, return_slaves=False, **kwargs) -> V
 
 if __name__ == "__main__":
     if True:
-        _serve_panel(get_panel_function=get_panel)
+        get_panel(None).show()
+        # _serve_panel(get_panel_function=get_panel)
     else:
         slave = ComputeSlave(MEDInterface)
         slave.read_file(Path(scivianna.__file__).parent / "input_file" / "power.med", GEOMETRY)

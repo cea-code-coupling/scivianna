@@ -449,3 +449,36 @@ class Panel3D(VisualizationPanel):
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
         return panel
+
+    def set_coordinates(
+        self,
+        u: Tuple[float, float, float] = None,
+        v: Tuple[float, float, float] = None,
+        u_min: float = None,
+        u_max: float = None,
+        v_min: float = None,
+        v_max: float = None,
+        w: float = None,
+    ):
+        """Updates the plot coordinates
+
+        Parameters
+        ----------
+        u : Tuple[float, float, float], optional
+            Horizontal axis direction vector, by default None
+        v : Tuple[float, float, float], optional
+            Vertical axis direction vector, by default None
+        u_min : float, optional
+            Horizontal axis minimum coordinate, by default None
+        u_max : float, optional
+            Horizontal axis maximum coordinate, by default None
+        v_min : float, optional
+            Vertical axis minimum coordinate, by default None
+        v_max : float, optional
+            Vertical axis maximum coordinate, by default None
+        w : float, optional
+            Normal axis location, by default None
+        """
+        self.plotter.move_slice_to(
+            u, v, u_min, u_max, v_min, v_max, w
+        )

@@ -82,15 +82,14 @@ class Data3D(DataContainer):
         self.check_valid()
 
         # IDs
-        self.polydata.cell_data["cell_id"] = np.asarray(self.cell_ids)
+        self.polydata.cell_data["cell_id"] = np.array(self.cell_ids)
 
         # Values
-        self.polydata.cell_data["cell_value"] = np.asarray(self.cell_values)
+        self.polydata.cell_data["cell_value"] = np.array(self.cell_values)
 
         # RGB colors (drop alpha if present and normalize to [0, 1])
-        colors = np.asarray(self.cell_colors, dtype=float)
+        colors = np.array(self.cell_colors, dtype=float)
 
-        print(colors.shape)
         if colors.shape[1] == 4:
             colors = colors[:, :3]
 

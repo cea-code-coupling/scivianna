@@ -35,3 +35,5 @@ utils/.venv_utils
 *.pkl
 # Compressed archive files
 *.zip
+
+vtk_work

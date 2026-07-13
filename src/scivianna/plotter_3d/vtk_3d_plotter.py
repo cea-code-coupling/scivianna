@@ -1,6 +1,8 @@
 from typing import Tuple, Callable
 
-from scivianna.component.vtk_plotter import VTKPlotter
+import numpy as np
+
+from scivianna_vtk.plotter import VTKPlotter
 from scivianna.data.data3d import Data3D
 
 class Plotter3D:
@@ -29,8 +31,6 @@ class Plotter3D:
         print(f"Plotting {data}")
         if data is not None:
             data.update_cell_data()
-            print(data.polydata)
-            print(len(data.cell_ids))
             self.plotter.update_polydata(data.polydata)
 
     def update_plot(
@@ -91,6 +91,11 @@ class Plotter3D:
         """
         self.on_mouse_move_callback = callback
 
+        self.plotter.param.watch(
+            lambda event: self.send_event(callback),
+            "hover_position"
+        )
+
     def provide_on_clic_callback(self, callback: Callable):
         """Stores a function to call everytime the user clics on the plot.
         Functions arguments are location, cell_id.
@@ -101,3 +106,54 @@ class Plotter3D:
             Function to call.
         """
         self.on_clic_callback = callback
+
+    def move_slice_to(
+        self,
+        u: float,
+        v: float,
+        u_min: float = None,
+        u_max: float = None,
+        v_min: float = None,
+        v_max: float = None,
+        w: float = None
+    ):
+        """Moves the slice to the given location
+
+        Parameters
+        ----------
+        u : float
+            First axis location
+        v : float
+            Second axis location
+        u_min : float, optional
+            First axis min value, by default None
+        u_max : float, optional
+            First axis max value, by default None
+        v_min : float, optional
+            Second axis min value, by default None
+        v_max : float, optional
+            Second axis max value, by default None
+        w : float, optional
+            Normal axis location, by default None
+        """
+        w_vector = None
+        origin = None
+
+        if u is not None and v is not None:
+            w_vector = np.cross(u, v)
+
+        if u_min is not None and v_min is not None and w is not None:
+            origin = u_min * u + v_min * v + w * w_vector
+
+        self.plotter.set_clip_plane(origin, w_vector)
+
+    def send_event(self, callback):
+        if self.plotter.hover_cell_id is not None:
+            callback(
+                screen_location=(
+                    None,
+                    None
+                ),
+                space_location=self.plotter.hover_position, 
+                cell_id=self.plotter.hover_cell_id
+            )

@@ -64,7 +64,8 @@ setup(
         "geopandas<1.1",
         "dill",
         "pandas",
-        "panel-splitjs"
+        "panel-splitjs",
+        "scivianna_vtk"
     ],
     extras_require={
         "default": [],

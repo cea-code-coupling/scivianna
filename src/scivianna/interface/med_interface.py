@@ -1093,10 +1093,11 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         if field_np_array is not None:
             values = field_np_array[cells.tolist()]
 
-            value_dict = dict(zip(np.array(cells).astype(int), values))
+            value_dict = dict(zip(np.array(cells).astype(int), values.astype(np.float32)))
 
             if profile_time:
                 print(f"Get value dict time: {coupling_time.time() - start_time}")
+
             return value_dict
 
         # Allowing the field not to be defined at start, in which case we return only the mesh
