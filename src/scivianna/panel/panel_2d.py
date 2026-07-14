@@ -581,6 +581,8 @@ class Panel2D(VisualizationPanel):
                 update_axes = True
 
         if update_axes:
+            if self.on_axes_change_callback is not None:
+                self.on_axes_change_callback(self.u, self.v)
             for extension in self.extensions:
                 extension.on_frame_change(self.u, self.v)
 
@@ -755,3 +757,14 @@ class Panel2D(VisualizationPanel):
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
         return panel
+
+    def provide_on_axes_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the axes are changed.
+        the functions takes a two numpy arrays.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.on_axes_change_callback = callback

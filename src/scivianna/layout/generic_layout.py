@@ -2,6 +2,7 @@ import functools
 from pathlib import Path
 from typing import Callable, Dict, List, Literal, Tuple, Type, Union
 
+import numpy as np
 import panel as pn
 import panel_material_ui as pmui
 
@@ -111,6 +112,7 @@ class GenericLayout:
             panel.provide_on_clic_callback(self.on_clic_callback)
             panel.provide_on_mouse_move_callback(self.mouse_move_callback)
             panel.provide_field_change_callback(self.field_change_callback)
+            panel.provide_on_axes_change_callback(self.on_axes_change_callback)
 
             # 2: assuming the two first are the button to open and close the tab
             self.button_columns[panel.panel_name] = [b[0] for b in panel.gui.buttons]
@@ -405,6 +407,21 @@ class GenericLayout:
         for panel in self.visualisation_panels.values():
             if panel.sync_field:
                 panel.set_field(new_field)
+
+    def on_axes_change_callback(self, u: np.ndarray, v: np.ndarray):
+        """Function calling panels update a field change
+
+        Parameters
+        ----------
+        u : np.ndarray
+            u axis direction vector
+        v : np.ndarray
+            v axis direction vector
+            New field to set
+        """
+        for panel in self.visualisation_panels.values():
+            if panel.update_event == UpdateEvent.AXES_CHANGE or (isinstance(panel.update_event, list) and UpdateEvent.AXES_CHANGE in panel.update_event):
+                panel.set_coordinates(u=u, v=v)
 
     def add_time_widget(self,):
         """Adds a time management widget to the layout

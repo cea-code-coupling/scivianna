@@ -17,6 +17,15 @@ class Plotter3D:
         )
         self.plotter.set_clip_enabled = True
 
+        self.plotter.param.watch(
+            self.compute_uv,
+            "clip_normal"
+        )
+        self.u = np.array([1, 0, 0])
+        self.v = np.array([0, 1, 0])
+
+        self.on_axes_change_callback = None
+
     def plot(
         self,
         data: Data3D
@@ -28,7 +37,6 @@ class Plotter3D:
         data : Data3D
             Data3D object containing the geometry and data to plot
         """
-        print(f"Plotting {data}")
         if data is not None:
             data.update_cell_data()
             self.plotter.update_polydata(data.polydata)
@@ -107,6 +115,22 @@ class Plotter3D:
         """
         self.on_clic_callback = callback
 
+        self.plotter.param.watch(
+            lambda event: self.send_event(callback),
+            "clicks"
+        )
+
+    def provide_on_axes_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the user changes the axes.
+        Functions arguments are the new axis values.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.on_axes_change_callback = callback
+
     def move_slice_to(
         self,
         u: float,
@@ -141,9 +165,19 @@ class Plotter3D:
 
         if u is not None and v is not None:
             w_vector = np.cross(u, v)
+            self.u = u
+            self.v = v
+        else:
+            w_vector = np.array(self.plotter.clip_normal)
+
+        if w_vector is None:
+            return
 
         if u_min is not None and v_min is not None and w is not None:
             origin = u_min * u + v_min * v + w * w_vector
+
+        if u_min is None and v_min is None and w is not None:
+            origin = np.array(self.plotter.clip_origin) + (w - np.dot(self.plotter.clip_origin, w_vector)) * w_vector
 
         self.plotter.set_clip_plane(origin, w_vector)
 
@@ -157,3 +191,67 @@ class Plotter3D:
                 space_location=self.plotter.hover_position, 
                 cell_id=self.plotter.hover_cell_id
             )
+
+    def get_slice_normal(self):
+        """Returns the normal of the slice plane
+
+        Returns
+        -------
+        np.ndarray
+            Normal of the slice plane
+        """
+        return self.plotter.clip_normal
+
+    def set_axes(self, normal, w):
+        """Sets the axes of the slice plane
+
+        Parameters
+        ----------
+        normal : np.ndarray
+            Normal axis of the slice plane
+        w : float
+            Normal axis value of the slice plane
+        """
+        normal = np.array(normal) / np.linalg.norm(normal)
+        origin = np.array(self.plotter.clip_origin) + (w - np.dot(self.plotter.clip_origin, normal)) * normal
+
+        self.plotter.set_clip_plane(origin, normal)
+
+    def compute_uv(self, event):
+        """Computes the u and v axes of the slice plane
+
+        Parameters
+        ----------
+        event : param.parameterized.Event
+            Event containing the normal of the slice plane
+        """
+        normal = np.array(event.new)
+        if np.linalg.norm(normal) == 0:
+            return
+
+        # Compute u and v axes
+        u = np.cross(normal, [0, 0, 1])
+        if np.linalg.norm(u) == 0:
+            u = np.cross(normal, [0, 1, 0])
+        u /= np.linalg.norm(u)
+        v = np.cross(normal, u)
+        v /= np.linalg.norm(v)
+
+        self.u = u
+        self.v = v
+
+        print(f"New axes: u={self.u}, v={self.v}")
+
+        if self.on_axes_change_callback is not None:
+            print("Calling axes change callback")
+            self.on_axes_change_callback(u, v)
+
+    def get_uv(self):
+        """Returns the u and v axes of the slice plane
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            u and v axes of the slice plane
+        """
+        return self.u, self.v

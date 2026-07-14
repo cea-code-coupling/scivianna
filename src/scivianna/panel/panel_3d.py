@@ -18,7 +18,7 @@ from scivianna.enums import VisualizationMode
 from scivianna.slave import ComputeSlave
 
 from scivianna.plotter_3d.vtk_3d_plotter import Plotter3D
-from scivianna.constants import MESH
+from scivianna.constants import MESH, X, Y
 import scivianna.utils
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
@@ -130,6 +130,9 @@ class Panel3D(VisualizationPanel):
         else:
             self.plotter.update_colorbar(False, (None, None))
 
+        self.w_value = 0.
+        self.u = X
+        self.v = Y
         self.__data_to_update: bool = False
         self.__new_data = {}
 
@@ -340,17 +343,16 @@ class Panel3D(VisualizationPanel):
         """
         self.field_change_callback = callback
 
-    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
-        """Triggers a panel recomputation at the provided location. Called by layout update event.
+    def provide_on_axes_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the axes are changed.
+        the functions takes a two numpy arrays.
 
         Parameters
         ----------
-        position : Tuple[float, float, float]
-            Location to provide to the slave
-        cell_id : str
-            cell id to provide to the slave
+        callback : Callable
+            Function to call.
         """
-        pass
+        self.plotter.provide_on_axes_change_callback(callback)
 
     def set_field(self, field_name: str):
         """Updates the plotted field
@@ -479,6 +481,40 @@ class Panel3D(VisualizationPanel):
         w : float, optional
             Normal axis location, by default None
         """
+        u_plotter, v_plotter = self.plotter.get_uv()
+
+        if (
+            (u is None or np.isclose(u, u_plotter).all())
+            and (v is None or np.isclose(v, v_plotter).all())
+            and (w is None or np.isclose(w, self.w_value).all())
+        ):
+            return
+
         self.plotter.move_slice_to(
             u, v, u_min, u_max, v_min, v_max, w
         )
+
+    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
+        """Triggers a panel recomputation at the provided location. Called by layout update event.
+
+        Parameters
+        ----------
+        position : Tuple[float, float, float]
+            Location to provide to the slave
+        cell_id : str
+            cell id to provide to the slave
+        """
+        w = self.plotter.get_slice_normal()
+
+        w_val = np.dot(position, w)
+
+        if np.isclose(w_val, self.w_value):
+            return
+
+        for extension in self.extensions:
+            extension.on_range_change(*self.plotter.get_uv(), w_val)
+
+        if w_val != self.w_value:
+            pn.state.notifications.info(f"w updating to {w_val} in {self.panel_name}", 1000)
+            self.w_value = w_val
+            self.plotter.set_axes(w, self.w_value)

@@ -70,6 +70,9 @@ class UpdateEvent(int, Enum):
     RANGE_CHANGE = 5
     """ The plot is updated when the (u, v) ranges change
     """
+    AXES_CHANGE = 6
+    """ The plot is updated when the axes are changed.
+    """
 
 class UpdatePolicy(Enum):
     """This enum lets the user define how the code interface manages its fields update with time."""

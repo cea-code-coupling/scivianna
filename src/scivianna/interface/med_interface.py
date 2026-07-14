@@ -8,7 +8,6 @@ import multiprocessing as mp
 import panel as pn
 import panel_material_ui as pmui
 import pickle
-import tempfile
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -29,6 +28,7 @@ from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 import medcoupling
 
 from scivianna.constants import MESH, GEOMETRY, CSV
+
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
@@ -603,9 +603,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     origin, vec, eps
                 )[0]
 
-                cells_ids = current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-
-                cell_ids = [int(c) for c in cells_ids]
+                cell_ids = current_mesh.getCellIdsCrossingPlane(origin, vec, eps).toNumPyArray().astype(int)
 
             except Exception:
                 eps = 1e-7
@@ -614,9 +612,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     origin, vec, eps
                 )[0]
 
-                cell_ids = [
-                    int(c) for c in current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-                ]
+                cell_ids = current_mesh.getCellIdsCrossingPlane(origin, vec, eps).toNumPyArray().astype(int)
 
             if len(cell_ids) != mesh.getNumberOfCells():
                 use_cell_id = False
@@ -633,7 +629,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         polygons = []
 
-        vertices_coords = [list(c) for c in mesh.getCoords()]
+        vertices_coords = [list(c) for c in list(mesh.getCoords())]
         caller_cell_dict = {}
 
         for cell in range(cells_count):
@@ -662,9 +658,9 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             )
 
             if not use_cell_id:
-                caller_cell_dict[cell] = current_mesh.getCellContainingPoint(
+                caller_cell_dict[int(cell)] = int(current_mesh.getCellContainingPoint(
                     [np.mean(x_vals), np.mean(y_vals), np.mean(z_vals)], eps=0.0
-                )
+                ))
 
         if use_cell_id:
             caller_cell_dict = dict(zip(list(range(cells_count)), cell_ids))
@@ -770,10 +766,13 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         if field_np_array is not None:
             caller_cell_dict = self.cell_dicts.get(caller, dict(zip(cells, cells)))
-            indexes = np.array(list(caller_cell_dict.values())).astype(int)
-            values = field_np_array[indexes[np.array(cells).astype(int)].tolist()]
+            indexes = np.array(list(caller_cell_dict.values()))
+            
+            values = field_np_array[
+                indexes[np.array(cells)].tolist()
+            ]
 
-            value_dict = dict(zip(np.array(cells).astype(str), values))
+            value_dict = dict(zip(np.array(cells), values))
 
             if profile_time:
                 print(f"Get value dict time: {coupling_time.time() - start_time}")

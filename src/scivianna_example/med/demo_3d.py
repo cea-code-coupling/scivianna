@@ -8,7 +8,14 @@ from scivianna.panel.panel_3d import Panel3D
 from scivianna.slave import ComputeSlave
 from scivianna.constants import GEOMETRY
 from scivianna.interface.med_interface import MEDInterface
-from scivianna.notebook_tools import _serve_panel
+from scivianna.notebook_tools import _serve_panel, get_med_panel
+from scivianna.enums import UpdateEvent
+from scivianna.layout.split import (
+    SplitItem,
+    SplitDirection,
+    SplitLayout,
+)
+from scivianna.constants import X, Y
 
 
 def get_panel(geo, title: str = "3D", *args, return_slaves=False, **kwargs) -> VisualizationPanel:
@@ -19,16 +26,24 @@ def get_panel(geo, title: str = "3D", *args, return_slaves=False, **kwargs) -> V
         slave.read_file(geo, GEOMETRY)
     else:
         raise TypeError(f"Provided type {type(geo)} not implemented")
+    
+    med_2 = get_med_panel(geo=geo, title="MEDCoupling slice")
+    med_2.update_event = [UpdateEvent.CLIC, UpdateEvent.AXES_CHANGE]
 
-    med_panel = Panel3D(slave, name="3D Demo")
+    med_panel_3d = Panel3D(slave, name="3D Demo")
+    med_panel_3d.update_event = [UpdateEvent.CLIC, UpdateEvent.AXES_CHANGE]
+    med_panel_3d.set_coordinates(u=X, v=Y)
     
     if "INTEGRATED_POWER" in slave.get_labels():
-        med_panel.set_field("INTEGRATED_POWER")
+        med_panel_3d.set_field("INTEGRATED_POWER")
+        med_2.set_field("INTEGRATED_POWER")
+
+    split = SplitItem(med_panel_3d, med_2, SplitDirection.VERTICAL)
 
     if return_slaves:
-        return SplitLayout(med_panel), [med_panel.get_slave()]
+        return SplitLayout(split), [med_panel_3d.get_slave()]
     else:
-        return SplitLayout(med_panel)
+        return SplitLayout(split)
 
 
 if __name__ == "__main__":

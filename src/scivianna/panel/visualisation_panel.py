@@ -227,6 +227,17 @@ class VisualizationPanel(pn.viewable.Viewer):
         """
         self.field_change_callback = callback
 
+    def provide_on_axes_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the axes are changed.
+        the functions takes a two numpy arrays.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        pass
+
     def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
         """Triggers a panel recomputation at the provided location. Called by layout update event.
 
