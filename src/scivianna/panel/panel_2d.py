@@ -644,6 +644,10 @@ class Panel2D(VisualizationPanel):
             if self.on_axes_change_callback is not None:
                 self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
 
+        if update_range: 
+            if self.on_axes_change_callback is not None:
+                self.on_axes_change_callback(self.u, self.v, self.u_range[0], self.v_range[0], self.w_value)
+
         if update_axes or update_range:
             self.plotter.set_axes(self.u, self.v, self.origin)
             self._schedule_recompute()
@@ -656,6 +660,16 @@ class Panel2D(VisualizationPanel):
                         origin=self.origin,
                         size_u=self.size_u,
                         size_v=self.size_v,
+                    )
+
+            if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
+                if self.on_axes_change_callback is not None:
+                    self.on_axes_change_callback(
+                        u=self.u, 
+                        v=self.v,
+                        umin=self.u_range[0],
+                        vmin=self.v_range[0],
+                        w=self.w_value,
                     )
 
     def set_field(self, field_name: str):
