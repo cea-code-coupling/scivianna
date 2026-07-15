@@ -151,22 +151,22 @@ You can also hide/show the axes on the plot and force a plot update.
         #   Vectors widgets
         #     
         self.u0_inp = pmui.FloatInput(
-            name="u0", value=1, start=0, end=1, width=125, margin=5
+            name="u0", value=1, start=-1, end=1, width=125, margin=5
         )
         self.u1_inp = pmui.FloatInput(
-            name="u1", value=0, start=0, end=1, width=125, margin=5
+            name="u1", value=0, start=-1, end=1, width=125, margin=5
         )
         self.u2_inp = pmui.FloatInput(
-            name="u2", value=0, start=0, end=1, width=125, margin=5
+            name="u2", value=0, start=-1, end=1, width=125, margin=5
         )
         self.v0_inp = pmui.FloatInput(
-            name="v0", value=0, start=0, end=1, width=125, margin=5
+            name="v0", value=0, start=-1, end=1, width=125, margin=5
         )
         self.v1_inp = pmui.FloatInput(
-            name="v1", value=1, start=0, end=1, width=125, margin=5
+            name="v1", value=1, start=-1, end=1, width=125, margin=5
         )
         self.v2_inp = pmui.FloatInput(
-            name="v2", value=0, start=0, end=1, width=125, margin=5
+            name="v2", value=0, start=-1, end=1, width=125, margin=5
         )
 
         def xplus_fn(event):
@@ -331,13 +331,18 @@ You can also hide/show the axes on the plot and force a plot update.
     def on_frame_change(self, u_vector, v_vector):
         u, v = self.get_uv()
         if [*list(u_vector), *list(v_vector)] != [*u.tolist(), *(v.tolist())]:
-            self.__new_data["u0"], self.__new_data["u1"], self.__new_data["u2"] = u_vector
-            self.__new_data["v0"], self.__new_data["v1"], self.__new_data["v2"] = v_vector
+            if not (all([
+                e == 0 for e in u
+            ]) or all([
+                e == 0 for e in v
+            ])):
+                self.__new_data["u0"], self.__new_data["u1"], self.__new_data["u2"] = u_vector
+                self.__new_data["v0"], self.__new_data["v1"], self.__new_data["v2"] = v_vector
 
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.update_data()
+                if pn.state.curdoc is not None:
+                    pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+                elif scivianna.utils._testing:
+                    self.update_data()
 
     def update_data(self,):
         if self.__new_data != {}:

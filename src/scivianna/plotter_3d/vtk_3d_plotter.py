@@ -178,7 +178,7 @@ class Plotter3D:
             return
 
         if u_min is not None and v_min is not None and w is not None:
-            origin = u_min * u + v_min * v + w * w_vector
+            origin = u_min * np.array(u) + v_min * np.array(v) + w * w_vector
 
         if u_min is None and v_min is None and w is not None:
             origin = np.array(self.plotter.clip_origin) + (w - np.dot(self.plotter.clip_origin, w_vector)) * w_vector
@@ -229,7 +229,8 @@ class Plotter3D:
         event : param.parameterized.Event
             Event containing the normal of the slice plane
         """
-        normal = np.array(event.new)
+        normal = self.plotter.clip_normal
+
         if np.linalg.norm(normal) == 0:
             return
         
