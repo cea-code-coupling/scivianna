@@ -91,7 +91,7 @@ Controls:
         """Handle clip enabled checkbox change."""
         if hasattr(self.plotter, 'plotter'):
             vtk_plotter = self.plotter.plotter
-            vtk_plotter.clip_enabled = event.new
+            vtk_plotter.set_clip_enabled(event.new)
 
     def _on_clip_axis_change(self, event):
         """Handle clip axis selector change."""

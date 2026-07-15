@@ -581,8 +581,6 @@ class Panel2D(VisualizationPanel):
                 update_axes = True
 
         if update_axes:
-            if self.on_axes_change_callback is not None:
-                self.on_axes_change_callback(self.u, self.v)
             for extension in self.extensions:
                 extension.on_frame_change(self.u, self.v)
 
@@ -633,6 +631,10 @@ class Panel2D(VisualizationPanel):
             for extension in self.extensions:
                 extension.on_range_change(self.u_range, self.v_range, self.w_value)
 
+        if update_range: 
+            if self.on_axes_change_callback is not None:
+                self.on_axes_change_callback(self.u, self.v, self.u_range[0], self.v_range[0], self.w_value)
+
         if update_axes or update_range:
             self.plotter.set_axes(self.u, self.v, self.w_value)
             
@@ -642,6 +644,16 @@ class Panel2D(VisualizationPanel):
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
             elif scivianna.utils._testing:
                 self.async_update_data()
+
+            if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
+                if self.on_axes_change_callback is not None:
+                    self.on_axes_change_callback(
+                        u=self.u, 
+                        v=self.v,
+                        umin=self.u_range[0],
+                        vmin=self.v_range[0],
+                        w=self.w_value,
+                    )
 
     def set_field(self, field_name: str):
         """Updates the plotted field
@@ -760,7 +772,7 @@ class Panel2D(VisualizationPanel):
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the axes are changed.
-        the functions takes a two numpy arrays.
+        the functions takes a two numpy arrays and three floats (axes, and umin, vmin, w).
 
         Parameters
         ----------

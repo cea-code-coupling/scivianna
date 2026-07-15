@@ -229,7 +229,7 @@ class VisualizationPanel(pn.viewable.Viewer):
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the axes are changed.
-        the functions takes a two numpy arrays.
+        the functions takes a two numpy arrays and three floats (axes, and umin, vmin, w).
 
         Parameters
         ----------

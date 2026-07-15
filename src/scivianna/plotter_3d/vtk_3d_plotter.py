@@ -15,11 +15,15 @@ class Plotter3D:
             sizing_mode="stretch_both",
             margin=0
         )
-        self.plotter.set_clip_enabled = True
+        self.plotter.set_clip_enabled(False)
 
         self.plotter.param.watch(
             self.compute_uv,
             "clip_normal"
+        )
+        self.plotter.param.watch(
+            self.compute_uv,
+            "clip_origin"
         )
         self.u = np.array([1, 0, 0])
         self.v = np.array([0, 1, 0])
@@ -122,7 +126,7 @@ class Plotter3D:
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the user changes the axes.
-        Functions arguments are the new axis values.
+        Functions arguments are the new axis values and three floats (axes, and umin, vmin, w).
 
         Parameters
         ----------
@@ -182,7 +186,7 @@ class Plotter3D:
         self.plotter.set_clip_plane(origin, w_vector)
 
     def send_event(self, callback):
-        if self.plotter.hover_cell_id is not None:
+        if self.plotter.hover_cell_id is not None and not any(np.isnan(self.plotter.hover_position)):
             callback(
                 screen_location=(
                     None,
@@ -228,6 +232,8 @@ class Plotter3D:
         normal = np.array(event.new)
         if np.linalg.norm(normal) == 0:
             return
+        
+        normal = normal / np.linalg.norm(normal)
 
         # Compute u and v axes
         u = np.cross(normal, [0, 0, 1])
@@ -240,11 +246,14 @@ class Plotter3D:
         self.u = u
         self.v = v
 
-        print(f"New axes: u={self.u}, v={self.v}")
-
         if self.on_axes_change_callback is not None:
-            print("Calling axes change callback")
-            self.on_axes_change_callback(u, v)
+            self.on_axes_change_callback(
+                u, 
+                v, 
+                float(np.dot(self.plotter.clip_origin, u)), 
+                float(np.dot(self.plotter.clip_origin, v)), 
+                float(np.dot(self.plotter.clip_origin, normal)), 
+            )
 
     def get_uv(self):
         """Returns the u and v axes of the slice plane

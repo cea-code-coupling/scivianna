@@ -57,23 +57,21 @@ setup(
         "matplotlib",
         "numpy",
         "shapely",
-        "jupyter_bokeh",
         "holoviews",
-        "icoco~=2.0.0",
         "panel_material_ui",
         "geopandas<1.1",
         "dill",
         "pandas",
-        "panel-splitjs",
-        "scivianna_vtk"
+        "panel-splitjs"
     ],
     extras_require={
         "default": [],
         "agent": [
             "smolagents[openai]",
         ],
-        "pyvista": [
+        "3d": [
             "pyvista",
+            "scivianna_vtk>=0.1.1"
         ],
         "test": [
             "pytest-xdist",
@@ -84,7 +82,8 @@ setup(
         ],
         "coupling": [
             "salome-c3po",
-            "pydantic"
+            "pydantic",
+            "icoco~=2.0.0",
         ],
         "doc": [
             "sphinx",
