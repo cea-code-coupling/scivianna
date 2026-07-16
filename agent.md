@@ -33,26 +33,40 @@ scivianna/
 │   ├── interface/
 │   │   ├── generic_interface.py  # Abstract base classes for all code interfaces
 │   │   ├── med_interface.py      # MEDCoupling (.med file) implementation
+│   │   ├── structured_mesh_interface.py  # Structured mesh interface
+│   │   ├── vtk_interface.py      # VTK/VTU file interface
 │   │   └── ...                   # Additional interfaces (e.g., CSV, TriToPO5)
 │   │
 │   ├── data/
 │   │   ├── data2d.py             # Data2D: geometry + cell values for 2D plotting
-│   │   ├── data_container.py     # Container for field metadata
+│   │   ├── data3d.py             # Data3D: 3D geometry container
 │   │   └── ...
 │   │
 │   ├── plotter_2d/
 │   │   ├── generic_plotter.py    # Abstract Plotter2D interface
+│   │   ├── api.py                # Public matplotlib plotting API
 │   │   ├── polygon/
-│   │   │   └── bokeh.py          # Bokeh-based 2D polygon renderer
+│   │   │   ├── bokeh.py          # Bokeh-based 2D polygon renderer
+│   │   │   └── matplotlib.py     # Matplotlib 2D polygon renderer
+│   │   ├── grid/
+│   │   │   ├── bokeh.py          # Bokeh-based 2D grid renderer
+│   │   │   └── matplotlib.py     # Matplotlib 2D grid renderer
 │   │   └── ...
+│   │
+│   ├── plotter_3d/
+│   │   └── vtk_3d_plotter.py     # VTK-based 3D plotter
 │   │
 │   ├── panel/
 │   │   ├── visualisation_panel.py  # Abstract VisualizationPanel base class
 │   │   ├── panel_2d.py             # 2D panel implementation (recompute, layout)
+│   │   ├── panel_3d.py             # 3D panel implementation
 │   │   └── gui.py                  # GUI builder for extensions
 │   │
 │   ├── extension/
 │   │   ├── extension.py            # Base Extension class with lifecycle hooks
+│   │   ├── axes.py                 # Axes customization extension
+│   │   ├── field_selector.py       # Field selection extension
+│   │   ├── file_loader.py          # File loading extension
 │   │   ├── save_load_extension.py  # Save/load session state extension
 │   │   └── ...
 │   │
@@ -61,9 +75,16 @@ scivianna/
 │   │
 │   ├── utils/
 │   │   ├── polygonize_tools.py     # PolygonElement, PolygonCoords dataclasses
+│   │   ├── polygon_sorter.py       # Polygon sorting utilities
+│   │   ├── color_tools.py          # Color interpolation and mapping
 │   │   └── ...
 │   │
 │   └── icon/                      # SVG icons (settings_applications.svg, salome.svg, etc.)
+│
+├── src/scivianna_example/         # Example modules
+│   ├── europe_grid/               # Europe electricity grid example
+│   ├── mandelbrot/                # Mandelbrot set example
+│   └── med/                       # MED file demo
 │
 ├── tests/                         # Unit and integration tests
 ├── pyproject.toml                 # Project metadata, dependencies
@@ -81,7 +102,11 @@ All code-specific adapters inherit from abstract base classes in `interface/gene
 ```
 GenericInterface          # File I/O: read_file, get_labels, save/load
     │
-    ├── Geometry2D        # + compute_2d_data, get_value_dict, get_geometry_type
+    ├── Geometry2D        # + compute_2D_data, get_value_dict, get_geometry_type
+    │   ├── Geometry2DPolygon  # Provides geometry as polygon list
+    │   └── Geometry2DGrid     # Provides geometry as numpy array (rasterized)
+    │
+    ├── Geometry3D        # + compute_3D_data, get_3d_value_dict
     │
     ├── ValueAtLocation   # + get_value, get_values (result query at cell/position)
     │
@@ -102,8 +127,8 @@ IcocoInterface            # Input coupling: getInputMEDDoubleFieldTemplate, setI
 | `GenericInterface` | `get_file_input_list()` | Return [(label, description)] for file picker |
 | `GenericInterface` | `save(file_path, include_files)` | Pickle save state |
 | `GenericInterface` | `load(file_path, include_files)` | Load pickled state |
-| `Geometry2D` | `compute_2D_data(u, v, u_min, u_max, v_min, v_max, w_value, q_tasks, options)` | Compute 2D slice geometry + polygons |
-| `Geometry2D` | `get_value_dict(value_label, cells, options)` | Return {cell_id: value} for a field |
+| `Geometry2D` | `compute_2D_data(u, v, origin, size_u, size_v, w_value, q_tasks, options, caller)` | Compute 2D slice geometry + polygons |
+| `Geometry2D` | `get_value_dict(value_label, cells, options, caller)` | Return {cell_id: value} for a field |
 | `Geometry2D` | `get_geometry_type()` | Return `GeometryType` enum |
 
 **Concrete example:** `MEDInterface` (in `med_interface.py`) implements both `Geometry2DPolygon` and `IcocoInterface`. It reads `.med` files using the MEDCoupling library, builds 2D slices via `buildSlice3D`, and maps field values to polygon cells.
@@ -231,6 +256,43 @@ class PolygonElement:
 
 ---
 
+## compute_2D_data Parameter Transformation
+
+### The New Signature
+
+The `compute_2D_data` method uses a **physical coordinate system** instead of normalized bounds:
+
+```python
+def compute_2D_data(
+    self,
+    u: Tuple[float, float, float],      # Horizontal axis direction vector
+    v: Tuple[float, float, float],      # Vertical axis direction vector
+    origin: Tuple[float, float, float], # Physical 3D position of slice center: ((u_min+u_max)/2)*u + ((v_min+v_max)/2)*v + w_value*w
+    size_u: float,                       # Size along u axis (u_max - u_min)
+    size_v: float,                       # Size along v axis (v_max - v_min)
+    w_value: float,                      # Normal axis coordinate
+    q_tasks: mp.Queue,
+    options: Dict[str, Any],
+    caller: str = "API",
+) -> Tuple[Data2D, bool]:
+```
+
+### Caching Strategy
+
+Interfaces cache computed frames to avoid redundant work. The cache key now includes the new parameters:
+
+```python
+# Old cache key (before refactoring):
+last_frame_key = (*u, *v, w_value)
+
+# New cache key (after refactoring):
+last_frame_key = [*origin, size_u, size_v, w_value]
+```
+
+This ensures that slices with the same plane but different extents are correctly identified as different frames.
+
+---
+
 ## Key Design Patterns
 
 ### Pattern 1: Abstract Base + Concrete Implementation
@@ -270,13 +332,27 @@ class NewInterface(Geometry2D):
     def read_file(self, file_path: str, file_label: str):
         # Parse and store the file
         
-    def compute_2D_data(self, u, v, u_min, u_max, v_min, v_max, w_value, q_tasks, options) -> Tuple[Data2D, bool]:
+    def compute_2D_data(
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],  # Physical 3D position
+        size_u: float,                        # Extent along u axis
+        size_v: float,                        # Extent along v axis
+        w_value: float,                       # Normal axis coordinate
+        q_tasks: mp.Queue,
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Tuple[Data2D, bool]:
+        # Cache key should use origin, size_u, size_v, w_value
+        last_frame_key = [*origin, size_u, size_v, w_value]
+        
         # Return (Data2D, polygons_updated)
         
     def get_labels(self) -> List[str]:
         # Return list of displayable field names
         
-    def get_value_dict(self, value_label, cells, options) -> Dict:
+    def get_value_dict(self, value_label, cells, options, caller="API") -> Dict:
         # Return {cell_id: value} mapping
         
     def get_label_coloring_mode(self, label: str) -> VisualizationMode:
@@ -328,6 +404,7 @@ panel = Panel2D(slave, name="My Panel", extensions=[MyExtension])
 Tests live in `scivianna/tests/`:
 - `tests/unit_test/` - Unit tests for individual components
 - `tests/integration_test/` - Integration tests (e.g., `test_serialization.py`)
+- `tests/gui_tests/` - GUI interaction tests
 
 Run tests:
 ```bash
@@ -367,6 +444,7 @@ panel.show()  # or use _show_panel from scivianna.notebook_tools
 2. **GIL awareness:** Never pass large numpy arrays or MEDCoupling meshes back to the main process unnecessarily. Only transfer what's needed for display.
 3. **Queue blocking:** The worker processes tasks sequentially. Long-running `compute_2D_data` calls block subsequent requests. Use `allow_errors=True` in `ComputeSlave` to prevent UI freeze on errors.
 4. **Extension feedback loops:** Set `_restoring = True` during `from_json()` restoration to prevent callback triggers.
+5. **Parameter mismatch:** When implementing `compute_2D_data`, always use the new signature with `origin`, `size_u`, `size_v`. Never use `u_min`, `u_max`, `v_min`, `v_max` directly.
 
 ---
 
@@ -377,11 +455,16 @@ panel.show()  # or use _show_panel from scivianna.notebook_tools
 | `src/scivianna/slave.py` | Multiprocessing worker + ComputeSlave |
 | `src/scivianna/interface/generic_interface.py` | Abstract interface base classes |
 | `src/scivianna/interface/med_interface.py` | MEDCoupling .med file adapter |
+| `src/scivianna/interface/structured_mesh_interface.py` | Structured mesh interface |
+| `src/scivianna/interface/vtk_interface.py` | VTK/VTU file adapter |
 | `src/scivianna/panel/panel_2d.py` | 2D visualization panel implementation |
+| `src/scivianna/panel/panel_3d.py` | 3D visualization panel implementation |
 | `src/scivianna/panel/visualisation_panel.py` | Abstract panel base class |
 | `src/scivianna/extension/extension.py` | Extension base class with hooks |
+| `src/scivianna/extension/axes.py` | Axes customization extension |
 | `src/scivianna/plotter_2d/generic_plotter.py` | Plotter2D abstract interface |
 | `src/scivianna/plotter_2d/polygon/bokeh.py` | Bokeh polygon renderer |
+| `src/scivianna/plotter_2d/api.py` | Public matplotlib plotting API |
 | `src/scivianna/data/data2d.py` | Data2D container for geometry+values |
 | `src/scivianna/enums.py` | GeometryType, VisualizationMode, UpdateEvent |
 | `src/scivianna/constants.py` | Global string constants |

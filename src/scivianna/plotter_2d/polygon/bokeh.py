@@ -541,7 +541,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.figure.on_event(bokeh.events.Tap, functools.partial(self.send_event, callback))
         # self.figure.add_tools(TapTool())
 
-    def set_axes(self, u:Tuple[float, float, float], v:Tuple[float, float, float], w:float):
+    def set_axes(self, u:Tuple[float, float, float], v:Tuple[float, float, float]):
         """Stores the u v axes of the current plot
 
         Parameters
@@ -550,8 +550,6 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             Horizontal axis direction vector
         v : Tuple[float, float, float]
             Vertical axis direction vector
-        w : float
-            Normal vector coordinate
         """
         w_vector = np.cross(np.array(u), np.array(v))
         
@@ -565,6 +563,5 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         new_data["w0"] = [w_vector[0]]
         new_data["w1"] = [w_vector[1]]
         new_data["w2"] = [w_vector[2]]
-        new_data["w"]  = [w]
 
         self.source_coordinates.update(data = new_data)

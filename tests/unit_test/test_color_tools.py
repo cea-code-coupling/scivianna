@@ -36,11 +36,9 @@ class ColorTestInterface(Geometry2DPolygon):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -53,16 +51,12 @@ class ColorTestInterface(Geometry2DPolygon):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice corner
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
@@ -197,7 +191,7 @@ def test_interpolate_cmap_blues():
 @pytest.mark.default
 def test_color_list_none():
     interface = ColorTestInterface()
-    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
+    data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
     set_colors_list(data2D, interface, MESH, "gray", False, {})
 
     np.testing.assert_equal(data2D.cell_colors, [(200, 200, 200, 0)] * 5)
@@ -207,7 +201,7 @@ def test_color_list_none():
 @pytest.mark.default
 def test_color_list_str():
     interface = ColorTestInterface()
-    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
+    data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
     set_colors_list(data2D, interface, "str", "gray", False, {})
 
     np.testing.assert_equal(
@@ -218,7 +212,7 @@ def test_color_list_str():
 @pytest.mark.default
 def test_color_list_float():
     interface = ColorTestInterface()
-    data2D, _ = interface.compute_2D_data(None, None, 0, 1, 0, 1, 0, None, {}, caller="Test")
+    data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
 
     dict_value_per_cell = interface.get_value_dict("float", data2D.cell_ids, {})
 

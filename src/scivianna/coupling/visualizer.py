@@ -112,17 +112,12 @@ class FieldPanel(CouplingPanel):
         Horizontal axis vector.
     v : tuple[float, float, float] | None
         Vertical axis vector.
-    u_min : float | None
-        Horizontal axis lower bound.
-    u_max : float | None
-        Horizontal axis upper bound.
-    v_min : float | None
-        Vertical axis lower bound.
-    v_max : float | None
-        Vertical axis upper bound.
-    w : float | None
-        Displayed frame normal vector coordinate (center goes to
-        u_min * u + v_min * v + w * u^v).
+    origin : tuple[float, float, float] | None
+        Physical 3D position of the slice center
+    size_u : float | None
+        Size of the slice along the u axis.
+    size_v : float | None
+        Size of the slice along the v axis.
     color_map : str | None
         Plot color map name.
     displayed_fields : str
@@ -132,9 +127,12 @@ class FieldPanel(CouplingPanel):
     -------
     >>> panel = FieldPanel(
     ...     name="temperature_field",
-    ...     interface=Geometry2D,
+    ...     interface=SomeInterface,
     ...     u=(1.0, 0.0, 0.0),
     ...     v=(0.0, 1.0, 0.0),
+    ...     origin=(0.5, 0.5, 0.0),
+    ...     size_u=1.0,
+    ...     size_v=1.0,
     ...     color_map="viridis",
     ...     displayed_field="power"
     ... )
@@ -147,18 +145,12 @@ class FieldPanel(CouplingPanel):
     v: tuple[float, float, float] | None = None
     """Vertical axis vector"""
 
-    u_min: float | None = None
-    """Horizontal axis lower bound"""
-    u_max: float | None = None
-    """Horizontal axis upper bound"""
-
-    v_min: float | None = None
-    """Vertical axis lower bound"""
-    v_max: float | None = None
-    """Vertical axis upper bound"""
-
-    w: float | None = None
-    """Displayed frame normal vector coordinate (center goes to u_min * u + v_min * v + w * u^v)"""
+    origin: tuple[float, float, float] | None = None
+    """Physical 3D position of the slice center"""
+    size_u: float | None = None
+    """Size of the slice along the u axis"""
+    size_v: float | None = None
+    """Size of the slice along the v axis"""
 
     color_map: str | None = None
     """Plot color map"""
@@ -579,13 +571,11 @@ class GridStackProblem(LayoutProblem):
                     visualisation_panels[name] = Panel2D(slave_2d, name=name)
 
                     visualisation_panels[name].set_coordinates(
-                        u = element.u,
-                        v = element.v,
-                        u_min = element.u_min,
-                        u_max = element.u_max,
-                        v_min = element.v_min,
-                        v_max = element.v_max,
-                        w = element.w,
+                        u=element.u,
+                        v=element.v,
+                        origin=element.origin,
+                        size_u=element.size_u,
+                        size_v=element.size_v,
                     )
                     if element.color_map is not None:
                         visualisation_panels[name].set_colormap(element.color_map)
@@ -708,13 +698,11 @@ class SplitLayoutProblem(LayoutProblem):
                 visualisation_panels[name] = Panel2D(slave_2d, name=name)
 
                 visualisation_panels[name].set_coordinates(
-                    u = element.u,
-                    v = element.v,
-                    u_min = element.u_min,
-                    u_max = element.u_max,
-                    v_min = element.v_min,
-                    v_max = element.v_max,
-                    w = element.w,
+                    u=element.u,
+                    v=element.v,
+                    origin=element.origin,
+                    size_u=element.size_u,
+                    size_v=element.size_v,
                 )
                 if element.color_map is not None:
                     visualisation_panels[name].set_colormap(element.color_map)

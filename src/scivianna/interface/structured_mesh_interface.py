@@ -54,11 +54,9 @@ class StructuredMeshInterface(Geometry2DPolygon):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -71,16 +69,12 @@ class StructuredMeshInterface(Geometry2DPolygon):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
@@ -94,17 +88,15 @@ class StructuredMeshInterface(Geometry2DPolygon):
             Were the polygons updated compared to the past call
         """
         if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*u, *v, w_value]
+            self.last_computed_frame.get(caller) == [*origin, size_u, size_v]
         ) and (caller in self.data):
             print("Skipping polygon computation.")
             return self.data[caller], False
 
-        self.last_computed_frame[caller] = [*u, *v, w_value]
+        self.last_computed_frame[caller] = [*origin, size_u, size_v]
 
         u = np.array(u)
         v = np.array(v)
-        vec = np.cross(u, v)
-        origin = u_min * u + v_min * v + w_value * vec
 
         self.data[caller] = Data2D.from_polygon_list(self.mesh.compute_2D_slice(origin, u, v))
 

@@ -408,8 +408,8 @@ class GenericLayout:
             if panel.sync_field:
                 panel.set_field(new_field)
 
-    def on_axes_change_callback(self, u: np.ndarray, v: np.ndarray, umin: float, vmin: float, w: float):
-        """Function calling panels update a field change
+    def on_axes_change_callback(self, u: np.ndarray, v: np.ndarray, origin: Tuple[float, float, float] = None, size_u: float = None, size_v: float = None):
+        """Function calling panels update when axes change.
 
         Parameters
         ----------
@@ -417,21 +417,21 @@ class GenericLayout:
             u axis direction vector
         v : np.ndarray
             v axis direction vector
-        umin : float
-            minimum value on u axis
-        vmin : float
-            minimum value on v axis
-        w : float
-            value on the normal axis
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center
+        size_u : float, optional
+            Size of the slice along the u axis
+        size_v : float, optional
+            Size of the slice along the v axis
         """
         for panel in self.visualisation_panels.values():
             if panel.update_event == UpdateEvent.AXES_CHANGE or (isinstance(panel.update_event, list) and UpdateEvent.AXES_CHANGE in panel.update_event):
                 panel.set_coordinates(
                     u=u, 
                     v=v,
-                    u_min=umin,
-                    v_min=vmin,
-                    w=w,
+                    origin=origin,
+                    size_u=size_u,
+                    size_v=size_v
                 )
 
     def add_time_widget(self,):

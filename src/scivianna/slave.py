@@ -163,11 +163,9 @@ def worker(
                 (
                     u,
                     v,
-                    u_min,
-                    u_max,
-                    v_min,
-                    v_max,
-                    w_value,
+                    origin,
+                    size_u,
+                    size_v,
                     q_tasks_,
                     coloring_label,
                     options,
@@ -182,11 +180,9 @@ def worker(
                 data, polygons_updated = code_.compute_2D_data(
                     u=u,
                     v=v,
-                    u_min=u_min,
-                    u_max=u_max,
-                    v_min=v_min,
-                    v_max=v_max,
-                    w_value=w_value,
+                    origin=origin,
+                    size_u=size_u,
+                    size_v=size_v,
                     q_tasks=q_tasks_,
                     options=options,
                     caller=caller,
@@ -572,11 +568,9 @@ class ComputeSlave:
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         coloring_label: str,
         options: Dict[str, Any],
@@ -592,16 +586,12 @@ class ComputeSlave:
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         coloring_label : str
@@ -622,11 +612,9 @@ class ComputeSlave:
                 [
                     u,
                     v,
-                    u_min,
-                    u_max,
-                    v_min,
-                    v_max,
-                    w_value,
+                    origin,
+                    size_u,
+                    size_v,
                     q_tasks,
                     coloring_label,
                     options,

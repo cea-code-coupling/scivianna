@@ -93,20 +93,20 @@ class Extension:
 
     def on_range_change(
         self,
-        u_bounds: Tuple[float, float],
-        v_bounds: Tuple[float, float],
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
     ):
         """Function called when the viewport range was updated.
 
         Parameters
         ----------
-        y_bounds : Tuple[float, float]
-            Bounds along the U axis
-        v_bounds : Tuple[float, float]
-            Bounds along the V axis
-        w_value : Tuple[float, float]
-            Coordinate along the W axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         """
         pass
 

@@ -72,11 +72,13 @@ class Panel3D(VisualizationPanel):
             Direction vector for the horizontal axis, defaults to X.
         v : Tuple[float, float, float]
             Direction vector for the vertical axis, defaults to Y.
-        u_range : Tuple[float, float]
-            Range (min, max) for the horizontal axis, defaults to (0., 1.).
-        v_range : Tuple[float, float]
-            Range (min, max) for the vertical axis, defaults to (0., 1.).
-        w_value : float
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center, defaults to None
+        size_u : float
+            Size of the slice along the u axis (not used for 3D but kept for API compatibility), defaults to None
+        size_v : float
+            Size of the slice along the v axis (not used for 3D but kept for API compatibility), defaults to None
+        w : float
             Value along the u ^ v (normal) axis, defaults to 0.5.
         """
         code_interface: Type[Geometry3D] = slave.code_interface
@@ -130,7 +132,8 @@ class Panel3D(VisualizationPanel):
         else:
             self.plotter.update_colorbar(False, (None, None))
 
-        self.w_value = 0.
+        self.w_inp = 0.
+        self.origin = (0.01, 0.01, 0.01)
         self.u = X
         self.v = Y
         self.__data_to_update: bool = False
@@ -138,9 +141,9 @@ class Panel3D(VisualizationPanel):
         
         for extension in self.extensions:
             extension.on_range_change(
-                (self.plotter.get_slice_origin()[0], None), 
-                (self.plotter.get_slice_origin()[1], None), 
-                self.w_value
+                self.origin, 
+                1.0, 
+                1.0
             )
             extension.on_frame_change(*self.plotter.get_uv())
 
@@ -353,7 +356,7 @@ class Panel3D(VisualizationPanel):
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the axes are changed.
-        the functions takes a two numpy arrays and three floats (axes, and umin, vmin, w).
+        the functions takes two numpy arrays and three values (u, v, origin, size_u, size_v).
 
         Parameters
         ----------
@@ -464,11 +467,9 @@ class Panel3D(VisualizationPanel):
         self,
         u: Tuple[float, float, float] = None,
         v: Tuple[float, float, float] = None,
-        u_min: float = None,
-        u_max: float = None,
-        v_min: float = None,
-        v_max: float = None,
-        w: float = None,
+        origin: Tuple[float, float, float] = None,
+        size_u: float = None,
+        size_v: float = None,
     ):
         """Updates the plot coordinates
 
@@ -478,38 +479,35 @@ class Panel3D(VisualizationPanel):
             Horizontal axis direction vector, by default None
         v : Tuple[float, float, float], optional
             Vertical axis direction vector, by default None
-        u_min : float, optional
-            Horizontal axis minimum coordinate, by default None
-        u_max : float, optional
-            Horizontal axis maximum coordinate, by default None
-        v_min : float, optional
-            Vertical axis minimum coordinate, by default None
-        v_max : float, optional
-            Vertical axis maximum coordinate, by default None
-        w : float, optional
-            Normal axis location, by default None
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center, by default None
+        size_u : float, optional
+            Size of the slice along the u axis (not used for 3D but kept for API compatibility), by default None
+        size_v : float, optional
+            Size of the slice along the v axis (not used for 3D but kept for API compatibility), by default None
         """
         u_plotter, v_plotter = self.plotter.get_uv()
 
         if (
             (u is None or np.isclose(u, u_plotter).all())
             and (v is None or np.isclose(v, v_plotter).all())
-            and (w is None or np.isclose(w, self.w_value).all())
         ):
             return
 
-        self.plotter.move_slice_to(
-            u, v, u_min, u_max, v_min, v_max, w
-        )
+        if origin is not None:
+            self.origin = tuple(origin)
 
         if u is not None and v is not None:
             self.u = u
             self.v = v
-        if w is not None:
-            self.w_value = w
+
+        self.plotter.move_slice_to(
+            u, v, 
+            self.origin
+        )
 
         for extension in self.extensions:
-            extension.on_range_change((u_min, u_max), (v_min, v_max), self.w_value)
+            extension.on_range_change(self.origin, 1.0, 1.0)
             extension.on_frame_change(*self.plotter.get_uv())
 
     def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
@@ -524,15 +522,8 @@ class Panel3D(VisualizationPanel):
         """
         w = self.plotter.get_slice_normal()
 
-        w_val = np.dot(position, w)
-
         for extension in self.extensions:
-            extension.on_range_change((position[0], None), (position[1], None), w_val)
+            extension.on_range_change(position, 1.0, 1.0)
             extension.on_frame_change(*self.plotter.get_uv())
 
         self.plotter.set_slice_origin(position)
-
-        if w_val != self.w_value:
-            pn.state.notifications.info(f"w updating to {w_val} in {self.panel_name}", 1000)
-            self.w_value = w_val
-            self.plotter.set_axes(w, self.w_value)

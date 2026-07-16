@@ -161,11 +161,9 @@ class Geometry2D(GenericInterface):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -178,16 +176,12 @@ class Geometry2D(GenericInterface):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis=
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]

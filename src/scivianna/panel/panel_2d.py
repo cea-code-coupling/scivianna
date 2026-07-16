@@ -71,9 +71,9 @@ class Panel2D(VisualizationPanel):
         colormap: str = "BuRd",
         u: Tuple[float, float, float] = X,
         v: Tuple[float, float, float] = Y,
-        u_range: Tuple[float, float] = (0., 1.),
-        v_range: Tuple[float, float] = (0., 1.),
-        w_value: float = 0.5,
+        origin: Tuple[float, float, float] = None,
+        size_u: float = 1.0,
+        size_v: float = 1.0,
     ):
         """Visualization panel constructor
 
@@ -97,17 +97,20 @@ class Panel2D(VisualizationPanel):
             Direction vector for the horizontal axis, defaults to X.
         v : Tuple[float, float, float]
             Direction vector for the vertical axis, defaults to Y.
-        u_range : Tuple[float, float]
-            Range (min, max) for the horizontal axis, defaults to (0., 1.).
-        v_range : Tuple[float, float]
-            Range (min, max) for the vertical axis, defaults to (0., 1.).
-        w_value : float
-            Value along the u ^ v (normal) axis, defaults to 0.5.
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis, defaults to 1.0.
+        size_v : float
+            Size of the slice along the v axis, defaults to 1.0.
         """
         code_interface: Type[Geometry2D] = slave.code_interface
         assert issubclass(
             code_interface, Geometry2D
         ), f"A VisualizationPanel can only be given a Geometry2D interface slave, received {code_interface}."
+
+        self.__data_to_update: bool = False
+        self.__new_data = {}
 
         #
         #   Initializing attributes
@@ -120,6 +123,9 @@ class Panel2D(VisualizationPanel):
 
         self.field_change_callback: Callable = None
         """Function to call when the field is changed"""
+
+        self.on_axes_change_callback: Callable = None
+        """Function to call when the axes are changed"""
 
         #
         #   Plotter creation
@@ -134,9 +140,12 @@ class Panel2D(VisualizationPanel):
         self.u = u
         self.v = v
 
-        self.u_range = u_range
-        self.v_range = v_range
-        self.w_value = w_value
+        # Store coordinates in new style: origin, size_u, size_v
+        # origin must be provided as a physical 3D position
+        self.origin = origin if origin is not None else [0.01, 0.01, 0.01]
+        
+        self.size_u = size_u
+        self.size_v = size_v
 
         #
         #   First plot on XY basic range
@@ -146,21 +155,21 @@ class Panel2D(VisualizationPanel):
             extension.on_field_change(displayed_field)
             extension.on_frame_change(u, v)
             extension.on_range_change(
-                u_range,
-                v_range,
-                w_value
+                self.origin,
+                self.size_u,
+                self.size_v
             )
 
         self.colormap = colormap
 
         if data is None:
-            data_ = self.compute_fn(self.u, self.v, self.u_range[0], self.v_range[0], self.u_range[1], self.v_range[1], self.w_value)
+            data_ = self.compute_fn(self.u, self.v, self.origin, self.size_u, self.size_v)
         else:
             print(f"Panel2D {self.panel_name} initialized initial Data2D object, restoring {len(data.cell_ids)} cells.")
             data_ = data
             self.update_polygons = True
         
-        self.plotter.set_axes(self.u, self.v, self.w_value)
+        self.plotter.set_axes(self.u, self.v)
         self.plotter.plot_2d_frame(data_)
 
         self.current_data = data_
@@ -180,9 +189,6 @@ class Panel2D(VisualizationPanel):
 
         # Attach the range update callback to the event
         self.plotter._set_callback_on_range_update(self.ranges_callback)
-
-        self.__data_to_update: bool = False
-        self.__new_data = {}
 
         try:
             pn.state.on_session_created(self.recompute)
@@ -244,11 +250,9 @@ class Panel2D(VisualizationPanel):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        x0: float,
-        y0: float,
-        x1: float,
-        y1: float,
-        z: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
     ) -> Data2D:
         """Request the slave to compute a new frame, and updates the data to display
 
@@ -258,16 +262,12 @@ class Panel2D(VisualizationPanel):
             Direction vector along the horizontal axis
         v : Tuple[float, float, float]
             Direction vector along the vertical axis
-        x0 : float
-            Lower bound value along the u axis
-        y0 : float
-            Lower bound value along the v axis
-        x1 : float
-            Upper bound value along the u axis
-        y1 : float
-            Upper bound value along the v axis
-        z : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
 
         Returns
         -------
@@ -286,11 +286,9 @@ class Panel2D(VisualizationPanel):
         computed_data = self.slave.compute_2D_data(
             u,
             v,
-            x0,
-            x1,
-            y0,
-            y1,
-            z,
+            origin,
+            size_u,
+            size_v,
             None,
             self.displayed_field,
             options,
@@ -344,11 +342,29 @@ class Panel2D(VisualizationPanel):
         elif scivianna.utils._testing:
             self.async_update_data()
 
-        self.u_range = (x0, x1)
-        self.v_range = (y0, y1)
-
-        for extension in self.extensions:
-            extension.on_range_change((x0, x1), (y0, y1), self.w_value)
+        # Convert x0, x1, y0, y1 (center coordinates in physical space) to origin/size_u/size_v
+        u_arr = np.array(self.u, dtype=float)
+        v_arr = np.array(self.v, dtype=float)
+        
+        # x0, x1 are the center_u coordinates, y0, y1 are center_v coordinates
+        center_u_min = x0
+        center_u_max = x1
+        center_v_min = y0
+        center_v_max = y1
+        
+        new_size_u = (center_u_max + center_u_min) * .5
+        new_size_v = (center_v_max + center_v_min) * .5
+        
+        # Compute origin from center coordinates
+        self.origin = center_u_min * u_arr + center_v_min * v_arr + self.origin
+        
+        if new_size_u != self.size_u or new_size_v != self.size_v:
+            self.size_u = new_size_u
+            self.size_v = new_size_v
+            # Keep origin unchanged (it's now a direct 3D position)
+            
+            for extension in self.extensions:
+                extension.on_range_change(self.origin, self.size_u, self.size_v)
 
         if self.update_event == UpdateEvent.RANGE_CHANGE or (
             isinstance(self.update_event, list) and UpdateEvent.RANGE_CHANGE in self.update_event
@@ -381,11 +397,11 @@ class Panel2D(VisualizationPanel):
         u, v = self.get_uv()
 
         print(
-            f"{self.panel_name} - Recomputing for axes {u}, {v}, at range : {self.u}, {self.v}, ({self.w_value}), with field {self.displayed_field}"
+            f"{self.panel_name} - Recomputing for axes {u}, {v}, at origin : {self.origin}, size_u : {self.size_u}, size_v : {self.size_v}, with field {self.displayed_field}"
         )
 
         data = self.compute_fn(
-            u, v, self.u_range[0], self.v_range[0], self.u_range[1], self.v_range[1], self.w_value
+            u, v, self.origin, self.size_u, self.size_v
         )
 
         if data is not None:
@@ -506,18 +522,16 @@ class Panel2D(VisualizationPanel):
         cell_id : str
             cell id to provide to the slave
         """
-        u, v = self.get_uv()
+        # Update origin directly to the clicked position
+        new_origin = tuple(position)
+        
+        if new_origin != self.origin:
+            self.origin = new_origin
+            
+            for extension in self.extensions:
+                extension.on_range_change(self.origin, self.size_u, self.size_v)
 
-        w = np.cross(u, v)
-        w_val = np.dot(position, w)
-
-        for extension in self.extensions:
-            extension.on_range_change(self.u_range, self.v_range, w_val)
-
-        if w_val != self.w_value:
-            pn.state.notifications.info(f"w updating to {w_val} in {self.panel_name}", 1000)
-            self.w_value = w_val
-            self.plotter.set_axes(self.u, self.v, self.w_value)
+            self.plotter.set_axes(self.u, self.v)
 
             self.__data_to_update = True
             self.marked_to_recompute = True
@@ -530,11 +544,9 @@ class Panel2D(VisualizationPanel):
         self,
         u: Tuple[float, float, float] = None,
         v: Tuple[float, float, float] = None,
-        u_min: float = None,
-        u_max: float = None,
-        v_min: float = None,
-        v_max: float = None,
-        w: float = None,
+        origin: Tuple[float, float, float] = None,
+        size_u: float = None,
+        size_v: float = None,
     ):
         """Updates the plot coordinates
 
@@ -544,16 +556,12 @@ class Panel2D(VisualizationPanel):
             Horizontal axis direction vector, by default None
         v : Tuple[float, float, float], optional
             Vertical axis direction vector, by default None
-        u_min : float, optional
-            Horizontal axis minimum coordinate, by default None
-        u_max : float, optional
-            Horizontal axis maximum coordinate, by default None
-        v_min : float, optional
-            Vertical axis minimum coordinate, by default None
-        v_max : float, optional
-            Vertical axis maximum coordinate, by default None
-        w : float, optional
-            Normal axis location, by default None
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center, by default None
+        size_u : float, optional
+            Size of the slice along the u axis, by default None
+        size_v : float, optional
+            Size of the slice along the v axis, by default None
         """
         self.__data_to_update = True
 
@@ -585,59 +593,43 @@ class Panel2D(VisualizationPanel):
                 extension.on_frame_change(self.u, self.v)
 
         update_range = False
-        if u_min is not None:
-            if not type(u_min) in [float, int]:
-                raise TypeError(f"u_min must be a number, found type {type(u_min)}")
-            if u_min != self.u_range[0]:
-                update_range = True
-        else:
-            u_min = self.u_range[0]
 
-        if v_min is not None:
-            if not type(v_min) in [float, int]:
-                raise TypeError(f"v_min must be a number, found type {type(v_min)}")
-            if v_min != self.v_range[0]:
+        # Handle origin parameter (tuple of 3 floats representing the slice center)
+        if origin is not None:
+            if not type(origin) in [tuple, list, np.ndarray]:
+                raise TypeError(f"origin must be a tuple/list/ndarray of 3 floats, found type {type(origin)}")
+            if len(origin) != 3:
+                raise ValueError(f"origin must be of length 3, found {len(origin)}")
+            origin_tuple = tuple(origin)
+            if origin_tuple != self.origin:
+                self.origin = origin_tuple
                 update_range = True
-        else:
-            v_min = self.v_range[0]
 
-        if u_max is not None:
-            if not type(u_max) in [float, int]:
-                raise TypeError(f"u_max must be a number, found type {type(u_max)}")
-            if u_max != self.u_range[1]:
+        # Handle size_u and size_v parameters
+        if size_u is not None:
+            if not type(size_u) in [float, int]:
+                raise TypeError(f"size_u must be a number, found type {type(size_u)}")
+            if size_u != self.size_u:
+                self.size_u = size_u
                 update_range = True
-        else:
-            u_max = self.u_range[1]
-
-        if v_max is not None:
-            if not type(v_max) in [float, int]:
-                raise TypeError(f"v_max must be a number, found type {type(v_max)}")
-            if v_max != self.v_range[1]:
-                update_range = True
-        else:
-            v_max = self.v_range[1]
-
-        if w is not None:
-            if not type(w) in [float, int]:
-                raise TypeError(f"w must be a number, found type {type(w)}")
-            if w != self.w_value:
-                self.w_value = w
+        
+        if size_v is not None:
+            if not type(size_v) in [float, int]:
+                raise TypeError(f"size_v must be a number, found type {type(size_v)}")
+            if size_v != self.size_v:
+                self.size_v = size_v
                 update_range = True
 
         if update_range:
-            self.u_range = (u_min, u_max)
-            self.v_range = (v_min, v_max)
-
             for extension in self.extensions:
-                extension.on_range_change(self.u_range, self.v_range, self.w_value)
+                extension.on_range_change(self.origin, self.size_u, self.size_v)
 
-        if update_range: 
             if self.on_axes_change_callback is not None:
-                self.on_axes_change_callback(self.u, self.v, self.u_range[0], self.v_range[0], self.w_value)
+                self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
 
         if update_axes or update_range:
-            self.plotter.set_axes(self.u, self.v, self.w_value)
-            
+            self.plotter.set_axes(self.u, self.v)
+
             self.marked_to_recompute = True
 
             if pn.state.curdoc is not None:
@@ -648,11 +640,11 @@ class Panel2D(VisualizationPanel):
             if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
                 if self.on_axes_change_callback is not None:
                     self.on_axes_change_callback(
-                        u=self.u, 
+                        u=self.u,
                         v=self.v,
-                        umin=self.u_range[0],
-                        vmin=self.v_range[0],
-                        w=self.w_value,
+                        origin=self.origin,
+                        size_u=self.size_u,
+                        size_v=self.size_v,
                     )
 
     def set_field(self, field_name: str):
@@ -705,7 +697,7 @@ class Panel2D(VisualizationPanel):
                 self.recompute()
 
     def to_json(self) -> Dict:
-        """Returns a dictionnary with the information required to rebuild the visualization panel
+        """Returns a dictionnary with the information about the visualization panel
 
         Returns
         -------
@@ -716,9 +708,9 @@ class Panel2D(VisualizationPanel):
             "name": self.panel_name,
             "u": self.u,
             "v": self.v,
-            "u_range": self.u_range,
-            "v_range": self.v_range,
-            "w_value": self.w_value,
+            "origin": self.origin,
+            "size_u": self.size_u,
+            "size_v": self.size_v,
             "displayed_field": self.displayed_field,
             "display_polygons": self.display_polygons,
             "colormap": self.colormap,
@@ -762,9 +754,9 @@ class Panel2D(VisualizationPanel):
             colormap = info_dict["colormap"],
             u = info_dict["u"],
             v = info_dict["v"],
-            u_range = info_dict["u_range"],
-            v_range = info_dict["v_range"],
-            w_value = info_dict["w_value"]
+            origin = info_dict.get("origin"),
+            size_u = info_dict.get("size_u", 1.0),
+            size_v = info_dict.get("size_v", 1.0),
         )
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
@@ -772,7 +764,7 @@ class Panel2D(VisualizationPanel):
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the axes are changed.
-        the functions takes a two numpy arrays and three floats (axes, and umin, vmin, w).
+        the functions takes two numpy arrays and three values (u, v, origin, size_u, size_v).
 
         Parameters
         ----------

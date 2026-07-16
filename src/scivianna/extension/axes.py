@@ -83,10 +83,10 @@ You can also hide/show the axes on the plot and force a plot update.
         self.hide_show_button.on_click(self.toggle_axis_visibility)
 
         # 
-        #   Bounds widgets
+        #   Bounds widgets (now using origin/size_u/size_v)
         #     
-        self.x0_inp = pmui.FloatInput(
-            name="u_min",
+        self.origin_x_inp = pmui.FloatInput(
+            label="origin_x",
             value=0,
             start=-1e6,
             end=1e6,
@@ -94,8 +94,8 @@ You can also hide/show the axes on the plot and force a plot update.
             width=125, margin=5,
             align="center",
         )
-        self.y0_inp = pmui.FloatInput(
-            name="v_min",
+        self.origin_y_inp = pmui.FloatInput(
+            label="origin_y",
             value=0,
             start=-1e6,
             end=1e6,
@@ -103,26 +103,32 @@ You can also hide/show the axes on the plot and force a plot update.
             width=125, margin=5,
             align="center",
         )
-        self.x1_inp = pmui.FloatInput(
-            name="u_max",
-            value=1,
+        self.origin_z_inp = pmui.FloatInput(
+            label="origin_z",
+            value=0,
             start=-1e6,
             end=1e6,
             step=0.1,
             width=125, margin=5,
             align="center",
         )
-        self.y1_inp = pmui.FloatInput(
-            name="v_max",
+        self.size_u_inp = pmui.FloatInput(
+            label="size_u",
             value=1,
-            start=-1e6,
+            start=0,
             end=1e6,
             step=0.1,
             width=125, margin=5,
             align="center",
         )
-        self.w_inp = pmui.FloatInput(
-            name="w", value=.5, start=-1e6, end=1e6, step=0.1, width=125, margin=5, align="center"
+        self.size_v_inp = pmui.FloatInput(
+            label="size_v",
+            value=1,
+            start=0,
+            end=1e6,
+            step=0.1,
+            width=125, margin=5,
+            align="center",
         )
         self.recompute_button = pmui.Button(
             label = "Update plot",
@@ -130,43 +136,87 @@ You can also hide/show the axes on the plot and force a plot update.
         )
         self.recompute_button.on_click(self.trigger_update)
 
-        self.w_col = pmui.Column(
-            pmui.Typography("Coordinate along the normal axis"),
-            self.w_inp,
-            margin=0
-        )
-        def update_w(*args, **kwargs):
+        def update_origin_x(*args, **kwargs):
             if self._restoring:
                 return
-            to_update = {"w": self.w_inp.value}
+            to_update = {"origin_x": self.origin_x_inp.value}
             self.__new_data = {**self.__new_data, **to_update}
             self.range_updated = True
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
             elif scivianna.utils._testing:
                 self.update_data()
-        self.w_inp.param.watch(update_w, "value")
+
+        def update_origin_y(*args, **kwargs):
+            if self._restoring:
+                return
+            to_update = {"origin_y": self.origin_y_inp.value}
+            self.__new_data = {**self.__new_data, **to_update}
+            self.range_updated = True
+            if pn.state.curdoc is not None:
+                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.update_data()
+
+        def update_origin_z(*args, **kwargs):
+            if self._restoring:
+                return
+            to_update = {"origin_z": self.origin_z_inp.value}
+            self.__new_data = {**self.__new_data, **to_update}
+            self.range_updated = True
+            if pn.state.curdoc is not None:
+                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.update_data()
+
+        def update_size_u(*args, **kwargs):
+            if self._restoring:
+                return
+            to_update = {"size_u": self.size_u_inp.value}
+            self.__new_data = {**self.__new_data, **to_update}
+            self.range_updated = True
+            if pn.state.curdoc is not None:
+                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.update_data()
+
+        def update_size_v(*args, **kwargs):
+            if self._restoring:
+                return
+            to_update = {"size_v": self.size_v_inp.value}
+            self.__new_data = {**self.__new_data, **to_update}
+            self.range_updated = True
+            if pn.state.curdoc is not None:
+                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            elif scivianna.utils._testing:
+                self.update_data()
+
+        self.origin_x_inp.param.watch(update_origin_x, "value")
+        self.origin_y_inp.param.watch(update_origin_y, "value")
+        self.origin_z_inp.param.watch(update_origin_z, "value")
+        self.size_u_inp.param.watch(update_size_u, "value")
+        self.size_v_inp.param.watch(update_size_v, "value")
 
         # 
         #   Vectors widgets
         #     
         self.u0_inp = pmui.FloatInput(
-            name="u0", value=1, start=-1, end=1, width=125, margin=5
+            label="u0", value=1, start=-1, end=1, width=125, margin=5
         )
         self.u1_inp = pmui.FloatInput(
-            name="u1", value=0, start=-1, end=1, width=125, margin=5
+            label="u1", value=0, start=-1, end=1, width=125, margin=5
         )
         self.u2_inp = pmui.FloatInput(
-            name="u2", value=0, start=-1, end=1, width=125, margin=5
+            label="u2", value=0, start=-1, end=1, width=125, margin=5
         )
         self.v0_inp = pmui.FloatInput(
-            name="v0", value=0, start=-1, end=1, width=125, margin=5
+            label="v0", value=0, start=-1, end=1, width=125, margin=5
         )
         self.v1_inp = pmui.FloatInput(
-            name="v1", value=1, start=-1, end=1, width=125, margin=5
+            label="v1", value=1, start=-1, end=1, width=125, margin=5
         )
         self.v2_inp = pmui.FloatInput(
-            name="v2", value=0, start=-1, end=1, width=125, margin=5
+            label="v2", value=0, start=-1, end=1, width=125, margin=5
         )
 
         def xplus_fn(event):
@@ -188,7 +238,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.xplus = pmui.Button(name="X+", button_type="success", width=50)
+        self.xplus = pmui.Button(label="X+", button_type="success", width=50)
         self.xplus.on_click(xplus_fn)
 
         def yplus_fn(event):
@@ -210,7 +260,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.yplus = pmui.Button(name="Y+", button_type="success", width=50)
+        self.yplus = pmui.Button(label="Y+", button_type="success", width=50)
         self.yplus.on_click(yplus_fn)
 
         def zplus_fn(event):
@@ -232,7 +282,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.zplus = pmui.Button(name="Z+", button_type="success", width=50)
+        self.zplus = pmui.Button(label="Z+", button_type="success", width=50)
         self.zplus.on_click(zplus_fn)
 
         u = pmui.Column(self.u0_inp, self.u1_inp, self.u2_inp, margin=0)
@@ -241,19 +291,20 @@ You can also hide/show the axes on the plot and force a plot update.
         self.axis_buttons = pn.Row(self.xplus, self.yplus, self.zplus, margin=0)
 
         self.bounds_card = pmui.Card(
-            pmui.Typography("Bounds along the axes"),
+            pmui.Typography("Slice center and size"),
             pmui.Column(
                 pmui.Row(
-                    self.x0_inp,
-                    self.x1_inp, margin=0
+                    self.origin_x_inp,
+                    self.origin_y_inp,
+                    self.origin_z_inp, margin=0
                 ),
                 pmui.Row(
-                    self.y0_inp,
-                    self.y1_inp, margin=0
+                    self.size_u_inp,
+                    self.size_v_inp, margin=0
                 ),
                 margin=0
             ),
-            title="Axes bounds",
+            title="Slice bounds",
             width=300,
             margin=0,
             collapsed=True,
@@ -301,27 +352,39 @@ You can also hide/show the axes on the plot and force a plot update.
             pmui.Typography("Hide/show axis"),
             self.recompute_button,
             self.hide_show_button,
-            self.w_col, 
             self.bounds_card,
             self.axes_card,
             margin=0
         )
 
-    def on_range_change(self, u_bounds, v_bounds, w_value):
-        if [
-            *u_bounds, 
-            *v_bounds, 
-            w_value
-        ] != [
-            self.x0_inp.value,
-            self.x1_inp.value,
-            self.y0_inp.value,
-            self.y1_inp.value,
-            self.w_inp.value
-        ]:
-            self.__new_data["x0"], self.__new_data["x1"] = u_bounds
-            self.__new_data["y0"], self.__new_data["y1"] = v_bounds
-            self.__new_data["w"] = w_value
+    def on_range_change(self, origin, size_u, size_v):
+        """Called when the range/coordinates change.
+        
+        Parameters
+        ----------
+        origin : tuple
+            Physical 3D position of the slice center (x, y, z)
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
+        """
+        if origin is None or size_u is None or size_v is None:
+            return
+            
+        origin_tuple = tuple(origin) if not isinstance(origin, tuple) else origin
+        
+        if (origin_tuple[0] != self.origin_x_inp.value or 
+            origin_tuple[1] != self.origin_y_inp.value or 
+            origin_tuple[2] != self.origin_z_inp.value or
+            size_u != self.size_u_inp.value or
+            size_v != self.size_v_inp.value):
+            
+            self.__new_data["origin_x"] = origin_tuple[0]
+            self.__new_data["origin_y"] = origin_tuple[1]
+            self.__new_data["origin_z"] = origin_tuple[2]
+            self.__new_data["size_u"] = size_u
+            self.__new_data["size_v"] = size_v
             
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
@@ -360,17 +423,16 @@ You can also hide/show the axes on the plot and force a plot update.
             if "v2" in self.__new_data:
                 self.v2_inp.value = self.__new_data["v2"]
 
-            if "x0" in self.__new_data:
-                self.x0_inp.value = self.__new_data["x0"]
-            if "y0" in self.__new_data:
-                self.y0_inp.value = self.__new_data["y0"]
-            if "x1" in self.__new_data:
-                self.x1_inp.value = self.__new_data["x1"]
-            if "y1" in self.__new_data:
-                self.y1_inp.value = self.__new_data["y1"]
-
-            if "w" in self.__new_data:
-                self.w_inp.value = self.__new_data["w"]
+            if "origin_x" in self.__new_data:
+                self.origin_x_inp.value = self.__new_data["origin_x"]
+            if "origin_y" in self.__new_data:
+                self.origin_y_inp.value = self.__new_data["origin_y"]
+            if "origin_z" in self.__new_data:
+                self.origin_z_inp.value = self.__new_data["origin_z"]
+            if "size_u" in self.__new_data:
+                self.size_u_inp.value = self.__new_data["size_u"]
+            if "size_v" in self.__new_data:
+                self.size_v_inp.value = self.__new_data["size_v"]
 
             self.__new_data = {}
 
@@ -390,21 +452,29 @@ You can also hide/show the axes on the plot and force a plot update.
         # Definition of U and V coords
         self.bounds_card.visible = geom_type in [GeometryType._2D, GeometryType._3D]
         
-        # Definition of the normal coordinate
-        self.w_inp.visible = geom_type in [GeometryType._3D, GeometryType._3D_INFINITE]
+        # Origin Z is only relevant for 3D (for 2D, origin is in u-v plane)
+        self.origin_z_inp.visible = geom_type in [GeometryType._3D, GeometryType._3D_INFINITE]
             
     def trigger_update(self, *args, **kwargs):
         if self._restoring:
             return
         u, v = self.get_uv()
+        
+        # Get origin and size values from widgets
+        origin = (
+            self.origin_x_inp.value,
+            self.origin_y_inp.value,
+            self.origin_z_inp.value,
+        )
+        size_u = self.size_u_inp.value
+        size_v = self.size_v_inp.value
+        
         self.panel.set_coordinates(
             u,
             v,
-            self.x0_inp.value,
-            self.x1_inp.value,
-            self.y0_inp.value,
-            self.y1_inp.value,
-            float(self.w_inp.value),
+            origin=origin,
+            size_u=size_u,
+            size_v=size_v,
         )
 
     def get_uv(
@@ -437,9 +507,9 @@ You can also hide/show the axes on the plot and force a plot update.
             "borders_displayed": self.borders_displayed,
             "u_vector": [self.u0_inp.value, self.u1_inp.value, self.u2_inp.value],
             "v_vector": [self.v0_inp.value, self.v1_inp.value, self.v2_inp.value],
-            "u_bounds": [self.x0_inp.value, self.x1_inp.value],
-            "v_bounds": [self.y0_inp.value, self.y1_inp.value],
-            "w_value": self.w_inp.value,
+            "origin": [self.origin_x_inp.value, self.origin_y_inp.value, self.origin_z_inp.value],
+            "size_u": self.size_u_inp.value,
+            "size_v": self.size_v_inp.value,
         }
     
     @classmethod
@@ -461,7 +531,6 @@ You can also hide/show the axes on the plot and force a plot update.
         extension._restoring = True
 
         extension.borders_displayed = info_dict.get("borders_displayed", False)
-        print(info_dict)
         
         u_vector = info_dict.get("u_vector", [1, 0, 0])
         extension.u0_inp.value = u_vector[0]
@@ -473,15 +542,12 @@ You can also hide/show the axes on the plot and force a plot update.
         extension.v1_inp.value = v_vector[1]
         extension.v2_inp.value = v_vector[2]
         
-        u_bounds = info_dict.get("u_bounds", [0, 1])
-        extension.x0_inp.value = u_bounds[0]
-        extension.x1_inp.value = u_bounds[1]
-        
-        v_bounds = info_dict.get("v_bounds", [0, 1])
-        extension.y0_inp.value = v_bounds[0]
-        extension.y1_inp.value = v_bounds[1]
-        
-        extension.w_inp.value = info_dict.get("w_value", 0.5)
+        origin = info_dict.get("origin", [0.0, 0.0, 0.0])
+        extension.origin_x_inp.value = origin[0]
+        extension.origin_y_inp.value = origin[1]
+        extension.origin_z_inp.value = origin[2]
+        extension.size_u_inp.value = info_dict.get("size_u", 1.0)
+        extension.size_v_inp.value = info_dict.get("size_v", 1.0)
         
         extension._restoring = False
         return extension

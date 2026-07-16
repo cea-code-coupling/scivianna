@@ -126,7 +126,7 @@ class Plotter3D:
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the user changes the axes.
-        Functions arguments are the new axis values and three floats (axes, and umin, vmin, w).
+        Functions arguments are the new axis values (u, v, origin, size_u, size_v).
 
         Parameters
         ----------
@@ -137,35 +137,23 @@ class Plotter3D:
 
     def move_slice_to(
         self,
-        u: float,
-        v: float,
-        u_min: float = None,
-        u_max: float = None,
-        v_min: float = None,
-        v_max: float = None,
-        w: float = None
+        u: float = None,
+        v: float = None,
+        origin: Tuple[float, float, float] = None,
     ):
         """Moves the slice to the given location
 
         Parameters
         ----------
-        u : float
-            First axis location
-        v : float
-            Second axis location
-        u_min : float, optional
-            First axis min value, by default None
-        u_max : float, optional
-            First axis max value, by default None
-        v_min : float, optional
-            Second axis min value, by default None
-        v_max : float, optional
-            Second axis max value, by default None
-        w : float, optional
-            Normal axis location, by default None
+        u : float, optional
+            First axis direction vector
+        v : float, optional
+            Second axis direction vector
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center (center_u*u + center_v*v + w*w), by default None
         """
         w_vector = None
-        origin = None
+        new_origin = None
 
         if u is not None and v is not None:
             w_vector = np.cross(u, v)
@@ -177,13 +165,14 @@ class Plotter3D:
         if w_vector is None:
             return
 
-        if u_min is not None and v_min is not None and w is not None:
-            origin = u_min * np.array(u) + v_min * np.array(v) + w * w_vector
+        if origin is not None and w is not None:
+            # origin parameter is the physical 3D center position
+            new_origin = np.array(origin, dtype=float)
 
-        if u_min is None and v_min is None and w is not None:
-            origin = np.array(self.plotter.clip_origin) + (w - np.dot(self.plotter.clip_origin, w_vector)) * w_vector
+        if origin is None and w is not None:
+            new_origin = np.array(self.plotter.clip_origin) + (w - np.dot(self.plotter.clip_origin, w_vector)) * w_vector
 
-        self.plotter.set_clip_plane(origin, w_vector)
+        self.plotter.set_clip_plane(new_origin, w_vector)
 
     def send_event(self, callback):
         if (
@@ -271,12 +260,15 @@ class Plotter3D:
         self.v = v
 
         if self.on_axes_change_callback is not None:
+            # Compute the physical origin (center position) from clip_origin
+            clip_origin = np.array(self.plotter.clip_origin)
+            
             self.on_axes_change_callback(
                 u, 
                 v, 
-                float(np.dot(self.plotter.clip_origin, u)), 
-                float(np.dot(self.plotter.clip_origin, v)), 
-                float(np.dot(self.plotter.clip_origin, normal)), 
+                tuple(clip_origin), 
+                None,  # size_u (not applicable for 3D)
+                None,  # size_v (not applicable for 3D)
             )
 
     def get_uv(self):
