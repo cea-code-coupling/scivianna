@@ -186,7 +186,10 @@ class Plotter3D:
         self.plotter.set_clip_plane(origin, w_vector)
 
     def send_event(self, callback):
-        if self.plotter.hover_cell_id is not None and not any(np.isnan(self.plotter.hover_position)):
+        if (
+            self.plotter.hover_cell_id is not None 
+            and not any(np.isnan(self.plotter.hover_position))
+        ):
             callback(
                 screen_location=(
                     None,
@@ -205,6 +208,26 @@ class Plotter3D:
             Normal of the slice plane
         """
         return self.plotter.clip_normal
+
+    def set_slice_origin(self, origin):
+        """Returns the normal of the slice plane
+
+        Returns
+        -------
+        np.ndarray
+            Normal of the slice plane
+        """
+        self.plotter.set_clip_plane(origin, None)
+
+    def get_slice_origin(self):
+        """Returns the normal of the slice plane
+
+        Returns
+        -------
+        np.ndarray
+            Normal of the slice plane
+        """
+        return self.plotter.clip_origin
 
     def set_axes(self, normal, w):
         """Sets the axes of the slice plane

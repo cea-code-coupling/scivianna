@@ -135,6 +135,14 @@ class Panel3D(VisualizationPanel):
         self.v = Y
         self.__data_to_update: bool = False
         self.__new_data = {}
+        
+        for extension in self.extensions:
+            extension.on_range_change(
+                (self.plotter.get_slice_origin()[0], None), 
+                (self.plotter.get_slice_origin()[1], None), 
+                self.w_value
+            )
+            extension.on_frame_change(*self.plotter.get_uv())
 
         try:
             pn.state.on_session_created(self.recompute)
@@ -494,6 +502,16 @@ class Panel3D(VisualizationPanel):
             u, v, u_min, u_max, v_min, v_max, w
         )
 
+        if u is not None and v is not None:
+            self.u = u
+            self.v = v
+        if w is not None:
+            self.w_value = w
+
+        for extension in self.extensions:
+            extension.on_range_change((u_min, u_max), (v_min, v_max), self.w_value)
+            extension.on_frame_change(*self.plotter.get_uv())
+
     def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
         """Triggers a panel recomputation at the provided location. Called by layout update event.
 
@@ -508,11 +526,11 @@ class Panel3D(VisualizationPanel):
 
         w_val = np.dot(position, w)
 
-        if np.isclose(w_val, self.w_value):
-            return
-
         for extension in self.extensions:
-            extension.on_range_change(*self.plotter.get_uv(), w_val)
+            extension.on_range_change((position[0], None), (position[1], None), w_val)
+            extension.on_frame_change(*self.plotter.get_uv())
+
+        self.plotter.set_slice_origin(position)
 
         if w_val != self.w_value:
             pn.state.notifications.info(f"w updating to {w_val} in {self.panel_name}", 1000)

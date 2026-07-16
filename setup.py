@@ -71,7 +71,7 @@ setup(
         ],
         "3d": [
             "pyvista",
-            "scivianna_vtk>=0.1.1"
+            "scivianna_vtk>=0.1.3"
         ],
         "test": [
             "pytest-xdist",

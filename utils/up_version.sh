@@ -52,7 +52,7 @@ if [ ! -d "${current_script_dir}/.venv_utils" ]; then
 fi
 echo "Activating venv ${current_script_dir}/.venv_utils"
 . ${current_script_dir}/.venv_utils/bin/activate
-pip install --upgrade pip setuptools tox
+pip install --upgrade pip setuptools tox uv
 
 # Tag the version
 echo ${version_name} > ${version_file}
@@ -61,7 +61,7 @@ git commit -m "Version ${version_name}"
 git tag ${version_name}
 
 # install current version in venv
-python3 -m pip install --upgrade ${project_root_dir}
+python3 -m uv pip install --upgrade ${project_root_dir}
 
 (cd ${project_root_dir} && tox)
 
