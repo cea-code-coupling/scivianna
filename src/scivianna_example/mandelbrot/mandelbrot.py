@@ -234,7 +234,6 @@ class MandelBrotInterface(Geometry2DGrid):
         # Project origin (center) onto u and v to get center_u and center_v
         center_u = float(np.dot(origin_arr, u_arr) / np.dot(u_arr, u_arr))
         center_v = float(np.dot(origin_arr, v_arr) / np.dot(v_arr, v_arr))
-
         # Convert center + size to min/max
         u_min = center_u - size_u / 2
         v_min = center_v - size_v / 2

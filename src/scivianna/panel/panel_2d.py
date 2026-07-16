@@ -95,6 +95,9 @@ class Panel2D(VisualizationPanel):
             code_interface, Geometry2D
         ), f"A VisualizationPanel can only be given a Geometry2D interface slave, received {code_interface}."
 
+        self.__data_to_update: bool = False
+        self.__new_data = {}
+
         #
         #   Initializing attributes
         #
@@ -644,9 +647,8 @@ class Panel2D(VisualizationPanel):
             if self.on_axes_change_callback is not None:
                 self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
 
-        if update_range: 
             if self.on_axes_change_callback is not None:
-                self.on_axes_change_callback(self.u, self.v, self.u_range[0], self.v_range[0], self.w_value)
+                self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
 
         if update_axes or update_range:
             self.plotter.set_axes(self.u, self.v, self.origin)
@@ -665,11 +667,11 @@ class Panel2D(VisualizationPanel):
             if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
                 if self.on_axes_change_callback is not None:
                     self.on_axes_change_callback(
-                        u=self.u, 
+                        u=self.u,
                         v=self.v,
-                        umin=self.u_range[0],
-                        vmin=self.v_range[0],
-                        w=self.w_value,
+                        origin=self.origin,
+                        size_u=self.size_u,
+                        size_v=self.size_v,
                     )
 
     def set_field(self, field_name: str):
