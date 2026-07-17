@@ -600,9 +600,8 @@ class Panel2D(VisualizationPanel):
                 raise TypeError(f"origin must be a tuple/list/ndarray of 3 floats, found type {type(origin)}")
             if len(origin) != 3:
                 raise ValueError(f"origin must be of length 3, found {len(origin)}")
-            origin_tuple = tuple(origin)
-            if origin_tuple != self.origin:
-                self.origin = origin_tuple
+            if np.allclose(origin, self.origin):
+                self.origin = list(origin)
                 update_range = True
 
         # Handle size_u and size_v parameters

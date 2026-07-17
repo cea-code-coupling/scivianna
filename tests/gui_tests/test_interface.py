@@ -267,7 +267,7 @@ class DummyTestInterface(Geometry2DPolygon):
             return self.data[caller], False
 
         # origin is a 3D point, use z component for offset
-        v_offset = origin[2]
+        v_offset = v[1] + 10*origin[2]
         polygons = [
             PolygonElement(
                 exterior_polygon = PolygonCoords(

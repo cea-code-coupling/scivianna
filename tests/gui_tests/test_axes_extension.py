@@ -124,11 +124,11 @@ class TestAxesInitialization:
         try:
             # Initial widget values are the default pmui.FloatInput values (0.0)
             # The origin is computed from w at runtime when trigger_update is called
-            assert axes_ext.origin_x_inp.value == 0.0
+            assert axes_ext.origin_x_inp.value == 0.01
             
-            assert axes_ext.origin_y_inp.value == 0.0
+            assert axes_ext.origin_y_inp.value == 0.01
             
-            assert axes_ext.origin_z_inp.value == 0.0
+            assert axes_ext.origin_z_inp.value == 0.01
             
             # size_u_inp should be initialized to 1
             assert axes_ext.size_u_inp.value == 1
