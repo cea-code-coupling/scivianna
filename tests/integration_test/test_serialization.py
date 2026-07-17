@@ -27,8 +27,10 @@ def test_serialize_slave():
         slave = med_panel.get_slave()
         
         # First compute with caller="Test" to populate cache
+        import numpy as np
+        origin = np.array(X) * 0.5 + np.array(Y) * 0.5 + 0.5 * np.cross(X, Y)
         slave.compute_2D_data(
-            X, Y, 0, 1, 0, 1, 0.5, None, MESH, {}, caller="Test"
+            X, Y, tuple(origin), 1.0, 1.0, None, MESH, {}, caller="Test"
         )
         
         save_slave_to_file(
@@ -44,7 +46,7 @@ def test_serialize_slave():
             True
         )
         data, recomputed, = slave2.compute_2D_data(
-            X, Y, 0, 1, 0, 1, 0.5, None, MESH, {}, caller="Test"
+            X, Y, tuple(origin), 1.0, 1.0, None, MESH, {}, caller="Test"
         )
         assert not recomputed, "Slave2 should not have recomputed the polygons."
     finally:
@@ -68,14 +70,21 @@ def test_serialize_panel():
         time.sleep(1)
 
         # First compute with caller="Test" to populate cache
+        import numpy as np
+        u = med_panel.u
+        v = med_panel.v
+        w = np.cross(u, v)
+        origin = med_panel.origin  # tuple (origin_x, origin_y, origin_z)
+        size_u = med_panel.size_u
+        size_v = med_panel.size_v
         slave.compute_2D_data(
-            med_panel.u, 
-            med_panel.v, 
-            *med_panel.u_range, 
-            *med_panel.v_range, 
-            med_panel.w_value, 
-            None, 
-            MESH, 
+            u, 
+            v,
+            origin,
+            size_u,
+            size_v,
+            None,
+            MESH,
             {},
             caller="Test"
         )
@@ -92,21 +101,21 @@ def test_serialize_panel():
         slave_2 = panel_2.get_slave()
         _, recomputed, = slave_2.compute_2D_data(
             panel_2.u, 
-            panel_2.v, 
-            *panel_2.u_range, 
-            *panel_2.v_range, 
-            panel_2.w_value, 
-            None, 
-            MESH, 
+            panel_2.v,
+            panel_2.origin,  # tuple (origin_x, origin_y, origin_z)
+            panel_2.size_u,
+            panel_2.size_v,
+            None,
+            MESH,
             {},
             caller="Test"
         )
         print(
             panel_2.u, 
             panel_2.v, 
-            *panel_2.u_range, 
-            *panel_2.v_range, 
-            panel_2.w_value, _, recomputed
+            panel_2.origin,
+            panel_2.size_u, panel_2.size_v,
+            _, recomputed
         )
         assert not recomputed, "Slave should not have recomputed the polygons."
 

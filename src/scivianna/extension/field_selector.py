@@ -195,7 +195,7 @@ If a color bar is used, you can decide to center it on zero.
 
         fields_list = self.slave.get_labels()
         self.field_color_selector = pmui.Select(
-            name="Color field",
+            label="Color field",
             options=fields_list,
             value=fields_list[0],
             width=280
@@ -212,7 +212,7 @@ If a color bar is used, you can decide to center it on zero.
 
         self.color_map_selector.width = self.color_map_selector.height
         self.center_colormap_on_zero_tick = pn.widgets.Checkbox(
-            name="Center color map on zero.", value=False,
+            label="Center color map on zero.", value=False,
             visible=slave.get_label_coloring_mode(self.field_color_selector.value) == VisualizationMode.FROM_VALUE,
         )
 

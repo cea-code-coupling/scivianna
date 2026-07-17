@@ -11,6 +11,7 @@ from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
 from scivianna.plotter_2d.grid.matplotlib import Matplotlib2DGridPlotter
 
 from scivianna_example.mandelbrot.mandelbrot import MandelBrotInterface
+import numpy as np
 
 def build_data_polygon() -> Data2D:
     med = MEDInterface()
@@ -19,11 +20,17 @@ def build_data_polygon() -> Data2D:
         GEOMETRY,
     )
     data_2d:Data2D
+    u, v = X, Y
+    w = np.cross(u, v)
+    origin = np.array(u) * 0.5 + np.array(v) * 0.5 + 0. * w
+    size_u = 1. - 0.
+    size_v = 1. - 0.
     data_2d, _ = med.compute_2D_data(
-        X,
-        Y, 
-        0, 1, 0, 1, # values not used
-        0., 
+        u,
+        v,
+        tuple(origin),
+        size_u,
+        size_v,
         None,
         {"u_steps": 50, "v_steps": 50},
         caller="Test"
@@ -35,12 +42,17 @@ def build_data_polygon() -> Data2D:
 def build_data_grid() -> Data2D:
     mandelbrot = MandelBrotInterface()
     data_2d:Data2D
+    u, v = X, Y
+    w = np.cross(u, v)
+    origin = np.array(u) * 0.5 + np.array(v) * 0.5 + 0. * w
+    size_u = 1. - 0.
+    size_v = 1. - 0.
     data_2d, _ = mandelbrot.compute_2D_data(
-        X,
-        Y, 
-        0, 1, 
-        0, 1, 
-        0., 
+        u,
+        v,
+        tuple(origin),
+        size_u,
+        size_v,
         None,
         {"u_steps": 50, "v_steps": 50},
         caller="Test"

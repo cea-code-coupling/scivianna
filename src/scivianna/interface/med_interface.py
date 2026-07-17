@@ -113,10 +113,9 @@ This extension allows defining the medcoupling field display parameters.
         self.u = (1, 0, 0)
         self.v = (0, 1, 0)
 
-        self.u_bounds = (0., 1.)
-        self.v_bounds = (0., 1.)
+        self.origin = (0.01, 0.01, 0.01)
 
-        self.w = 0.5
+        self.w = 0.01
 
         self.on_file_load(None, None)
 
@@ -176,6 +175,7 @@ This extension allows defining the medcoupling field display parameters.
 
         w = np.cross(self.u, self.v).astype(float)
         w /= np.linalg.norm(w).astype(float)
+        self.w = np.dot(w, self.origin)
 
         min_vect = np.array([x_range[0], y_range[0], z_range[0]])
         max_vect = np.array([x_range[1], y_range[1], z_range[1]])
@@ -195,22 +195,19 @@ This extension allows defining the medcoupling field display parameters.
         if not self.slider_w.visible:
             self.slider_w.visible = True
 
-    def on_range_change(self, u_bounds: Tuple[float, float], v_bounds: Tuple[float, float], w_value: float):
-        """Saves the frame bounds on both coordinates and the normal coordinate
+    def on_range_change(self, origin: Tuple[float, float, float], size_u: float, size_v: float):
+        """Saves the frame bounds on both coordinates
 
         Parameters
         ----------
-        u_bounds : Tuple[float, float]
-            Bounds on the horizontal axis
-        v_bounds : Tuple[float, float]
-            Bounds on the vertical axis
-        w_value : float
-            Normal axis coordinate
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         """
-        self.u_bounds = u_bounds
-        self.v_bounds = v_bounds
-        self.w = w_value
-
+        self.origin = origin
         self.update_slider_range()
 
     def on_frame_change(self, u_vector, v_vector):
@@ -309,8 +306,7 @@ This extension allows defining the medcoupling field display parameters.
             "field_name": self.field_name,
             "iteration": self.iteration_input.value,
             "order": self.order_input.value,
-            "u_bounds": self.u_bounds,
-            "v_bounds": self.v_bounds,
+            "origin": self.origin,
             "w": self.w,
         }
 
@@ -341,11 +337,8 @@ This extension allows defining the medcoupling field display parameters.
         if info_dict.get("order") is not None:
             extension.order_input.value = info_dict["order"]
 
-        if info_dict.get("u_bounds") is not None:
-            extension.u_bounds = info_dict["u_bounds"]
-
-        if info_dict.get("v_bounds") is not None:
-            extension.v_bounds = info_dict["v_bounds"]
+        if info_dict.get("origin") is not None:
+            extension.origin = info_dict["origin"]
 
         if info_dict.get("w") is not None:
             extension.w = info_dict["w"]
@@ -521,11 +514,9 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -538,16 +529,12 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
@@ -572,7 +559,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         current_mesh, mesh_time = self._get_mesh_at_time(time)
 
         if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*u, *v, w_value, mesh_time]
+            self.last_computed_frame.get(caller) == [*origin, size_u, size_v, mesh_time]
         ) and (caller in self.data):
             print("Skipping polygon computation.")
             return self.data[caller], False
@@ -589,13 +576,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             cell_ids = list(range(mesh.getNumberOfCells()))
         elif mesh_dimension == 3:
             vec = [float(e) for e in np.cross(u, v)]
-
-            if any([u_min is None, v_min is None, w_value is None]):
-                print(f"u_min : {u_min}")
-                print(f"v_min : {v_min}")
-                print(f"w_value : {w_value}")
-
-            origin = [u_min * u[i] + v_min * v[i] + w_value * vec[i] for i in range(3)]
 
             try:
                 eps = 0.0
@@ -672,7 +652,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 f"Gathering cells id time: {time.time() - start_time} using cell id {use_cell_id}"
             )
 
-        self.last_computed_frame[caller] = [*u, *v, w_value, mesh_time]
+        self.last_computed_frame[caller] = [*origin, size_u, size_v, mesh_time]
         self.data[caller] = Data2D.from_polygon_list(polygons)
         return self.data[caller], True
 

@@ -7,6 +7,7 @@ from scivianna.constants import GEOMETRY, X, Y
 from scivianna.interface.med_interface import MEDInterface
 from scivianna.slave import ComputeSlave
 from scivianna.utils.file_cleaner import mark_for_deletion
+import numpy as np
 
 
 @pytest.mark.default
@@ -20,7 +21,12 @@ def test_save_load_med_with_include_files():
         GEOMETRY,
     )
 
-    data, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
+    u, v = X, Y
+    w = np.cross(u, v)
+    origin = np.array(u) * 0.5 + np.array(v) * 0.5 + 0. * w
+    size_u = 1. - 0.
+    size_v = 1. - 0.
+    data, computed = slave.compute_2D_data(u, v, tuple(origin), size_u, size_v, None, "INTEGRATED_POWER", {}, caller="Test")
     assert computed, "First compute_2d_data should have been computed"
     dict1 = slave.get_value_dict("INTEGRATED_POWER", data.cell_ids, {}, caller="Test")
 
@@ -33,7 +39,7 @@ def test_save_load_med_with_include_files():
     slave2.load("med_test.pkl", True)
 
     #   New compute_2D_data is now instant as the polygons were saved
-    data2, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
+    data2, computed = slave.compute_2D_data(u, v, tuple(origin), size_u, size_v, None, "INTEGRATED_POWER", {}, caller="Test")
     assert not computed, "Loaded compute_2d_data should have been skipped"
     dict2 = slave2.get_value_dict("INTEGRATED_POWER", data2.cell_ids, {}, caller="Test")
 
@@ -54,7 +60,12 @@ def test_save_load_med_without_include_files():
         GEOMETRY,
     )
 
-    data, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
+    u, v = X, Y
+    w = np.cross(u, v)
+    origin = np.array(u) * 0.5 + np.array(v) * 0.5 + 0. * w
+    size_u = 1. - 0.
+    size_v = 1. - 0.
+    data, computed = slave.compute_2D_data(u, v, tuple(origin), size_u, size_v, None, "INTEGRATED_POWER", {}, caller="Test")
     assert computed, "First compute_2d_data should have been computed"
     dict1 = slave.get_value_dict("INTEGRATED_POWER", data.cell_ids, {}, caller="Test")
 
@@ -71,7 +82,7 @@ def test_save_load_med_without_include_files():
     slave2.load("med_test.pkl", False)
 
     #   New compute_2D_data is now instant as the polygons were saved
-    data2, computed = slave.compute_2D_data(X, Y, 0., 1., 0., 1., 0., None, "INTEGRATED_POWER", {}, caller="Test")
+    data2, computed = slave.compute_2D_data(u, v, tuple(origin), size_u, size_v, None, "INTEGRATED_POWER", {}, caller="Test")
     assert not computed, "Loaded compute_2d_data should have been skipped"
     dict2 = slave2.get_value_dict("INTEGRATED_POWER", data2.cell_ids, {}, caller="Test")
 
