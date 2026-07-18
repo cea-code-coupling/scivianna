@@ -130,3 +130,5 @@ if __name__ == "__main__":
     test_mandelbrot()
     # test_mandelbrot()
     # test_demo_3d()
+    # test_mandelbrot()
+    test_demo_3d()
