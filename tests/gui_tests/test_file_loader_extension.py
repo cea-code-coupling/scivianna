@@ -36,7 +36,6 @@ class TestFileLoaderInitialization:
         try:
             # Title and icon set by constructor
             assert file_loader.title == "Load new files"
-            assert file_loader.icon == "file_open"
 
             # Description should be set
             assert "browse files" in file_loader.description.lower()

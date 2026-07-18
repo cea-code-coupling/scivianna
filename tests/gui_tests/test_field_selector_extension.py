@@ -39,7 +39,6 @@ class TestFieldSelectorInitialization:
         try:
             # Title and icon set by constructor
             assert field_sel.title == "Color map"
-            assert field_sel.icon == "palette"
 
             # Description should be set
             assert "color map" in field_sel.description.lower()

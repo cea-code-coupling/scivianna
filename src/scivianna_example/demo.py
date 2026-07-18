@@ -13,19 +13,29 @@ from scivianna_example.med.split_item_example import (
 )
 import scivianna_example.med.split_item_example as split_item_example
 
-from scivianna_example.med.demo_3d import (
-    get_panel as medcoupling_3d_example,
-)
+try:
+    from scivianna_example.med.demo_3d import (
+        get_panel as medcoupling_3d_example,
+    )
+    has_3d = True
+except ImportError as e:
+    print(f"Could not import 3D app, {e}, skipping demo 3D build")
+    has_3d = False
 
 from scivianna_example.mandelbrot.mandelbrot import (
     make_panel as mandelbrot_example,
 )
 import scivianna_example.mandelbrot.mandelbrot as mandelbrot
 
-from scivianna_example.c3po_coupling.coupling import (
-    get_panel as coupling_example,
-)
-import scivianna_example.c3po_coupling.coupling as coupling
+try:
+    from scivianna_example.c3po_coupling.coupling import (
+        get_panel as coupling_example,
+    )
+    import scivianna_example.c3po_coupling.coupling as coupling
+    has_coupling = True
+except ImportError as e:
+    print(f"Could not import coupling app, {e}, skipping demo coupling build")
+    has_coupling = False
 
 
 from pathlib import Path
@@ -48,15 +58,23 @@ def make_demo(return_slaves=False) -> pmui.Page:
     if return_slaves:
         europe_panel, slaves_europe = europe_example(None, return_slaves = return_slaves)
         medcoupling_panel, slaves_medcoupling = medcoupling_example(None, return_slaves = return_slaves)
-        medcoupling_3d_panel, slaves_medcoupling_3d = medcoupling_3d_example(None, return_slaves = return_slaves)
+        if has_3d:
+            medcoupling_3d_panel, slaves_medcoupling_3d = medcoupling_3d_example(None, return_slaves = return_slaves)
+        else:
+            slaves_medcoupling_3d = []
         mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(None, return_slaves = return_slaves)
-        coupling_panel, slaves_coupling = coupling_example(computation_time = .01, return_slaves=return_slaves, start = False, use_server=False)
+        if has_coupling:
+            coupling_panel, slaves_coupling = coupling_example(computation_time = .01, return_slaves=return_slaves, start = False, use_server=False)
+        else:
+            slaves_coupling = []
     else:
         europe_panel = europe_example(None)
         medcoupling_panel = medcoupling_example(None)
-        medcoupling_3d_panel = medcoupling_3d_example(None)
+        if has_3d:
+            medcoupling_3d_panel = medcoupling_3d_example(None)
         mandelbrot_panel = mandelbrot_example(None)
-        coupling_panel = coupling_example(computation_time = .01, start = False, use_server=False)
+        if has_coupling:
+            coupling_panel = coupling_example(computation_time = .01, start = False, use_server=False)
 
     with open(Path(europe_grid.__file__).parent / "description.md", "r") as f:
         europe_with_description = pmui.Row(
@@ -94,10 +112,13 @@ def make_demo(return_slaves=False) -> pmui.Page:
         "Help": help,
         "Europe example": europe_with_description,
         "Medcoupling example": medcoupling_with_description,
-        "Medcoupling 3D example": medcoupling_3d_with_description,
         "Mandelbrot example": mandelbrot_with_description,
-        "Coupling example": coupling_with_description,
     }
+
+    if has_3d:
+        guis["Medcoupling 3D example"] = medcoupling_3d_with_description
+    if has_coupling:
+        guis["Coupling example"] = coupling_with_description
 
     demo = Demonstrator(guis, icons)
 

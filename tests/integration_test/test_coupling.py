@@ -34,7 +34,12 @@ def test_run_coupling_with_server(cleanup, grid):
 
 def test_reload_coupling(cleanup, grid):
     scivianna.utils._testing = True
-    get_panel(computation_time = 0.001, use_server = False, working_directory=working_directory, grid = grid)
+    get_panel(
+        computation_time = 0.001, 
+        use_server = False, 
+        working_directory=working_directory, 
+        grid = grid
+    )
 
     if grid:
         layout = load_gridstack_from_zip(
