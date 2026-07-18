@@ -1,5 +1,4 @@
-
-import scivianna
+from scivianna.icon import get_icon
 from scivianna.panel.demo import Demonstrator
 
 import scivianna_example
@@ -35,10 +34,6 @@ import panel as pn
 import panel_material_ui as pmui
 
 
-def get_icon(icon_name: str):
-    with open(str(Path(scivianna.__file__).parent / "icon" / icon_name) + ".svg", "r") as f:
-        return f.read()
-
 # download at https://composables.com/icons/icon-libraries/material-symbols?q=dashboard
 def make_demo(return_slaves=False) -> pmui.Page:
     icons = {
@@ -51,10 +46,10 @@ def make_demo(return_slaves=False) -> pmui.Page:
     }
 
     if return_slaves:
-        europe_panel, slaves_europe = europe_example(None, return_slaves)
-        medcoupling_panel, slaves_medcoupling = medcoupling_example(None, return_slaves)
-        medcoupling_3d_panel, slaves_medcoupling_3d = medcoupling_3d_example(None, return_slaves)
-        mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(None, return_slaves)
+        europe_panel, slaves_europe = europe_example(None, return_slaves = return_slaves)
+        medcoupling_panel, slaves_medcoupling = medcoupling_example(None, return_slaves = return_slaves)
+        medcoupling_3d_panel, slaves_medcoupling_3d = medcoupling_3d_example(None, return_slaves = return_slaves)
+        mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(None, return_slaves = return_slaves)
         coupling_panel, slaves_coupling = coupling_example(computation_time = .01, return_slaves=return_slaves, start = False, use_server=False)
     else:
         europe_panel = europe_example(None)

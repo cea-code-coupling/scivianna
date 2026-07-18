@@ -21,7 +21,7 @@ from scivianna.data.data3d import Data3D
 
 from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.extension.extension import Extension
-import scivianna.icon
+from scivianna.icon import get_icon
 from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface, Geometry3D
 from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 
@@ -34,8 +34,7 @@ profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ el
 if profile_time:
     import time
 
-with open(Path(scivianna.icon.__file__).parent / "salome.svg", "r") as f:
-    icon_svg = f.read()
+icon_svg = get_icon("salome")
 
 
 class MEDCouplingExtension(Extension):
@@ -156,7 +155,9 @@ This extension allows defining the medcoupling field display parameters.
         if self._restoring:
             return
         if self.slider_w.value != self.w:
-            self.panel.set_coordinates(w=self.slider_w.value)
+            origin = np.array(self.origin) + np.cross(self.u, self.v) * (self.slider_w.value - self.w)
+            print(f"Setting origin to {origin}")
+            self.panel.set_coordinates(origin=origin)
 
     @pn.io.hold()
     def update_slider_range(self,):
@@ -559,7 +560,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         current_mesh, mesh_time = self._get_mesh_at_time(time)
 
         if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*origin, size_u, size_v, mesh_time]
+            self.last_computed_frame.get(caller) == [*origin, *list(u), *list(v), mesh_time]
         ) and (caller in self.data):
             print("Skipping polygon computation.")
             return self.data[caller], False
@@ -652,7 +653,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 f"Gathering cells id time: {time.time() - start_time} using cell id {use_cell_id}"
             )
 
-        self.last_computed_frame[caller] = [*origin, size_u, size_v, mesh_time]
+        self.last_computed_frame[caller] = [*origin, *list(u), *list(v), mesh_time]
         self.data[caller] = Data2D.from_polygon_list(polygons)
         return self.data[caller], True
 

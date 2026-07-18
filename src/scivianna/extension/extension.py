@@ -24,7 +24,7 @@ class Extension:
     """Figure plotter"""
     panel: "VisualizationPanel"
     """Panel to which the extension is attached"""
-    iconsize: str = "6em"
+    iconsize: str = "1em"
     _restoring: bool = False
     """Flag to prevent feedback triggers during from_json restoration"""
 

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import panel as pn
 import panel_material_ui as pmui
 import scivianna
+from scivianna.icon import get_icon
 from scivianna.data.data2d import Data2D
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
@@ -36,7 +37,7 @@ class AIAssistant(Extension):
         """
         super().__init__(
             "AI assistant",
-            "auto_fix_high",
+            get_icon("auto_fix_high"),
             slave,
             plotter,
             panel,
@@ -64,14 +65,14 @@ You can for example request:
         )
         prompt_clear_button = pmui.IconButton(
             label="Clear",
-            icon=(Path(scivianna.__file__).parent / "icon" / 'clear.svg').read_text().strip(),            
+            icon=get_icon('clear'),
             variant="outlined",
             description='Clear the prompt text',
             margin=1,
             )
         prompt_run_button = pmui.IconButton(
             label="Run",
-            icon=(Path(scivianna.__file__).parent / "icon" / 'auto_fix_high.svg').read_text().strip(),
+            icon=get_icon('auto_fix_high'),
             variant="contained",
             description='Apply to the geometry',
             margin=1,

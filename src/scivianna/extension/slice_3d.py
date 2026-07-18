@@ -3,6 +3,7 @@ import panel as pn
 import panel_material_ui as pmui
 
 from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -37,7 +38,7 @@ class Slice3D(Extension):
         """
         super().__init__(
             "Slice Plane",
-            "view_in_ar",
+            get_icon("view_in_ar"),
             slave,
             plotter,
             panel,
@@ -55,7 +56,7 @@ Controls:
 
         # Clip enabled checkbox
         self.plane_enabled_checkbox = pmui.Checkbox(
-            name="Enable slice plane",
+            label="Enable slice plane",
             value=False,
             width=280
         )
@@ -63,7 +64,7 @@ Controls:
 
         # Clip enabled checkbox
         self.clip_enabled_checkbox = pmui.Checkbox(
-            name="Enable clipping",
+            label="Enable clipping",
             value=False,
             width=280
         )
@@ -71,7 +72,7 @@ Controls:
 
         # Axis selector
         self.clip_axis_select = pmui.Select(
-            name="Clip axis",
+            label="Clip axis",
             options=["x", "y", "z"],
             value="z",
             width=280

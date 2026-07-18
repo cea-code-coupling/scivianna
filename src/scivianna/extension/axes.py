@@ -238,7 +238,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.xplus = pmui.Button(label="X+", button_type="success", width=50)
+        self.xplus = pmui.Button(label="X+", color="success", width=50)
         self.xplus.on_click(xplus_fn)
 
         def yplus_fn(event):
@@ -260,7 +260,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.yplus = pmui.Button(label="Y+", button_type="success", width=50)
+        self.yplus = pmui.Button(label="Y+", color="success", width=50)
         self.yplus.on_click(yplus_fn)
 
         def zplus_fn(event):
@@ -282,7 +282,7 @@ You can also hide/show the axes on the plot and force a plot update.
                 self.update_data()
 
         # Attach the CB to the button
-        self.zplus = pmui.Button(label="Z+", button_type="success", width=50)
+        self.zplus = pmui.Button(label="Z+", color="success", width=50)
         self.zplus.on_click(zplus_fn)
 
         u = pmui.Column(self.u0_inp, self.u1_inp, self.u2_inp, margin=0)

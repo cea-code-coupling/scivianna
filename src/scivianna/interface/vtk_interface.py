@@ -19,7 +19,7 @@ except ImportError:
 
 import scivianna
 from scivianna.extension.extension import Extension
-
+from scivianna.icon import get_icon
 from scivianna.interface.generic_interface import Geometry2DPolygon
 
 if TYPE_CHECKING:
@@ -33,10 +33,7 @@ from scivianna.constants import MESH, GEOMETRY, CSV
 from scivianna.data.data2d import Data2D
 
 
-
-
-with open(Path(scivianna.__file__).parent / "icon" / "vtk.svg", "r") as f:
-    icon_svg = f.read()
+icon_svg = get_icon("vtk")
 
 def _require_pyvista():
     """Raise an error if pyvista is not available."""

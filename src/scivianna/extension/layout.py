@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import scivianna
 from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
 from scivianna.utils.interface_tools import GenericInterfaceEnum
@@ -40,7 +41,7 @@ class LayoutExtension(Extension):
         """
         super().__init__(
             "Interface layout",
-            "dashboard",
+            get_icon("dashboard"),
             slave,
             plotter,
             panel,
@@ -50,6 +51,8 @@ class LayoutExtension(Extension):
 
         self.description = """
 This extension allows you to split panels to visualize several fields/geometries at the same time.
+
+You can use the following drop box to change the currently edited panel. Otherwise, press the gear icon next to the panel name.
 """
         interface_options = [
             val.value if isinstance(val, GenericInterfaceEnum) else str(val)
@@ -57,7 +60,7 @@ This extension allows you to split panels to visualize several fields/geometries
         ]
 
         self.interface_selector = pn.widgets.Select(
-            name="Code",
+            label="Code",
             options=interface_options,
             value=interface_options[
                 list(self.layout.available_interfaces.values())
@@ -71,7 +74,7 @@ This extension allows you to split panels to visualize several fields/geometries
             Current edited frame selector
         """
         self.frame_selector = pn.widgets.Select(
-            name="Visualizer selector",
+            label="Visualizer selector",
             options=list(self.layout.visualisation_panels.keys()),
             value=list(self.layout.visualisation_panels.keys())[0],
             width = 280,
@@ -127,7 +130,7 @@ This extension allows you to split panels to visualize several fields/geometries
 
         self.layout_param_card = pn.Column(
             self.frame_selector,
-            self.interface_selector,
+            # self.interface_selector,
             # pn.Row(
             #     self.duplicate_horizontally_button, self.duplicate_vertitally_button
             # ),

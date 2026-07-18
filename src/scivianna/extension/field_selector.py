@@ -9,6 +9,7 @@ from scivianna.constants import OUTSIDE
 from scivianna.data.data2d import Data2D
 from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.utils.color_tools import beautiful_color_maps, get_edges_colors, interpolate_cmap_at_values
 
@@ -181,7 +182,7 @@ class FieldSelector(Extension):
         """
         super().__init__(
             "Color map",
-            "palette",
+            get_icon("palette"),
             slave,
             plotter,
             panel,
