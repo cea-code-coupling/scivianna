@@ -5,7 +5,6 @@ import panel as pn
 import param
 import os
 
-from scivianna.component.key_listener import KeyListener
 from scivianna.extension.extension import Extension
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
