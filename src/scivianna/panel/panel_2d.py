@@ -5,6 +5,7 @@ import panel as pn
 import param
 import os
 
+from scivianna.component.key_listener import KeyListener
 from scivianna.extension.extension import Extension
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
@@ -23,7 +24,7 @@ from scivianna.utils.polygon_sorter import PolygonSorter
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.constants import MESH, X, Y
+from scivianna.constants import MESH, X, Y, Z
 import scivianna.utils
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
@@ -181,6 +182,63 @@ class Panel2D(VisualizationPanel):
         except Exception:
             pass
 
+        self.figure.param.watch(self.key_pressed, "key")
+
+    def key_pressed(self, *events):
+        """Callback function triggered when a key is pressed in the overlay component.
+        It updates the `key` parameter of the panel with the last key pressed.
+        If the key is 'X', 'Y', or 'Z', it changes the axes accordingly. If the key is 'F', it flips the u axis.
+
+        Parameters
+        ----------
+        *events : tuple
+            Event information, not used in this function.
+        """
+        if self.figure.key:
+            if self.figure.key == "x":
+                print(f"Key pressed: X - Changing axes to XZ for panel {self.panel_name}")
+                if np.array_equal(self.u, Y) and np.array_equal(self.v, Z):
+                    self.set_coordinates(
+                        u=(0, -1, 0),
+                        v=Z,
+                    )
+                else:
+                    self.set_coordinates(
+                        u=Y,
+                        v=Z,
+                    )
+            if self.figure.key == "y":
+                print(f"Key pressed: Y - Changing axes to YZ for panel {self.panel_name}")
+                if np.array_equal(self.u, X) and np.array_equal(self.v, Z):
+                    self.set_coordinates(
+                        u=(-1, 0, 0),
+                        v=Z,
+                    )
+                else:
+                    self.set_coordinates(
+                        u=X,
+                        v=Z,
+                    )
+            if self.figure.key == "z":
+                print(f"Key pressed: Z - Setting axes to X and Y for panel {self.panel_name}")
+                if np.array_equal(self.u, X) and np.array_equal(self.v, Y):
+                    self.set_coordinates(
+                        u=(-1, 0, 0),
+                        v=Y,
+                    )
+                else:
+                    self.set_coordinates(
+                        u=X,
+                        v=Y,
+                    )
+            if self.figure.key == "f":
+                print(f"Key pressed: F - Flipping u axis for panel {self.panel_name}")
+                self.set_coordinates(
+                    u=[-e for e in self.u],
+                    v=self.v,
+                )
+            self.figure.key = ""  # Reset the key after processing
+
     @pn.io.hold()
     def _apply_update(self):
         """Apply pending visual updates to the plotter. 
@@ -197,8 +255,9 @@ class Panel2D(VisualizationPanel):
 
         # Update data visualization if needed
         if self._pending_updates.get("data"):
+            shapes_matching = self.current_data.cell_ids.shape == self._pending_updates["data"].cell_ids.shape
             self.current_data = self._pending_updates["data"]
-            if self.update_polygons:
+            if self.update_polygons or not shapes_matching:
                 self.plotter.update_2d_frame(self.current_data)
             else:
                 self.plotter.update_colors(self.current_data)
@@ -306,9 +365,9 @@ class Panel2D(VisualizationPanel):
                 options[key] = value
 
         computed_data = self.slave.compute_2D_data(
-            u,
-            v,
-            origin,
+            list(u),
+            list(v),
+            list(origin),
             size_u,
             size_v,
             None,
@@ -360,6 +419,7 @@ class Panel2D(VisualizationPanel):
         # Convert x0, x1, y0, y1 (center coordinates in physical space) to origin/size_u/size_v
         u_arr = np.array(self.u, dtype=float)
         v_arr = np.array(self.v, dtype=float)
+        w_arr = np.cross(u_arr, v_arr)
         
         center_u = (x1 + x0) * 0.5
         center_v = (y0 + y1) * 0.5
@@ -368,7 +428,7 @@ class Panel2D(VisualizationPanel):
         new_size_v = (y1 - y0)
         
         # Compute origin from center coordinates
-        self.origin = center_u * u_arr + center_v * v_arr
+        self.origin = center_u * u_arr + center_v * v_arr + np.dot(w_arr, self.origin) * w_arr
 
         if new_size_u != self.size_u or new_size_v != self.size_v:
             self.size_u = new_size_u
@@ -495,11 +555,8 @@ class Panel2D(VisualizationPanel):
         cell_id : str
             cell id to provide to the slave
         """
-        # Update origin directly to the clicked position
-        new_origin = tuple(position)
-        
-        if new_origin != self.origin:
-            self.origin = new_origin
+        if not np.allclose(position, self.origin):
+            self.origin = position
             
             for extension in self.extensions:
                 extension.on_range_change(self.origin, self.size_u, self.size_v)

@@ -159,7 +159,6 @@ Agent not loaded, received error : {e}
             Viewable to display in the extension tab
         """
         col = pmui.Column(
-            self.agent_row,
         )
         if self.has_agent:
             col.append(self.dialog)
