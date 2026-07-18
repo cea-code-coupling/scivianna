@@ -28,12 +28,12 @@ class Data3D(DataContainer):
         self.cell_edge_colors = []
 
     @classmethod
-    def from_polydata(cls, polydata: "vtk.vtkPolyData") -> "Data3D":
-        """Build a Data3D object from a vtk.vtkPolyData 
+    def from_polydata(cls, polydata: "pv.PolyData") -> "Data3D":
+        """Build a Data3D object from a pv.PolyData 
         
         Parameters 
         ---------- 
-        polydata : vtk.vtkPolyData 
+        polydata : pv.PolyData 
             VTK polydata defining the geometry 
             
         Returns 
@@ -51,10 +51,10 @@ class Data3D(DataContainer):
     
     def copy(self) -> "Data3D":
         """Returns a deep copy of self."""
-        import vtk
+        import pyvista as pv
         data3D = Data3D()
 
-        poly = vtk.vtkPolyData()
+        poly = pv.PolyData()
         poly.DeepCopy(self.polydata)
         data3D.polydata = poly
 

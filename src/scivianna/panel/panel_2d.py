@@ -347,21 +347,18 @@ class Panel2D(VisualizationPanel):
         v_arr = np.array(self.v, dtype=float)
         
         # x0, x1 are the center_u coordinates, y0, y1 are center_v coordinates
-        center_u_min = x0
-        center_u_max = x1
-        center_v_min = y0
-        center_v_max = y1
+        center_u = (x1 + x0) * .5
+        center_v = (y0 + y1) * .5
         
-        new_size_u = (center_u_max + center_u_min) * .5
-        new_size_v = (center_v_max + center_v_min) * .5
+        new_size_u = (x1 - x0)
+        new_size_v = (y1 - y0)
         
         # Compute origin from center coordinates
-        self.origin = center_u_min * u_arr + center_v_min * v_arr + self.origin
-        
+        self.origin = center_u * u_arr + center_v * v_arr
+
         if new_size_u != self.size_u or new_size_v != self.size_v:
             self.size_u = new_size_u
             self.size_v = new_size_v
-            # Keep origin unchanged (it's now a direct 3D position)
             
             for extension in self.extensions:
                 extension.on_range_change(self.origin, self.size_u, self.size_v)

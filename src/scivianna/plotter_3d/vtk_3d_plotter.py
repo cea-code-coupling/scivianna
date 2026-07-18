@@ -165,12 +165,8 @@ class Plotter3D:
         if w_vector is None:
             return
 
-        if origin is not None and w is not None:
-            # origin parameter is the physical 3D center position
+        if origin is not None :
             new_origin = np.array(origin, dtype=float)
-
-        if origin is None and w is not None:
-            new_origin = np.array(self.plotter.clip_origin) + (w - np.dot(self.plotter.clip_origin, w_vector)) * w_vector
 
         self.plotter.set_clip_plane(new_origin, w_vector)
 

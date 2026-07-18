@@ -1,4 +1,6 @@
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Optional
+
+import numpy as np
 
 from scivianna.data.data3d import Data3D
 
@@ -8,7 +10,7 @@ class Plotter3D:
     def __init__(
         self,
     ):
-        pass
+        self.on_axes_change_callback = None
 
     def plot(
         self,
@@ -37,8 +39,14 @@ class Plotter3D:
         raise NotImplementedError()
 
     def make_panel(self,):
-        raise NotImplementedError()
+        """Returns the viewable displayed in the 3D panel
 
+        Returns
+        -------
+        pn.viewable.Viewable
+            3D potter
+        """
+        raise NotImplementedError()
 
     def update_colorbar(self, display: bool, range: Tuple[float, float]):
         """Displays or hide the color bar, if display, updates its range
@@ -71,7 +79,7 @@ class Plotter3D:
         callback : Callable
             Function to call.
         """
-        self.on_mouse_move_callback = callback
+        raise NotImplementedError()
 
     def provide_on_clic_callback(self, callback: Callable):
         """Stores a function to call everytime the user clics on the plot.
@@ -82,4 +90,86 @@ class Plotter3D:
         callback : Callable
             Function to call.
         """
-        self.on_clic_callback = callback
+        raise NotImplementedError()
+
+    def provide_on_axes_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the user changes the axes.
+        Functions arguments are the new axis values (u, v, origin, size_u, size_v).
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        raise NotImplementedError()
+
+    def move_slice_to(
+        self,
+        u: np.ndarray = None,
+        v: np.ndarray = None,
+        origin: Tuple[float, float, float] = None,
+    ):
+        """Moves the slice to the given location
+
+        Parameters
+        ----------
+        u : np.ndarray, optional
+            First axis direction vector
+        v : np.ndarray, optional
+            Second axis direction vector
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center (center_u*u + center_v*v + w*w), by default None
+        """
+        raise NotImplementedError()
+
+    def get_slice_normal(self) -> np.ndarray:
+        """Returns the normal of the slice plane
+
+        Returns
+        -------
+        np.ndarray
+            Normal of the slice plane
+        """
+        raise NotImplementedError()
+
+    def set_slice_origin(self, origin: Tuple[float, float, float]):
+        """Sets the origin of the slice plane
+
+        Parameters
+        ----------
+        origin : Tuple[float, float, float]
+            Origin of the slice plane
+        """
+        raise NotImplementedError()
+
+    def get_slice_origin(self) -> np.ndarray:
+        """Returns the origin of the slice plane
+
+        Returns
+        -------
+        np.ndarray
+            Origin of the slice plane
+        """
+        raise NotImplementedError()
+
+    def set_axes(self, normal: np.ndarray, w: float):
+        """Sets the axes of the slice plane
+
+        Parameters
+        ----------
+        normal : np.ndarray
+            Normal axis of the slice plane
+        w : float
+            Normal axis value of the slice plane
+        """
+        raise NotImplementedError()
+
+    def get_uv(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Returns the u and v axes of the slice plane
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            u and v axes of the slice plane
+        """
+        raise NotImplementedError()
