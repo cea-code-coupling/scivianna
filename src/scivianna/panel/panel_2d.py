@@ -11,19 +11,7 @@ from scivianna.extension.file_loader import FileLoader
 from scivianna.extension.axes import Axes
 from scivianna.panel.visualisation_panel import VisualizationPanel
 
-try:
-    from scivianna.extension.ai_assistant import AIAssistant
-    has_agent = True
-
-except ImportError as e:
-    has_agent = False
-
-    print(f"Warning : Agent not loaded, received error : {e}")
-
-except ValueError as e:
-    has_agent = False
-    print(f"Warning : Agent not loaded, received error : {e}")
-
+from scivianna.extension.ai_assistant import AIAssistant
 
 from scivianna.data.data2d import Data2D
 from scivianna.interface.generic_interface import Geometry2D
@@ -44,9 +32,7 @@ if profile_time:
 
 pn.config.inline = True
 
-default_extensions = [FileLoader, FieldSelector, Axes]
-if has_agent:
-    default_extensions.append(AIAssistant)
+default_extensions = [FileLoader, FieldSelector, Axes, AIAssistant]
 
 
 class Panel2D(VisualizationPanel):

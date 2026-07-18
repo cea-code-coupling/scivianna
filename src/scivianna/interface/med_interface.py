@@ -705,7 +705,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         # Get time from options, default to 0 if absent
         coupling_time = options.get("time", 0.0)
-        print(f"Coupling time : {coupling_time}")
 
         field_np_array = None
 
@@ -1030,7 +1029,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         # Get time from options, default to 0 if absent
         coupling_time = options.get("time", 0.0)
-        print(f"Coupling time : {coupling_time}")
 
         field_np_array = None
 
