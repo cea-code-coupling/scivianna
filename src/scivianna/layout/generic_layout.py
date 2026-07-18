@@ -280,25 +280,23 @@ class GenericLayout:
     def stop_periodic_update(
         self,
     ):
-        """Stops the curdoc a periodic task (every 100 ms) to automatically update the plots."""
+        """Stops the periodic task that automatically updates the plots."""
         self.periodic_recompute_added = False
-        pn.state.curdoc.add_timeout_callback(self.recompute, 100)
 
     def add_periodic_update(
         self,
     ):
-        """Add to the curdoc a periodic task (every 100 ms) to automatically update the plots."""
+        """Starts a periodic task (every 100 ms) to automatically update the plots."""
         self.periodic_recompute_added = True
-        pn.state.curdoc.add_timeout_callback(self.recompute, 100)
 
     def recompute(
         self,
     ):
-        """Periodically called function that requests calling async_update_data at the end of current tick."""
+        """Schedules updates on marked panels via add_next_tick_callback."""
         if pn.state.curdoc is not None:
-            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            pn.state.curdoc.add_next_tick_callback(self._apply_updates)
         elif scivianna.utils._testing:
-            self.async_update_data()
+            self._apply_updates()
 
     def recompute_all(
         self,
@@ -315,15 +313,13 @@ class GenericLayout:
         self.layout_extension.on_coupling_update()
         self.recompute()
 
-
-    @pn.io.hold()
-    async def async_update_data(
-        self,
-    ):
-        """Request all panels to update themselves. This function being called between two ticks, it will not trigger collisions between automatic and user update requests."""
+    def _apply_updates(self):
+        """Apply pending updates on all marked panels.
+        Called on the UI thread to ensure thread safety.
+        """
         for panel in self.panels_to_recompute:
-            self.visualisation_panels[panel].recompute()
-            self.visualisation_panels[panel].async_update_data()
+            if panel in self.visualisation_panels:
+                self.visualisation_panels[panel].recompute()
         self.panels_to_recompute.clear()
 
         if self.periodic_recompute_added:

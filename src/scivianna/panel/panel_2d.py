@@ -109,14 +109,11 @@ class Panel2D(VisualizationPanel):
             code_interface, Geometry2D
         ), f"A VisualizationPanel can only be given a Geometry2D interface slave, received {code_interface}."
 
-        self.__data_to_update: bool = False
-        self.__new_data = {}
-
         #
         #   Initializing attributes
         #
         self.update_polygons = False
-        """Need to update the data at the next async call"""
+        """Need to update the polygons geometry (vs just colors)"""
         self.display_polygons = display_polygons
 
         self.polygon_sorter = PolygonSorter()
@@ -126,6 +123,9 @@ class Panel2D(VisualizationPanel):
 
         self.on_axes_change_callback: Callable = None
         """Function to call when the axes are changed"""
+
+        self._pending_updates: Dict = {}
+        """Pending visual updates to apply on next tick"""
 
         #
         #   Plotter creation
@@ -196,55 +196,91 @@ class Panel2D(VisualizationPanel):
             pass
 
     @pn.io.hold()
-    def async_update_data(
-        self,
-    ):
-        """Update the figures and buttons based on what was added in self.__new_data. This function is called between two servers ticks to prevent multi-users collisions."""
-        if self.__data_to_update:
-            if profile_time:
-                st = time.time()
+    def _apply_update(self):
+        """Apply pending visual updates to the plotter. 
+        Called via add_next_tick_callback to ensure UI thread safety.
+        """
+        if profile_time:
+            st = time.time()
 
-            if "color_mapper" in self.__new_data:
-                self.plotter.update_colorbar(
-                    True,
-                    (
-                        self.__new_data["color_mapper"]["new_low"],
-                        self.__new_data["color_mapper"]["new_high"],
-                    ),
-                )
-                self.plotter.set_color_map(self.colormap)
-            if "data" in self.__new_data:
-                self.current_data: Data2D = self.__new_data["data"]
+        # Update colorbar if needed
+        if self._pending_updates.get("colorbar"):
+            cb = self._pending_updates["colorbar"]
+            self.plotter.update_colorbar(True, (cb["new_low"], cb["new_high"]))
+            self.plotter.set_color_map(self.colormap)
 
-                if not self.update_polygons:
-                    self.plotter.update_colors(self.current_data)
-                else:
-                    self.plotter.update_2d_frame(self.current_data)
+        # Update data visualization if needed
+        if self._pending_updates.get("data"):
+            self.current_data = self._pending_updates["data"]
+            if self.update_polygons:
+                self.plotter.update_2d_frame(self.current_data)
+            else:
+                self.plotter.update_colors(self.current_data)
 
-            self.__data_to_update = False
+        # Clear pending updates
+        self._pending_updates = {}
+        self.marked_to_recompute = False
 
-            if profile_time:
-                print(f"Async function : {time.time() - st}")
+        if profile_time:
+            print(f"Apply update : {time.time() - st}")
 
-        if "field_name" in self.__new_data:
-            if self.marked_to_recompute:
-                self.marked_to_recompute = False
-                self.async_update_data()
-        else:
-            # If marked to recompute, a safe change was applied on a plot parameter, a recompute is requested async
-            if self.marked_to_recompute:
-                if not scivianna.utils._testing:
-                    self.recompute()
-                    self.marked_to_recompute = False
-                    self.async_update_data()
-                else:
-                    self.marked_to_recompute = False
-                    self.recompute()
-
-        # this is necessary only in a notebook context where sometimes we have to force Panel/Bokeh to push an update to the browser
+        # Force notebook refresh
         pn.io.push_notebook(self.figure)
 
-        self.__new_data = {}
+    def _schedule_recompute(self):
+        """Schedule a recompute on the next UI tick."""
+        self.marked_to_recompute = True
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self._do_recompute)
+        elif scivianna.utils._testing:
+            self._do_recompute()
+
+    def _schedule_update(self):
+        """Schedule a visual update on the next UI tick (no data recompute)."""
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self._apply_update)
+        elif scivianna.utils._testing:
+            self._apply_update()
+
+    def _do_recompute(self):
+        """Perform the actual recompute and schedule visual update."""
+        if not self.marked_to_recompute:
+            return
+            
+        if profile_time:
+            st = time.time()
+
+        u, v = self.get_uv()
+
+        print(
+            f"{self.panel_name} - Recomputing for axes {u}, {v}, at origin : {self.origin}, size_u : {self.size_u}, size_v : {self.size_v}, with field {self.displayed_field}"
+        )
+
+        data = self.compute_fn(u, v, self.origin, self.size_u, self.size_v)
+
+        if data is not None:
+            if profile_time:
+                print(f"Plot panel compute function : {time.time() - st}")
+                st = time.time()
+
+            # Build pending updates directly
+            self._pending_updates = {"data": data}
+
+            if (
+                self.slave.get_label_coloring_mode(
+                    self.displayed_field
+                ) == VisualizationMode.FROM_VALUE
+            ):
+                self._pending_updates["colorbar"] = {
+                    "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
+                    "new_high": np.nanmax(np.array(data.cell_values).astype(float)),
+                }
+
+            if profile_time:
+                print(f"Plot panel preparing data : {time.time() - st}")
+
+            # Schedule visual update
+            self._schedule_update()
 
     def compute_fn(
         self,
@@ -335,16 +371,12 @@ class Panel2D(VisualizationPanel):
         y1 : float
             Vertical axis maximum value
         """
-        to_update = {"x0": x0, "x1": x1, "y0": y0, "y1": y1}
-        self.__new_data = {**self.__new_data, **to_update}
-        
         # Convert x0, x1, y0, y1 (center coordinates in physical space) to origin/size_u/size_v
         u_arr = np.array(self.u, dtype=float)
         v_arr = np.array(self.v, dtype=float)
         
-        # x0, x1 are the center_u coordinates, y0, y1 are center_v coordinates
-        center_u = (x1 + x0) * .5
-        center_v = (y0 + y1) * .5
+        center_u = (x1 + x0) * 0.5
+        center_v = (y0 + y1) * 0.5
         
         new_size_u = (x1 - x0)
         new_size_v = (y1 - y0)
@@ -359,15 +391,14 @@ class Panel2D(VisualizationPanel):
             for extension in self.extensions:
                 extension.on_range_change(self.origin, self.size_u, self.size_v)
 
+        # Schedule recompute if range changes trigger it
         if self.update_event == UpdateEvent.RANGE_CHANGE or (
             isinstance(self.update_event, list) and UpdateEvent.RANGE_CHANGE in self.update_event
         ):
-            self.marked_to_recompute = True
-
-        if pn.state.curdoc is not None:
-            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-        elif scivianna.utils._testing:
-            self.async_update_data()
+            self._schedule_recompute()
+        else:
+            # Just update the view without full recompute
+            self._schedule_update()
 
     def get_uv(
         self,
@@ -388,51 +419,9 @@ class Panel2D(VisualizationPanel):
         self, *args, **kwargs
     ):
         """Recomputes the figure based on the new bounds and parameters.
+        Public method that triggers the recompute pipeline.
         """
-        if profile_time:
-            st = time.time()
-
-        u, v = self.get_uv()
-
-        print(
-            f"{self.panel_name} - Recomputing for axes {u}, {v}, at origin : {self.origin}, size_u : {self.size_u}, size_v : {self.size_v}, with field {self.displayed_field}"
-        )
-
-        data = self.compute_fn(
-            u, v, self.origin, self.size_u, self.size_v
-        )
-
-        if data is not None:
-            if profile_time:
-                print(f"Plot panel compute function : {time.time() - st}")
-                st = time.time()
-
-            self.__new_data = {
-                "data": data,
-            }
-
-            if (
-                self.slave.get_label_coloring_mode(
-                    self.displayed_field
-                ) == VisualizationMode.FROM_VALUE
-            ):
-                self.__new_data["color_mapper"] = {
-                    "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
-                    "new_high": np.nanmax(np.array(data.cell_values).astype(float)),
-                }
-                self.__new_data["hide_colorbar"] = False
-            else:
-                self.__new_data["hide_colorbar"] = True
-
-            self.__data_to_update = True
-
-            if profile_time:
-                print(f"Plot panel preparing data : {time.time() - st}")
-
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
+        self._schedule_recompute()
 
     def duplicate(self, keep_name: bool = False) -> "VisualizationPanel":
         """Get a copy of the panel. A panel of the same type is generated, the current display too, but a new slave process is created.
@@ -531,12 +520,7 @@ class Panel2D(VisualizationPanel):
 
             self.plotter.set_axes(self.u, self.v, self.origin)
 
-            self.__data_to_update = True
-            self.marked_to_recompute = True
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
+            self._schedule_recompute()
 
     def set_coordinates(
         self,
@@ -561,8 +545,6 @@ class Panel2D(VisualizationPanel):
         size_v : float, optional
             Size of the slice along the v axis, by default None
         """
-        self.__data_to_update = True
-
         update_axes = False
         if u is not None:
             if not type(u) in [tuple, list, np.ndarray]:
@@ -626,13 +608,7 @@ class Panel2D(VisualizationPanel):
 
         if update_axes or update_range:
             self.plotter.set_axes(self.u, self.v, self.origin)
-
-            self.marked_to_recompute = True
-
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
+            self._schedule_recompute()
 
             if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
                 if self.on_axes_change_callback is not None:
@@ -686,12 +662,7 @@ class Panel2D(VisualizationPanel):
         """
         if colormap != self.colormap:
             self.colormap = colormap
-            self.__data_to_update = True
-
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.recompute)
-            elif scivianna.utils._testing:
-                self.recompute()
+            self._schedule_recompute()
 
     def to_json(self) -> Dict:
         """Returns a dictionnary with the information about the visualization panel
