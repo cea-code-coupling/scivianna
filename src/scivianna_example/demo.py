@@ -86,20 +86,22 @@ def make_demo(return_slaves=False) -> pmui.Page:
             medcoupling_panel.main_frame, pmui.Typography(f.read(), width=300)
         )
 
-    with open(Path(split_item_example.__file__).parent / "description_3d.md", "r") as f:
-        medcoupling_3d_with_description = pmui.Row(
-            medcoupling_3d_panel.main_frame, pmui.Typography(f.read(), width=300)
-        )
+    if has_3d:
+        with open(Path(split_item_example.__file__).parent / "description_3d.md", "r") as f:
+            medcoupling_3d_with_description = pmui.Row(
+                medcoupling_3d_panel.main_frame, pmui.Typography(f.read(), width=300)
+            )
 
     with open(Path(mandelbrot.__file__).parent / "description.md", "r") as f:
         mandelbrot_with_description = pmui.Row(
             mandelbrot_panel.main_frame, pmui.Typography(f.read(), width=300)
         )
 
-    with open(Path(coupling.__file__).parent / "description.md", "r") as f:
-        coupling_with_description = pmui.Row(
-            coupling_panel.main_frame, pmui.Typography(f.read(), width=300)
-        )
+    if has_coupling:
+        with open(Path(coupling.__file__).parent / "description.md", "r") as f:
+            coupling_with_description = pmui.Row(
+                coupling_panel.main_frame, pmui.Typography(f.read(), width=300)
+            )
 
     description_file = Path(scivianna_example.__file__).parent / "demo_description.md"
 
