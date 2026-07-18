@@ -337,11 +337,7 @@ class Panel2D(VisualizationPanel):
         """
         to_update = {"x0": x0, "x1": x1, "y0": y0, "y1": y1}
         self.__new_data = {**self.__new_data, **to_update}
-        if pn.state.curdoc is not None:
-            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-        elif scivianna.utils._testing:
-            self.async_update_data()
-
+        
         # Convert x0, x1, y0, y1 (center coordinates in physical space) to origin/size_u/size_v
         u_arr = np.array(self.u, dtype=float)
         v_arr = np.array(self.v, dtype=float)
@@ -367,6 +363,11 @@ class Panel2D(VisualizationPanel):
             isinstance(self.update_event, list) and UpdateEvent.RANGE_CHANGE in self.update_event
         ):
             self.marked_to_recompute = True
+
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+        elif scivianna.utils._testing:
+            self.async_update_data()
 
     def get_uv(
         self,

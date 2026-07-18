@@ -349,6 +349,9 @@ class Bokeh2DGridPlotter(Plotter2D):
         """
         self.update_2d_frame(data)
 
+    def update_range(self, event: events.RangesUpdate):
+        self.range_callback(event.x0, event.x1, event.y0, event.y1)
+
     def _set_callback_on_range_update(self, callback: IO):
         """Sets a callback to update the x and y ranges in the GUI.
 
@@ -357,11 +360,8 @@ class Bokeh2DGridPlotter(Plotter2D):
         callback : IO
             Function that takes x0, x1, y0, y1 as arguments
         """
-
-        def update_range(event: events.RangesUpdate):
-            callback(event.x0, event.x1, event.y0, event.y1)
-
-        self.figure.on_event("rangesupdate", update_range)
+        self.range_callback = callback
+        self.figure.on_event("rangesupdate", self.update_range)
 
     def make_panel(self) -> pn.viewable.Viewable:
         """Makes the Holoviz panel viewable displayed in the web app.

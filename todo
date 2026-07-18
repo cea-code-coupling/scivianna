@@ -1,4 +1,3 @@
-- Add test ensuring mandelbrot updates on right range after drag
 - add test for split medcoupling clic callback
 - add test for med slider
 - bin XYZ in bokeh plot

@@ -356,7 +356,7 @@ class MandelBrotInterface(Geometry2DGrid):
         return []
 
 
-def make_panel(_, return_slaves=False):
+def make_panel(_, return_slaves=False) -> Union[SplitLayout, Tuple[SplitLayout, List[ComputeSlave]]]:
     slave = ComputeSlave(MandelBrotInterface)
     panel = Panel2D(slave, name="Mandelbrot polygons")
     panel.update_event = UpdateEvent.RANGE_CHANGE
