@@ -236,7 +236,12 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
         self.figure.tight_layout()
         self.figure.savefig(file_name, dpi=1500)
 
-    def set_axes(self, u:Tuple[float, float, float], v:Tuple[float, float, float]):
+    def set_axes(
+        self, 
+        u: Tuple[float, float, float], 
+        v: Tuple[float, float, float], 
+        origin: Tuple[float, float, float]
+    ):
         """Stores the u v axes of the current plot
 
         Parameters
@@ -245,5 +250,7 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
             Horizontal axis direction vector
         v : Tuple[float, float, float]
             Vertical axis direction vector
+        origin : Tuple[float, float, float]
+            Frame center
         """
         pass

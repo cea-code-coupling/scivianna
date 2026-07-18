@@ -214,21 +214,6 @@ class Plotter3D:
         """
         return self.plotter.clip_origin
 
-    def set_axes(self, normal, w):
-        """Sets the axes of the slice plane
-
-        Parameters
-        ----------
-        normal : np.ndarray
-            Normal axis of the slice plane
-        w : float
-            Normal axis value of the slice plane
-        """
-        normal = np.array(normal) / np.linalg.norm(normal)
-        origin = np.array(self.plotter.clip_origin) + (w - np.dot(self.plotter.clip_origin, normal)) * normal
-
-        self.plotter.set_clip_plane(origin, normal)
-
     def compute_uv(self, event):
         """Computes the u and v axes of the slice plane
 

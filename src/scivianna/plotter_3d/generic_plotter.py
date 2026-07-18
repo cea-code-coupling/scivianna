@@ -152,18 +152,6 @@ class Plotter3D:
         """
         raise NotImplementedError()
 
-    def set_axes(self, normal: np.ndarray, w: float):
-        """Sets the axes of the slice plane
-
-        Parameters
-        ----------
-        normal : np.ndarray
-            Normal axis of the slice plane
-        w : float
-            Normal axis value of the slice plane
-        """
-        raise NotImplementedError()
-
     def get_uv(self) -> Tuple[np.ndarray, np.ndarray]:
         """Returns the u and v axes of the slice plane
 

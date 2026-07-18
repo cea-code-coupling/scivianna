@@ -50,12 +50,15 @@ class Bokeh2DGridPlotter(Plotter2D):
             }
         )
 
+        self.dw = 1.
+        self.dh = 1.
+
         self.source_coordinates = ColumnDataSource(
             {
                 "u_min": [0],
-                "dw": [1],
+                "dw": [self.dw],
                 "v_min": [0],
-                "dh": [1],
+                "dh": [self.dh],
                 "u0": [1.0],
                 "u1": [0.0],
                 "u2": [0.0],
@@ -289,12 +292,15 @@ class Bokeh2DGridPlotter(Plotter2D):
             }
         )
 
+        self.dw = data.u_values.max() - data.u_values.min()
+        self.dh = data.v_values.max() - data.v_values.min()
+
         self.image = self.figure.image_rgba(
             image = GRID,
             x = data.u_values.min(),
             y = data.v_values.min(),
-            dw = data.u_values.max() - data.u_values.min(),
-            dh = data.v_values.max() - data.v_values.min(),
+            dw = self.dw,
+            dh = self.dh,
             source=self.source_grid
         )
 
@@ -322,12 +328,15 @@ class Bokeh2DGridPlotter(Plotter2D):
                 CELL_VALUES : [val_grid],
             }
         )
+        
+        self.dw = data.u_values.max() - data.u_values.min()
+        self.dh = data.v_values.max() - data.v_values.min()
 
         self.image.glyph.update(
             x = data.u_values.min(),
             y = data.v_values.min(),
-            dw = data.u_values.max() - data.u_values.min(),
-            dh = data.v_values.max() - data.v_values.min(),
+            dw = self.dw,
+            dh = self.dh,
         )
 
     def update_colors(self, data: Data2D,):
@@ -581,7 +590,12 @@ class Bokeh2DGridPlotter(Plotter2D):
         self.figure.on_event(bokeh.events.Tap, functools.partial(self.send_event, callback))
         # self.figure.add_tools(TapTool())
 
-    def set_axes(self, u:Tuple[float, float, float], v:Tuple[float, float, float]):
+    def set_axes(
+        self, 
+        u: Tuple[float, float, float], 
+        v: Tuple[float, float, float], 
+        origin: Tuple[float, float, float]
+    ):
         """Stores the u v axes of the current plot
 
         Parameters
@@ -590,6 +604,8 @@ class Bokeh2DGridPlotter(Plotter2D):
             Horizontal axis direction vector
         v : Tuple[float, float, float]
             Vertical axis direction vector
+        origin : Tuple[float, float, float]
+            Frame center
         """
         w_vector = np.cross(np.array(u), np.array(v))
         
@@ -603,5 +619,15 @@ class Bokeh2DGridPlotter(Plotter2D):
         new_data["w0"] = [w_vector[0]]
         new_data["w1"] = [w_vector[1]]
         new_data["w2"] = [w_vector[2]]
+        
+        umin = np.dot(u, origin) - self.dw/2
+        vmin = np.dot(v, origin) - self.dh/2
+        w = np.dot(w_vector, origin)
+
+        new_data["u_min"] = [umin]
+        new_data["dw"] = [self.dw]
+        new_data["v_min"] = [vmin]
+        new_data["dh"] = [self.dh]
+        new_data["w"] = [w]
 
         self.source_coordinates.update(data = new_data)

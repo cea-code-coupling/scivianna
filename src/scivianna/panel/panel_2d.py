@@ -169,7 +169,7 @@ class Panel2D(VisualizationPanel):
             data_ = data
             self.update_polygons = True
         
-        self.plotter.set_axes(self.u, self.v)
+        self.plotter.set_axes(self.u, self.v, self.origin)
         self.plotter.plot_2d_frame(data_)
 
         self.current_data = data_
@@ -528,7 +528,7 @@ class Panel2D(VisualizationPanel):
             for extension in self.extensions:
                 extension.on_range_change(self.origin, self.size_u, self.size_v)
 
-            self.plotter.set_axes(self.u, self.v)
+            self.plotter.set_axes(self.u, self.v, self.origin)
 
             self.__data_to_update = True
             self.marked_to_recompute = True
@@ -624,7 +624,7 @@ class Panel2D(VisualizationPanel):
                 self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
 
         if update_axes or update_range:
-            self.plotter.set_axes(self.u, self.v)
+            self.plotter.set_axes(self.u, self.v, self.origin)
 
             self.marked_to_recompute = True
 
