@@ -158,10 +158,12 @@ Agent not loaded, received error : {e}
         pn.viewable.Viewable
             Viewable to display in the extension tab
         """
-        return pmui.Column(
+        col = pmui.Column(
             self.agent_row,
-            self.dialog
         )
+        if self.has_agent:
+            col.append(self.dialog)
+        return col
 
     def on_updated_data(self, data: Data2D):
         """Function called when the displayed data is being updated. Extension can edit the data on its way to the plotter.

@@ -9,4 +9,5 @@ markers = [
     "default",
     "pyvista",
     "agent",
+    "coupling"
 ]
