@@ -69,6 +69,8 @@ demo.show()
 
 Visualize line plots, 2D geometries and vtk.js plots together in an integrated dashboard with inter-plot interactions.
 
+![Demonstration 2D - 3D interaction](gifs/3d_demo.gif)
+
 ### 2. Real-Time Code Coupling
 Connect to simulations in real-time using the C3PO coupling platform and ICOCO interface. The visualizer can receive field updates during simulation execution.
 

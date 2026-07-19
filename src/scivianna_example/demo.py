@@ -124,7 +124,7 @@ def make_demo(return_slaves=False) -> pmui.Page:
 
     description_file = Path(scivianna_example.__file__).parent / "demo_description.md"
 
-    image = pn.pane.Image(Path(scivianna_example.__file__).parent / "image/tuto_visu_serma.png", sizing_mode = "stretch_both")
+    image = pn.pane.Image(Path(scivianna_example.__file__).parent / "image/main_page.png", sizing_mode = "stretch_both")
 
     with open(description_file, 'r') as f:
         help = pn.Column(pmui.Typography(f.read()), image, sizing_mode = "stretch_both")

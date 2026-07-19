@@ -4,6 +4,7 @@ from scivianna.panel.visualisation_panel import (
     VisualizationPanel
 )
 import scivianna
+from scivianna.panel.panel_2d import Panel2D
 from scivianna.panel.panel_3d import Panel3D
 from scivianna.slave import ComputeSlave
 from scivianna.constants import GEOMETRY
@@ -27,17 +28,12 @@ def get_panel(geo, title: str = "3D", *args, return_slaves=False, **kwargs) -> V
     else:
         raise TypeError(f"Provided type {type(geo)} not implemented")
     
-    med_2 = get_med_panel(geo=geo, title="MEDCoupling slice")
+    med_2 = Panel2D(slave, name="MEDCoupling slice", u=X, v=Y, displayed_field = "INTEGRATED_POWER")
     med_2.update_event = [UpdateEvent.CLIC, UpdateEvent.AXES_CHANGE]
 
-    med_panel_3d = Panel3D(slave, name="3D Demo")
+    med_panel_3d = Panel3D(slave, name="3D Demo", displayed_field = "INTEGRATED_POWER")
     med_panel_3d.update_event = [UpdateEvent.CLIC, UpdateEvent.AXES_CHANGE]
-    med_panel_3d.set_coordinates(u=X, v=Y)
     
-    if "INTEGRATED_POWER" in slave.get_labels():
-        med_panel_3d.set_field("INTEGRATED_POWER")
-        med_2.set_field("INTEGRATED_POWER")
-
     split = SplitItem(med_panel_3d, med_2, SplitDirection.VERTICAL)
 
     if return_slaves:
