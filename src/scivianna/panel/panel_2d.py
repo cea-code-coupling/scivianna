@@ -427,23 +427,19 @@ class Panel2D(VisualizationPanel):
         new_size_v = (y1 - y0)
         
         # Compute origin from center coordinates
-        self.origin = center_u * u_arr + center_v * v_arr + np.dot(w_arr, self.origin) * w_arr
-
-        if new_size_u != self.size_u or new_size_v != self.size_v:
-            self.size_u = new_size_u
-            self.size_v = new_size_v
-            
-            for extension in self.extensions:
-                extension.on_range_change(self.origin, self.size_u, self.size_v)
-
-        # Schedule recompute if range changes trigger it
         if self.update_event == UpdateEvent.RANGE_CHANGE or (
             isinstance(self.update_event, list) and UpdateEvent.RANGE_CHANGE in self.update_event
         ):
+            self.origin = center_u * u_arr + center_v * v_arr + np.dot(w_arr, self.origin) * w_arr
+
+            if new_size_u != self.size_u or new_size_v != self.size_v:
+                self.size_u = new_size_u
+                self.size_v = new_size_v
+                
+                for extension in self.extensions:
+                    extension.on_range_change(self.origin, self.size_u, self.size_v)
+
             self._schedule_recompute()
-        else:
-            # Just update the view without full recompute
-            self._schedule_update()
 
     def get_uv(
         self,

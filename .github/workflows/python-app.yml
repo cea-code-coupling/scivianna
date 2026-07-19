@@ -39,6 +39,10 @@ jobs:
 
     - name: Tests
       run: |
+        $env:LLM_MODEL_ID = ""
+        $env:LLM_API_BASE = ""
+        $env:LLM_API_KEY = ""
+
         # Run default tests
         python -m pytest --cov=scivianna --cov-append -n 8 tests --tb=short -W ignore::DeprecationWarning -m default
 

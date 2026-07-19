@@ -65,8 +65,9 @@ demo.show()
 
 ## Key Features
 
-### 1. Simultaneous 1D and 2D Visualization
-Visualize line plots and 2D geometries together in an integrated dashboard.
+### 1. Simultaneous 1D, 2D and 3D Visualization
+
+Visualize line plots, 2D geometries and vtk.js plots together in an integrated dashboard with inter-plot interactions.
 
 ### 2. Real-Time Code Coupling
 Connect to simulations in real-time using the C3PO coupling platform and ICOCO interface. The visualizer can receive field updates during simulation execution.
@@ -88,6 +89,11 @@ Extensions can be added to panels for additional functionality:
 - File loaders
 - Layout management
 - AI assistant integration
+
+## Panel interactions
+
+Visualisation panels can interact with one another based on a update event parameter. 
+
 
 ## Code Coupling with C3PO
 
@@ -130,8 +136,11 @@ The `scivianna_example` module provides ready-to-use examples showcasing Scivian
 | Example | Description |
 |---------|-------------|
 | **Europe Grid** | Plots an interactive Europe map displaying electricity production and consumption per country with weekly time-steps. Hover over countries to see values. |
-| **Medcoupling** | Demonstrates MED file format handling with three synchronized views. Click in one view to offset others at the click location. |
 | **Mandelbrot** | Computes the Mandelbrot set on a 2D grid and converts it to polygons for visualization. |
+| **Medcoupling** | Demonstrates MED file format handling with three synchronized views. Click in one view to offset others at the click location. (if medcoupling  available) |
+| **Coupling example** | Plot of a coupled simulation to see time dependant data (if salome-c3po installed) |
+| **3D example** | 3D plot interacting with a 2D plot. (if medcoupling and pyvista available) |
+
 
 ## License
 
