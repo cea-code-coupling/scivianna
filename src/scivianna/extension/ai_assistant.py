@@ -142,7 +142,8 @@ class AIAssistant(Extension):
             self.description = f"""
 The AI assistant allows you to edit the plot cells colors based on its values. A code will be generated and executed at each cells updates.
 
-Agent not loaded, received error : {e}
+Agent not loaded, received error : 
+*{e}*
 """
             self.agent_row = pn.Row(
                 self.description

@@ -67,6 +67,12 @@ class Axes(Extension):
 The axes extension allows you to edit the axes vectors or the plot bounds along both axes if applicable.
 
 You can also hide/show the axes on the plot and force a plot update.
+
+The following keys are binded:
+-   **X** : Moves the axes to a YZ plane
+-   **Y** : Moves the axes to a XZ plane
+-   **Z** : Moves the axes to a XY plane
+-   **F** : Flips the horizontal axis
 """
 
         self.iconsize = "1.0em"
