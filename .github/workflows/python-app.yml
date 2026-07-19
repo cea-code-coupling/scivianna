@@ -53,8 +53,9 @@ jobs:
         # Run pytest for each tag (map '3d' to 'pyvista')
         foreach ($tag in $tags) {
           $pytestTag = if ($tag -eq '3d') { 'pyvista' } else { $tag }
+          $procCount = if ($tag -eq 'coupling') { 1 } else { 8 }
           Write-Host "Running tests for tag: $tag (pytest marker: $pytestTag)"
-          python -m pytest --cov=scivianna --cov-append -n 8 tests --tb=short -W ignore::DeprecationWarning -m $pytestTag
+          python -m pytest --cov=scivianna --cov-append -n $procCount tests --tb=short -W ignore::DeprecationWarning -m $pytestTag
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
         }
