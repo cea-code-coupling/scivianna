@@ -7,9 +7,9 @@ from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 import scivianna.utils
 from scivianna.utils.serialization import load_gridstack_from_zip, load_layout_from_zip
 from scivianna.notebook_tools import _serve_panel
-from scivianna.constants import CELL_VALUES
 
 working_directory = Path(__file__).parent / "working_dir"
+working_directory.mkdir(exist_ok=True, parents=True)
 
 @pytest.fixture
 def cleanup():

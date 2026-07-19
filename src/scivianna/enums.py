@@ -68,10 +68,10 @@ class UpdateEvent(int, Enum):
     """ The plot is preiodically updated, applicable in real-time code coupling simulations
     """
     RANGE_CHANGE = 5
-    """ The plot is updated when the (u, v) ranges change
+    """ The plot is updated when the (u, v) ranges or origin change.
     """
     AXES_CHANGE = 6
-    """ The plot is updated when the axes are changed.
+    """ The plot is updated when the axes or the origin are changed.
     """
 
 class UpdatePolicy(Enum):
