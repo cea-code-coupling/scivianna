@@ -92,8 +92,37 @@ Extensions can be added to panels for additional functionality:
 
 ## Panel interactions
 
-Visualisation panels can interact with one another based on a update event parameter. 
+Visualisation panels can interact with one another based on a update event parameter. This UpdateEvent class provide the following options:
 
+-   CLIC
+-   MOUSE_POSITION_CHANGE
+-   MOUSE_CELL_CHANGE
+-   PERIODIC
+-   RANGE_CHANGE
+-   AXES_CHANGE
+
+The behavior impacts differently based on the current panel type.
+
+### Sending panel
+
+| Event                 | Panel1D |                       Panel2D                       |                          Panel3D                         |
+|-----------------------|:-------:|:---------------------------------------------------:|:--------------------------------------------------------:|
+| CLIC                  |    -    |       Sends mouse location and cell id on clic      |         Sends mouse location and cell id on clic         |
+| MOUSE_POSITION_CHANGE |    -    |    Sends mouse location and cell id on mouse move   |      Sends mouse location and cell id on mouse move      |
+| MOUSE_CELL_CHANGE     |    -    | Sends mouse location and cell id on hovered cell id |    Sends mouse location and cell id on hovered cell id   |
+| PERIODIC              |    -    |                          -                          |                             -                            |
+| RANGE_CHANGE          |    -    |       Sends frame center and size on zoom/drag      |                             -                            |
+| AXES_CHANGE           |    -    |            Sends new axes on axes change            | Sends clip plane origin and axes on translation/rotation |
+
+### Receiving panel
+| Event                 |              Panel1D              |                 Panel2D                 |               Panel3D               |
+|-----------------------|:---------------------------------:|:---------------------------------------:|:-----------------------------------:|
+| CLIC                  | Updates at mouse location/cell id | Updates moving origin to mouse location |    Moves clip plane to new origin   |
+| MOUSE_POSITION_CHANGE | Updates at mouse location/cell id | Updates moving origin to mouse location |    Moves clip plane to new origin   |
+| MOUSE_CELL_CHANGE     | Updates at mouse location/cell id | Updates moving origin to mouse location |    Moves clip plane to new origin   |
+| PERIODIC              |  Updates at last location/cell id |                    -                    |                  -                  |
+| RANGE_CHANGE          |                 -                 |       Updates for new origin/range      |    Moves clip plane to new origin   |
+| AXES_CHANGE           |                 -                 |       Updates for new origin/axes       | Moves clip plane to new origin/axes |
 
 ## Code Coupling with C3PO
 
