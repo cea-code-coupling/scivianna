@@ -2,7 +2,6 @@ from pathlib import Path
 import shutil
 import pytest
 
-from scivianna_example.c3po_coupling.coupling import get_panel
 from scivianna.plotter_1d.bokeh_1d_plotter import BokehPlotter1D
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 import scivianna.utils
@@ -23,16 +22,22 @@ def cleanup():
 def grid(request):
     # Return True or False based on the parameter
     return request.param
-
+ 
+@pytest.mark.coupling
 def test_run_coupling(cleanup, grid):
+    from scivianna_example.c3po_coupling.coupling import get_panel
     get_panel(computation_time = 0.001, use_server = False, grid = grid)
 
 
+@pytest.mark.coupling
 def test_run_coupling_with_server(cleanup, grid):
+    from scivianna_example.c3po_coupling.coupling import get_panel
     get_panel(computation_time = 0.001, grid = grid)
 
 
+@pytest.mark.coupling
 def test_reload_coupling(cleanup, grid):
+    from scivianna_example.c3po_coupling.coupling import get_panel
     scivianna.utils._testing = True
     get_panel(
         computation_time = 0.001, 
@@ -64,6 +69,7 @@ def test_reload_coupling(cleanup, grid):
         panel.get_slave().terminate()
 
 if __name__ == "__main__":
+    from scivianna_example.c3po_coupling.coupling import get_panel
     get_panel(
         computation_time = 0.01,
         use_server = False,

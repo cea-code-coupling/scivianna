@@ -41,7 +41,7 @@ def get_template():
     panel = get_panel()
     return panel
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_import_gridstack():
     """Test importing the gridstack layout and make the panel without opening it
     """

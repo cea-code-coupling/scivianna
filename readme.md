@@ -19,7 +19,7 @@ Scivianna offers several optional dependency sets for specific features:
 pip install scivianna[agent]
 
 # PyVista 3D visualization
-pip install scivianna[pyvista]
+pip install scivianna[3d]
 
 # Testing and development
 pip install scivianna[test]
@@ -34,20 +34,17 @@ pip install scivianna[coupling]
 
 ```python
 from scivianna.layout.gridstack import GridStackLayout
-from scivianna.panel.visualisation_panel import VisualizationPanel
+from scivianna.panel.panel2d import Panel2D
 from scivianna.slave import ComputeSlave
 
 # Create a slave with your data interface
 slave = ComputeSlave(YourInterface)
 
 # Create a visualization panel
-panel = VisualizationPanel(slave, name="My Panel")
-
-# Create a layout and add the panel
-layout = GridStackLayout({"panel1": panel})
+panel = Panel2D(slave, name="My Panel")
 
 # Display
-layout.show()
+panel.show()
 ```
 
 ### Running the Demonstrator

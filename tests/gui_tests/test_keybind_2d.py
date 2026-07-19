@@ -1,7 +1,7 @@
 import pytest
 from scivianna_example.med.single_med import get_panel
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_press_z():
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]
@@ -19,6 +19,7 @@ def test_press_z():
     for slave in slaves:
         slave.terminate()
 
+@pytest.mark.medcoupling
 def test_press_x():
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]
@@ -35,6 +36,7 @@ def test_press_x():
     for slave in slaves:
         slave.terminate()
 
+@pytest.mark.medcoupling
 def test_press_y():
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]
@@ -51,6 +53,7 @@ def test_press_y():
     for slave in slaves:
         slave.terminate()
 
+@pytest.mark.medcoupling
 def test_press_f():
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]

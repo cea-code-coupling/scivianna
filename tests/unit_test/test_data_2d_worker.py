@@ -34,11 +34,16 @@ def data2d():
     return data2d
 
 @pytest.fixture
-def worker(data2d, request):
-    """Provide a Data2DWorker instance initialized with a copy of data2d."""
-    from scivianna.data.data_2d_worker import Data2DWorker
-    worker = Data2DWorker(data2d)
-    return worker
+def worker_cls(request):
+    if request.node.get_closest_marker("agent"):
+        from scivianna.agent.data_2d_worker import Data2DWorker
+    else:
+        from scivianna.data.data_2d_worker import Data2DWorker
+    return Data2DWorker
+
+@pytest.fixture
+def worker(worker_cls, data2d):
+    return worker_cls(data2d)
 
 @pytest.mark.default
 def test_has_changed_no_change(worker: "Data2DWorker"):

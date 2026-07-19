@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 import scivianna
 from scivianna.constants import GEOMETRY, MATERIAL, X, Y
-from scivianna.interface.med_interface import MEDInterface
 from scivianna.data.data2d import Data2D
 from scivianna.extension.field_selector import set_colors_list
 from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
@@ -14,6 +13,7 @@ from scivianna_example.mandelbrot.mandelbrot import MandelBrotInterface
 import numpy as np
 
 def build_data_polygon() -> Data2D:
+    from scivianna.interface.med_interface import MEDInterface
     med = MEDInterface()
     med.read_file(
         str(Path(scivianna.__file__).parent / "input_file" / "power.med"),
@@ -61,7 +61,7 @@ def build_data_grid() -> Data2D:
 
     return data_2d
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_polygon_plt_from_polygons():
     data_2d = build_data_polygon()
 
@@ -69,7 +69,7 @@ def test_polygon_plt_from_polygons():
     plotter.plot_2d_frame(data_2d)
     plotter.figure.savefig("p2p.png")
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_grid_plt_from_polygons():
     data_2d = build_data_grid()
 

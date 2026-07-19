@@ -66,6 +66,9 @@ setup(
     ],
     extras_require={
         "default": [],
+        "medcoupling": [
+            "medcoupling",
+        ],
         "agent": [
             "smolagents[openai]",
         ],
@@ -84,6 +87,7 @@ setup(
             "salome-c3po",
             "pydantic",
             "icoco~=2.0.0",
+            "medcoupling"
         ],
         "doc": [
             "sphinx",
