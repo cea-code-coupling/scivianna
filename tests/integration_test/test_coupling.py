@@ -57,7 +57,7 @@ def test_reload_coupling(cleanup, grid):
 
     assert layout.time_widget is not None
 
-    assert layout.time_widget.time_slider.options == [0., 0.0005]
+    assert layout.time_widget.time_slider.options == [0., 0.001]
 
     layout.time_widget.time_slider.value = 0.
     assert set(list(layout.visualisation_panels.keys())) == set(["Field", "Temperature"])
