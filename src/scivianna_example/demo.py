@@ -29,6 +29,7 @@ except ImportError as e:
     has_3d = False
 
 try:
+    import rasterio
     from scivianna_example.mandelbrot.mandelbrot import (
         make_panel as mandelbrot_example,
     )
