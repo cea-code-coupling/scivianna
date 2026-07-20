@@ -89,8 +89,7 @@ setup(
             "medcoupling",
             "salome-c3po",
             "pydantic",
-            "icoco~=2.0.0",
-            "medcoupling"
+            "icoco~=2.0.0"
         ],
         "doc": [
             "sphinx",
