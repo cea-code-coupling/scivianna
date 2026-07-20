@@ -15,7 +15,7 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-22.04, ubuntu-24.04]
         python-version: ["3.10", "3.11", "3.12"]
-        deps: ["default", "pyvista", "agent", "pyvista,agent"]
+        deps: ["default", "medcoupling", "coupling", "3d,medcoupling", "grid"]
 
     runs-on: ${{ matrix.os }}
 
@@ -28,7 +28,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip uv
-        python -m uv pip install .[${{ matrix.deps }},coupling,grid] flake8 coverage pytest-cov nbmake pytest-xdist
+        python -m uv pip install .[${{ matrix.deps }}] flake8 coverage pytest-cov nbmake pytest-xdist
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -38,6 +38,10 @@ jobs:
 
     - name: Tests
       run: |
+        $env:LLM_MODEL_ID = ""
+        $env:LLM_API_BASE = ""
+        $env:LLM_API_KEY = ""
+
         # Run default tests
         python -m pytest --cov=scivianna --cov-append -n 8 tests --tb=short -W ignore::DeprecationWarning -m default
 
@@ -45,10 +49,12 @@ jobs:
         $deps = "${{ matrix.deps }}"
         $tags = $deps -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
 
-        # Run pytest for each tag
+        # Run pytest for each tag (map '3d' to 'pyvista')
         foreach ($tag in $tags) {
-          Write-Host "Running tests for tag: $tag"
-          python -m pytest --cov=scivianna --cov-append -n 8 tests --tb=short -W ignore::DeprecationWarning -m $tag
+          $pytestTag = if ($tag -eq '3d') { 'pyvista' } else { $tag }
+          $procCount = if ($tag -eq 'coupling') { 1 } else { 8 }
+          Write-Host "Running tests for tag: $tag (pytest marker: $pytestTag)"
+          python -m pytest --cov=scivianna --cov-append -n $procCount tests --tb=short -W ignore::DeprecationWarning -m $pytestTag
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
         }

@@ -38,7 +38,7 @@ Provides binary split divisions:
 
 ### Panel Management
 ```python
-from scivianna.layout.splot import SplitLayout, SplitItem, SplitDirection
+from scivianna.layout.split import SplitLayout, SplitItem, SplitDirection
 
 # Create layout with multiple panels
 split_panel = SplitLayout(
@@ -69,11 +69,18 @@ The layout handles and distributes mouse events:
 | `field_change_callback` | User changes displayed field |
 
 ### Update Events
-Panels can be configured to update on different events:
-- `UpdateEvent.RECOMPUTE`: Manual recompute trigger
-- `UpdateEvent.CLIC`: Update on click
-- `UpdateEvent.MOUSE_POSITION_CHANGE`: Update on mouse move
-- `UpdateEvent.MOUSE_CELL_CHANGE`: Update when hovered cell changes
+
+Panels can be configured to update on different events via `UpdateEvent`:
+
+| Event | Value | Description |
+|-------|-------|-------------|
+| `UpdateEvent.RECOMPUTE` | 0 | Manual recompute only (default) |
+| `UpdateEvent.CLIC` | 1 | Update on mouse click (sends/receives mouse location and cell ID) |
+| `UpdateEvent.MOUSE_POSITION_CHANGE` | 2 | Update on mouse move over 2D plot |
+| `UpdateEvent.MOUSE_CELL_CHANGE` | 3 | Update when hovered cell changes on 2D plot |
+| `UpdateEvent.PERIODIC` | 4 | Periodic updates for real-time simulation coupling |
+| `UpdateEvent.RANGE_CHANGE` | 5 | Update when zoom/pan bounds change (2D) or clip plane origin changes (3D) |
+| `UpdateEvent.AXES_CHANGE` | 6 | Update when axes orientation or origin changes (2D axes or 3D clip plane) |
 
 ### Time Widget Integration
 For coupled simulations, add time management:
@@ -95,3 +102,15 @@ For real-time coupling, enable periodic refresh (updates only if changes were do
 ```python
 layout.add_periodic_update()  # Start 100ms refresh loop
 layout.stop_periodic_update()  # Stop refresh
+```
+
+## Inter-Panel Communication
+
+When panels share a layout and have compatible `update_event` settings, they can communicate:
+
+1. **2D → 2D**: Clicking in one panel moves the slice origin in others
+2. **2D → 3D**: Clicking in a 2D panel moves the 3D clip plane
+3. **3D → 2D**: Rotating/panning the 3D view updates 2D slice axes
+4. **3D → 3D**: Clip plane changes propagate between 3D panels
+5. **2D → 1D**: Clicking or moving in one panel changes the plot location/cell id data
+6. **3D → 1D**: Clicking or moving in one panel changes the plot location/cell id data

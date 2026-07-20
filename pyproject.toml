@@ -6,7 +6,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 markers = [
-    "default",
-    "pyvista",
-    "agent",
+    "default", # basic tests without any dependencies or medcoupling related features
+    "medcoupling", # More complex tests that require medcoupling to be installed
+    "pyvista", # Tests for 3D plots and 3D extrusion
+    "coupling", # Coupling tests that require CP3O to be installed
+    "agent", # Tests for the Data2DWorker
+    "grid", # Tests related to rasterio
 ]

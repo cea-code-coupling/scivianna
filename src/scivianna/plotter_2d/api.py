@@ -23,11 +23,9 @@ def plot_frame_in_axes(
     axes: matplotlib.axes.Axes,
     u: Tuple[float, float, float] = X,
     v: Tuple[float, float, float] = Y,
-    u_min: float = 0.,
-    u_max: float = 1.,
-    v_min: float = 0.,
-    v_max: float = 1.,
-    w_value: float = 0.0,
+    origin: Tuple[float, float, float] = None,
+    size_u: float = 1.,
+    size_v: float = 1.,
     color_map: str = "BuRd",
     display_colorbar: bool = False,
     edge_width: float = 1.,
@@ -53,22 +51,18 @@ def plot_frame_in_axes(
         Horizontal coordinate director vector, by default X
     v : Tuple[float, float, float], optional
         Vertical coordinate director vector, by default Y
-    u_min : float, optional
-        Lower bound value along the u axis, by default 0.
-    u_max : float, optional
-        Upper bound value along the u axis, by default 1.
-    v_min : float, optional
-        Lower bound value along the v axis, by default 0.
-    v_max : float, optional
-        Upper bound value along the v axis, by default 1.
-    w_value : float, optional
-        Value along the u ^ v axis, by default "BuRd"
+    origin : Tuple[float, float, float], optional
+        Physical 3D position of the slice center, by default (0, 0, 0)
+    size_u : float, optional
+        Size of the slice along the u axis, by default 1.
+    size_v : float, optional
+        Size of the slice along the v axis, by default 1.
     color_map : str, optional
         Colormap used to color the polygons, by default "BuRd"
     edge_width : float, optional
         Cells edge width, by default 1.
     display_colorbar : bool, optional
-        Display the polygons, by default False
+        Display the colorbar, by default False
     options : dict, optional
         Extra coloring options, by default {}
     plot_options : dict, optional
@@ -97,16 +91,18 @@ def plot_frame_in_axes(
         matplotlib.axes.Axes
             Axes in which the geometry was plotted
     """
+    # If origin is None, default to (0, 0, 0)
+    if origin is None:
+        origin = (0.0, 0.0, 0.0)
+
     data, _ = slave.compute_2D_data(
-        u=u,
-        v=v,
-        u_min=u_min,
-        u_max=u_max,
-        v_min=v_min,
-        v_max=v_max,
-        w_value=w_value,
-        coloring_label=coloring_label,
+        u=tuple(u),
+        v=tuple(v),
+        origin=tuple(origin),
+        size_u=size_u,
+        size_v=size_v,
         q_tasks=None,
+        coloring_label=coloring_label,
         options=options,
         caller=caller,
     )
@@ -226,11 +222,9 @@ def plot_frame(
     coloring_label: str,
     u: Tuple[float, float, float] = X,
     v: Tuple[float, float, float] = Y,
-    u_min: float = 0.,
-    u_max: float = 1.,
-    v_min: float = 0.,
-    v_max: float = 1.,
-    w_value: float = 0.0,
+    origin: Tuple[float, float, float] = None,
+    size_u: float = 1.,
+    size_v: float = 1.,
     color_map: str = "BuRd",
     display_colorbar: bool = False,
     edge_width: float = 1.,
@@ -254,20 +248,16 @@ def plot_frame(
         Horizontal coordinate director vector, by default X
     v : Tuple[float, float, float], optional
         Vertical coordinate director vector, by default Y
-    u_min : float, optional
-        Lower bound value along the u axis, by default 0.
-    u_max : float, optional
-        Upper bound value along the u axis, by default 1.
-    v_min : float, optional
-        Lower bound value along the v axis, by default 0.
-    v_max : float, optional
-        Upper bound value along the v axis, by default 1.
-    w_value : float, optional
-        Value along the u ^ v axis, by default "BuRd"
+    origin : Tuple[float, float, float], optional
+        Physical 3D position of the slice center, by default (0, 0, 0)
+    size_u : float, optional
+        Size of the slice along the u axis, by default 1.
+    size_v : float, optional
+        Size of the slice along the v axis, by default 1.
     color_map : str, optional
         Colormap used to color the polygons, by default "BuRd"
     display_colorbar : bool, optional
-        Display the polygons, by default False
+        Display the colorbar, by default False
     edge_width : float, optional
         Cells edge width, by default 1.
     options : dict, optional
@@ -303,13 +293,11 @@ def plot_frame(
         slave=slave,
         u=u,
         v=v,
-        u_min=u_min,
-        u_max=u_max,
-        v_min=v_min,
-        v_max=v_max,
+        origin=origin,
+        size_u=size_u,
+        size_v=size_v,
         coloring_label=coloring_label,
         axes=axes,
-        w_value=w_value,
         color_map=color_map,
         display_colorbar=display_colorbar,
         edge_width=edge_width,

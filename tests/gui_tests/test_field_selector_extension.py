@@ -39,13 +39,9 @@ class TestFieldSelectorInitialization:
         try:
             # Title and icon set by constructor
             assert field_sel.title == "Color map"
-            assert field_sel.icon == "palette"
 
             # Description should be set
             assert "color map" in field_sel.description.lower()
-
-            # Icon size should be set
-            assert field_sel.iconsize == "6em"
 
             # Slave, plotter, and panel references should be set
             assert field_sel.slave is panel.slave

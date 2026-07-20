@@ -6,6 +6,7 @@ import panel as pn
 from scivianna.component.server_file_browser import ServerFileBrowser
 from scivianna.constants import GEOMETRY
 from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 
 if TYPE_CHECKING:
@@ -35,7 +36,7 @@ class FileLoader(Extension):
         """
         super().__init__(
             "Load new files",
-            "file_open",
+            get_icon("file_open"),
             slave,
             plotter,
             panel,

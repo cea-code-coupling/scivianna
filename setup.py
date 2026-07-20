@@ -56,7 +56,6 @@ setup(
         "matplotlib",
         "numpy",
         "shapely",
-        "jupyter_bokeh",
         "holoviews",
         "panel_material_ui",
         "geopandas<1.1",
@@ -66,14 +65,18 @@ setup(
     ],
     extras_require={
         "default": [],
+        "medcoupling": [
+            "medcoupling",
+        ],
         "agent": [
             "smolagents[openai]",
         ],
         "grid": [
             "rasterio",
         ],
-        "pyvista": [
+        "3d": [
             "pyvista",
+            "scivianna_vtk>=0.1.3"
         ],
         "test": [
             "pytest-xdist",
@@ -86,7 +89,7 @@ setup(
             "medcoupling",
             "salome-c3po",
             "pydantic",
-            "icoco~=2.0.0",
+            "icoco~=2.0.0"
         ],
         "doc": [
             "sphinx",

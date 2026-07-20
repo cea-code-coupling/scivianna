@@ -360,6 +360,9 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             }
         )
 
+    def update_range(self, event: events.RangesUpdate):
+        self.range_callback(event.x0, event.x1, event.y0, event.y1)
+
     def _set_callback_on_range_update(self, callback: IO):
         """Sets a callback to update the x and y ranges in the GUI.
 
@@ -368,11 +371,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         callback : IO
             Function that takes x0, x1, y0, y1 as arguments
         """
-
-        def update_range(event: events.RangesUpdate):
-            callback(event.x0, event.x1, event.y0, event.y1)
-
-        self.figure.on_event("rangesupdate", update_range)
+        self.range_callback = callback
+        self.figure.on_event("rangesupdate", self.update_range)
 
     def make_panel(self) -> pn.viewable.Viewable:
         """Makes the Holoviz panel viewable displayed in the web app.
@@ -541,7 +541,12 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.figure.on_event(bokeh.events.Tap, functools.partial(self.send_event, callback))
         # self.figure.add_tools(TapTool())
 
-    def set_axes(self, u:Tuple[float, float, float], v:Tuple[float, float, float], w:float):
+    def set_axes(
+        self, 
+        u: Tuple[float, float, float], 
+        v: Tuple[float, float, float], 
+        origin: Tuple[float, float, float]
+    ):
         """Stores the u v axes of the current plot
 
         Parameters
@@ -550,8 +555,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             Horizontal axis direction vector
         v : Tuple[float, float, float]
             Vertical axis direction vector
-        w : float
-            Normal vector coordinate
+        origin : Tuple[float, float, float]
+            Frame center
         """
         w_vector = np.cross(np.array(u), np.array(v))
         
@@ -565,6 +570,9 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         new_data["w0"] = [w_vector[0]]
         new_data["w1"] = [w_vector[1]]
         new_data["w2"] = [w_vector[2]]
-        new_data["w"]  = [w]
+        
+        w = np.dot(w_vector, origin)
+
+        new_data["w"] = [w]
 
         self.source_coordinates.update(data = new_data)

@@ -23,6 +23,14 @@ scivianna.data.data2d module
    :undoc-members:
    :show-inheritance:
 
+scivianna.data.data3d module
+----------------------------
+
+.. automodule:: scivianna.data.data3d
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 scivianna.data.data\_2d\_worker module
 --------------------------------------
 

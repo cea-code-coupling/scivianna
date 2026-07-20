@@ -116,16 +116,19 @@ class TestExtensionCallbacksCalled:
             # Reset tracking
             test_ext._range_change_history.clear()
 
-            # Update ranges via set_coordinates
-            panel.set_coordinates(u_min=0.0, u_max=5.0, v_min=-1.0, v_max=3.0)
+            # Update ranges via set_coordinates (new signature - no w parameter)
+            panel.set_coordinates(
+                origin=[0.0, 0.0, 0.0],
+                size_u=5.0,
+                size_v=4.0
+            )
 
             # Verify callback was called
             assert len(test_ext._range_change_history) > 0
             last_call = test_ext._range_change_history[-1]
-            assert last_call.u_bounds == (0.0, 5.0)
-            assert last_call.v_bounds == (-1.0, 3.0)
-            # w_value defaults to 0.5
-            assert np.isclose(last_call.w_value, 0.5)
+            assert np.allclose(last_call.origin, [0.0, 0.0, 0.0])
+            assert np.isclose(last_call.size_u, 5.0)
+            assert np.isclose(last_call.size_v, 4.0)
         finally:
             cleanup()
 
@@ -236,11 +239,11 @@ class TestExtensionTrackingMechanism:
         event = FieldChangeEvent(field_name="TEST")
         assert event.field_name == "TEST"
 
-        # Test RangeChangeEvent
-        event = RangeChangeEvent(u_bounds=(0.0, 1.0), v_bounds=(0.0, 1.0), w_value=0.5)
-        assert event.u_bounds == (0.0, 1.0)
-        assert event.v_bounds == (0.0, 1.0)
-        assert event.w_value == 0.5
+        # Test RangeChangeEvent (new signature: origin, size_u, size_v)
+        event = RangeChangeEvent(origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0)
+        assert np.allclose(event.origin, (0.0, 0.0, 0.0))
+        assert event.size_u == 1.0
+        assert event.size_v == 1.0
 
         # Test FrameChangeEvent
         event = FrameChangeEvent(u_vector=(1.0, 0.0, 0.0), v_vector=(0.0, 1.0, 0.0))
@@ -283,8 +286,13 @@ class TestExtensionCallbackSequence:
             test_ext._frame_change_history.clear()
             test_ext._range_change_history.clear()
 
-            # Change coordinates - should trigger both callbacks
-            panel.set_coordinates(u=[0.0, 1.0, 0.0], u_min=0.0, u_max=5.0)
+            # Change coordinates - should trigger both callbacks (new signature - no w)
+            panel.set_coordinates(
+                u=[0.0, 1.0, 0.0],
+                origin=[0.0, 0.0, 0.0],
+                size_u=5.0,
+                size_v=5.0
+            )
 
             # Both callbacks should have been called
             assert len(test_ext._frame_change_history) > 0
@@ -326,11 +334,11 @@ class TestExtensionBaseClassMethods:
         assert True
 
     def test_on_range_change_signature(self):
-        """Test on_range_change accepts bounds tuples and w value."""
+        """Test on_range_change accepts origin, size_u, size_v."""
         ext = Extension.__new__(Extension)
 
-        # Should accept u_bounds, v_bounds, w_value
-        ext.on_range_change((0.0, 1.0), (0.0, 1.0), 0.5)
+        # Should accept origin, size_u, size_v (new signature - no w_val)
+        ext.on_range_change((0.0, 0.0, 0.0), 1.0, 1.0)
         assert True
 
     def test_on_frame_change_signature(self):

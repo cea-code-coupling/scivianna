@@ -2,9 +2,6 @@ import pytest
 
 import scivianna.utils
 from scivianna.constants import X, Y, Z, MESH
-from scivianna.interface.med_interface import MEDInterface
-from scivianna.layout.split import SplitLayout
-from scivianna.layout.gridstack import GridStackLayout
 from scivianna.utils.serialization import (
     save_slave_to_file, 
     load_slave_from_file, 
@@ -12,13 +9,16 @@ from scivianna.utils.serialization import (
     load_panel2d_from_file
 )
 
-from scivianna_example.med.split_item_example import get_panel, get_med_panel
-from scivianna_example.med.grid_stack_example import get_panel as get_gridstack_panel
+from scivianna.layout.split import SplitLayout
+from scivianna.layout.gridstack import GridStackLayout
 from scivianna_example.europe_grid.europe_grid import make_europe_panel, EuropeGridInterface, CountryTimeSeriesInterface
+
 scivianna.utils._testing = True
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_serialize_slave():
+    from scivianna.interface.med_interface import MEDInterface
+    from scivianna_example.med.split_item_example import get_panel, get_med_panel
     slave = None
     slave2 = None
     try:
@@ -27,8 +27,10 @@ def test_serialize_slave():
         slave = med_panel.get_slave()
         
         # First compute with caller="Test" to populate cache
+        import numpy as np
+        origin = np.array(X) * 0.5 + np.array(Y) * 0.5 + 0.5 * np.cross(X, Y)
         slave.compute_2D_data(
-            X, Y, 0, 1, 0, 1, 0.5, None, MESH, {}, caller="Test"
+            X, Y, tuple(origin), 1.0, 1.0, None, MESH, {}, caller="Test"
         )
         
         save_slave_to_file(
@@ -44,7 +46,7 @@ def test_serialize_slave():
             True
         )
         data, recomputed, = slave2.compute_2D_data(
-            X, Y, 0, 1, 0, 1, 0.5, None, MESH, {}, caller="Test"
+            X, Y, tuple(origin), 1.0, 1.0, None, MESH, {}, caller="Test"
         )
         assert not recomputed, "Slave2 should not have recomputed the polygons."
     finally:
@@ -53,8 +55,9 @@ def test_serialize_slave():
         if slave2 is not None:
             slave2.terminate()
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_serialize_panel():
+    from scivianna_example.med.split_item_example import get_panel, get_med_panel
     slave = None
     slave2 = None
     try:
@@ -68,14 +71,21 @@ def test_serialize_panel():
         time.sleep(1)
 
         # First compute with caller="Test" to populate cache
+        import numpy as np
+        u = med_panel.u
+        v = med_panel.v
+        w = np.cross(u, v)
+        origin = med_panel.origin  # tuple (origin_x, origin_y, origin_z)
+        size_u = med_panel.size_u
+        size_v = med_panel.size_v
         slave.compute_2D_data(
-            med_panel.u, 
-            med_panel.v, 
-            *med_panel.u_range, 
-            *med_panel.v_range, 
-            med_panel.w_value, 
-            None, 
-            MESH, 
+            u, 
+            v,
+            origin,
+            size_u,
+            size_v,
+            None,
+            MESH,
             {},
             caller="Test"
         )
@@ -92,21 +102,21 @@ def test_serialize_panel():
         slave_2 = panel_2.get_slave()
         _, recomputed, = slave_2.compute_2D_data(
             panel_2.u, 
-            panel_2.v, 
-            *panel_2.u_range, 
-            *panel_2.v_range, 
-            panel_2.w_value, 
-            None, 
-            MESH, 
+            panel_2.v,
+            panel_2.origin,  # tuple (origin_x, origin_y, origin_z)
+            panel_2.size_u,
+            panel_2.size_v,
+            None,
+            MESH,
             {},
             caller="Test"
         )
         print(
             panel_2.u, 
             panel_2.v, 
-            *panel_2.u_range, 
-            *panel_2.v_range, 
-            panel_2.w_value, _, recomputed
+            panel_2.origin,
+            panel_2.size_u, panel_2.size_v,
+            _, recomputed
         )
         assert not recomputed, "Slave should not have recomputed the polygons."
 
@@ -119,8 +129,9 @@ def test_serialize_panel():
             print("Terminating slave 1")
             slave2.terminate()
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_serialize_split():
+    from scivianna_example.med.split_item_example import get_panel, get_med_panel
     panel, slaves = get_panel(None, True)
 
     panel.save_to_zip("test.zip")
@@ -130,15 +141,15 @@ def test_serialize_split():
 
     try:
         new_layout = SplitLayout.restore_from_zip("test.zip")
-        # new_layout.show()
     except Exception as e:
         print(e)
     finally:
         for panel in new_layout.visualisation_panels.values():
             panel.get_slave().terminate()
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_serialize_gridstack():
+    from scivianna_example.med.grid_stack_example import get_panel as get_gridstack_panel
     panel, slaves = get_gridstack_panel(None, True)
 
     panel.save_to_zip("test_gridstack.zip")
@@ -148,7 +159,6 @@ def test_serialize_gridstack():
 
     try:
         new_layout = GridStackLayout.restore_from_zip("test_gridstack.zip")
-        # new_layout.show()
     except Exception as e:
         print("Received exception ", e)
     finally:

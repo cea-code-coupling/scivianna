@@ -8,16 +8,17 @@ import dill
 import traceback
 from threading import Lock
 
-import time
 import pandas as pd
 from typing import Any, List, Dict, Tuple, Type, Union
 
 from scivianna.data.data2d import Data2D
+from scivianna.data.data3d import Data3D
 
 from scivianna.interface.generic_interface import (
     GenericInterface,
     Geometry2D,
     CouplingInterface,
+    Geometry3D,
     OverLine,
     ValueAtLocation,
     Value1DAtLocation
@@ -59,6 +60,12 @@ class SlaveCommand:
     """Returns the values of a field at cells"""
     GET_GEOMETRY_TYPE = "get_geometry_type"
     """Returns the geometry type"""
+
+    #   Geometry3D functions
+    COMPUTE_3D_DATA = "compute_3d_data"
+    """Compute a 3D slice of the geometry"""
+    GET_3D_VALUE_DICT = "get_3d_value_dict"
+    """Returns the values of a field at cells"""
 
     #   ValueAtLocation functions
     GET_VALUE = "get_value"
@@ -156,11 +163,9 @@ def worker(
                 (
                     u,
                     v,
-                    u_min,
-                    u_max,
-                    v_min,
-                    v_max,
-                    w_value,
+                    origin,
+                    size_u,
+                    size_v,
                     q_tasks_,
                     coloring_label,
                     options,
@@ -175,11 +180,9 @@ def worker(
                 data, polygons_updated = code_.compute_2D_data(
                     u=u,
                     v=v,
-                    u_min=u_min,
-                    u_max=u_max,
-                    v_min=v_min,
-                    v_max=v_max,
-                    w_value=w_value,
+                    origin=origin,
+                    size_u=size_u,
+                    size_v=size_v,
                     q_tasks=q_tasks_,
                     options=options,
                     caller=caller,
@@ -217,6 +220,48 @@ def worker(
 
             elif task == SlaveCommand.GET_GEOMETRY_TYPE:
                 q_returns.put(code_.geometry_type)
+
+            #   Geometry3D functions
+            elif task == SlaveCommand.COMPUTE_3D_DATA:
+                coloring_label, options = data
+                if not isinstance(code_, Geometry3D):
+                    raise TypeError(
+                        f"The requested panel is not associated to an Geometry3D, found class {type(code_)}."
+                    )
+                data: Data3D
+                data, polygons_updated = code_.compute_3D_data(
+                    options=options,
+                )
+
+                dict_value_per_cell = code_.get_3d_value_dict(
+                    value_label=coloring_label,
+                    cells=data.cell_ids,
+                    options=options,
+                    caller=options.get("caller", "API"),
+                )
+
+                data.cell_values = [dict_value_per_cell[v] for v in data.cell_ids]
+
+                q_returns.put(
+                    [
+                        data,
+                        polygons_updated,
+                    ]
+                )
+            elif task == SlaveCommand.GET_3D_VALUE_DICT:
+                if not isinstance(code_, Geometry3D):
+                    raise TypeError(
+                        f"The requested panel is not associated to an Geometry3D, found class {type(code_)}."
+                    )
+                value_label, cells, options, caller = data
+                set_return = code_.get_3d_value_dict(
+                    value_label=value_label,
+                    cells=cells,
+                    options=options,
+                    caller=caller,
+                )
+                q_returns.put(set_return)
+
 
             #   ValueAtLocation functions
             elif task == SlaveCommand.GET_VALUE:
@@ -523,11 +568,9 @@ class ComputeSlave:
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         coloring_label: str,
         options: Dict[str, Any],
@@ -543,16 +586,12 @@ class ComputeSlave:
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         coloring_label : str
@@ -573,11 +612,9 @@ class ComputeSlave:
                 [
                     u,
                     v,
-                    u_min,
-                    u_max,
-                    v_min,
-                    v_max,
-                    w_value,
+                    origin,
+                    size_u,
+                    size_v,
                     q_tasks,
                     coloring_label,
                     options,
@@ -619,6 +656,69 @@ class ComputeSlave:
             Interface geometry type
         """
         return self.__get_function([SlaveCommand.GET_GEOMETRY_TYPE, []])
+
+    #   Geometry3D functions
+    def compute_3D_data(
+        self,
+        coloring_label: str,
+        options: Dict[str, Any]
+    ) -> Tuple[Data3D, bool]:
+        """Returns a list of polygons that defines the geometry in a given frame
+
+        Parameters
+        ----------
+        options : Dict[str, Any]
+            Additional options for frame computation.
+
+        Returns
+        -------
+        Data3D
+            Geometry to display
+        bool
+            Were the polygons updated compared to the past call
+        """
+        return self.__get_function(
+            [
+                SlaveCommand.COMPUTE_3D_DATA,
+                [
+                    coloring_label,
+                    options,
+                ],
+            ]
+        )
+
+    def get_3d_value_dict(
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+        """
+        return self.__get_function(
+            [
+                SlaveCommand.GET_3D_VALUE_DICT,
+                [
+                    value_label,
+                    cells,
+                    options,
+                    caller,
+                ],
+            ]
+        )
 
     #   ValueAtLocation functions
     def get_value(

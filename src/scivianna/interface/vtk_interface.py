@@ -19,7 +19,7 @@ except ImportError:
 
 import scivianna
 from scivianna.extension.extension import Extension
-
+from scivianna.icon import get_icon
 from scivianna.interface.generic_interface import Geometry2DPolygon
 
 if TYPE_CHECKING:
@@ -33,10 +33,7 @@ from scivianna.constants import MESH, GEOMETRY, CSV
 from scivianna.data.data2d import Data2D
 
 
-
-
-with open(Path(scivianna.__file__).parent / "icon" / "vtk.svg", "r") as f:
-    icon_svg = f.read()
+icon_svg = get_icon("vtk")
 
 def _require_pyvista():
     """Raise an error if pyvista is not available."""
@@ -236,11 +233,9 @@ class VTKInterface(Geometry2DPolygon):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -254,16 +249,12 @@ class VTKInterface(Geometry2DPolygon):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
@@ -287,23 +278,24 @@ class VTKInterface(Geometry2DPolygon):
             time_updated = True
 
         if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*u, *v, w_value]
+            self.last_computed_frame.get(caller) == [*origin, size_u, size_v]
         ) and (caller in self.data) and ( not (
             options["recompute"] and time_updated
         )):
             print("Skipping polygon computation.")
             return self.data[caller], False
-        
+
         u = np.array(u)/np.linalg.norm(u)
         v = np.array(v)/np.linalg.norm(v)
         w = np.cross(u, v)
 
         if np.linalg.norm(w) == 0.:
             raise ValueError(f"u and v must be both non zero and non parallel, found {u}, {v}")
-        
+
         w /= np.linalg.norm(w)
-        
-        origin = u*u_min + v*v_min + w_value*w
+
+        # origin is already provided as a physical 3D position
+        origin = np.array(origin, dtype=float)
 
         mesh_slice: pv.PolyData = self.mesh.slice(normal = w, origin = origin, generate_triangles = True)
 
@@ -327,7 +319,7 @@ class VTKInterface(Geometry2DPolygon):
             ))
 
         self.data[caller] = Data2D.from_polygon_list(polygon_elements)
-        self.last_computed_frame[caller] = [*u, *v, w_value]
+        self.last_computed_frame[caller] = [*origin, size_u, size_v]
         
         return self.data[caller], True
 

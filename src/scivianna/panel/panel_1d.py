@@ -52,8 +52,6 @@ class Panel1D(VisualizationPanel):
 
         self.fields = slave.get_labels()
 
-        self.__data_to_update: bool = False
-        """Is it required to update the data, can be set on periodic event or on clic"""
         self.field_change_callback: Callable = None
         """Function to call when the field is changed"""
 
@@ -61,6 +59,10 @@ class Panel1D(VisualizationPanel):
         self.current_value = None
 
         self.series: Dict[str, pd.Series] = {}
+        """Cache of series data"""
+
+        self._pending_updates: Dict = {}
+        """Pending visual updates to apply on next tick"""
 
         def field_changed(event):
             """Function called on field changed
@@ -78,35 +80,39 @@ class Panel1D(VisualizationPanel):
         self.fields_list = self.slave.get_labels()
         self.visible_fields_list = [self.slave.get_labels()[0]]
         self.visible_series_list = []
-        self.__new_data = {}
 
         self.recompute()
 
         self.periodic_recompute_added = False
 
     @pn.io.hold()
-    def async_update_data(
-        self,
-    ):
-        """Update the figures and buttons based on what was added in self.__new_data. This function is called between two servers ticks to prevent multi-users collisions."""
-        if "field_names" in self.__new_data:
-            self.visible_fields_list = self.__new_data["field_names"]
-            self.__new_data = {}
+    def _apply_update(self):
+        """Apply pending visual updates to the plotter. 
+        Called via add_next_tick_callback to ensure UI thread safety.
+        """
+        # Update fields if requested
+        if self._pending_updates.get("field_names"):
+            self.visible_fields_list = self._pending_updates["field_names"]
+            self._pending_updates.pop("field_names", None)
             self.__get_series(self.visible_fields_list)
-            self.__data_to_update = True
 
-        if self.__data_to_update:
-            for key in self.series:
-                if self.series[key] is not None:
-                    # Can be None if the async happens at the same time as the next recompute
-                    self.plotter.update_plot(key, self.series[key])
+        # Update plot data
+        for key in self.series:
+            if self.series[key] is not None:
+                self.plotter.update_plot(key, self.series[key])
 
-            self.plotter.set_visible(self.visible_series_list)
+        self.plotter.set_visible(self.visible_series_list)
+        self._pending_updates.clear()
 
-            self.__data_to_update = False
-
-        # this is necessary only in a notebook context where sometimes we have to force Panel/Bokeh to push an update to the browser
+        # Force notebook refresh
         pn.io.push_notebook(self.figure)
+
+    def _schedule_update(self):
+        """Schedule a visual update on the next UI tick."""
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self._apply_update)
+        elif scivianna.utils._testing:
+            self._apply_update()
 
     def recompute(self, *args, **kwargs):
         """Recomputes the figure based on the new bounds and parameters.
@@ -117,15 +123,9 @@ class Panel1D(VisualizationPanel):
             Event to make the function linkable to a button
         """
         if len(self.visible_fields_list) > 0:
-            self.__data_to_update = True
-
             self.series.clear()
             self.__get_series(self.visible_fields_list)
-
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
+            self._schedule_update()
 
     def __get_series(self, key: str):
         """Get the serie or series associated to the given key
@@ -231,16 +231,11 @@ class Panel1D(VisualizationPanel):
                 fields.append(field_names)
 
         if fields != [] and set(fields) != set(self.visible_fields_list):
-            self.__new_data["field_names"] = fields
-
-            self.__data_to_update = True
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
-            else:
-                # A set field was probably called before opening the gui
-                self.visible_fields_list = fields
+            self._pending_updates["field_names"] = fields
+            self._schedule_update()
+        else:
+            # A set field was probably called before opening the gui
+            self.visible_fields_list = fields
 
     def provide_field_change_callback(self, callback: Callable):
         """Stores a function to call everytime the displayed field is changed.

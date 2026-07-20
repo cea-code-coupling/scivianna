@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from scivianna.agent.data_2d_worker import Data2DWorker
 
@@ -33,25 +34,16 @@ def data2d():
     return data2d
 
 @pytest.fixture
-def worker(data2d, request):
-    """Provide a Data2DWorker instance initialized with a copy of data2d."""
-    if request.node.get_closest_marker("default"):
-        from scivianna.data.data_2d_worker import Data2DWorker
-    elif request.node.get_closest_marker("agent"):
-        import os
-        os.environ["LLM_MODEL_ID"] = "PYTEST"
-        os.environ["LLM_API_BASE"] = "PYTEST"
-        os.environ["LLM_API_KEY"] = "PYTEST"
+def worker_cls(request):
+    if request.node.get_closest_marker("agent"):
         from scivianna.agent.data_2d_worker import Data2DWorker
     else:
-        import os
-        os.environ["LLM_MODEL_ID"] = "PYTEST"
-        os.environ["LLM_API_BASE"] = "PYTEST"
-        os.environ["LLM_API_KEY"] = "PYTEST"
-        from scivianna.agent.data_2d_worker import Data2DWorker
+        from scivianna.data.data_2d_worker import Data2DWorker
+    return Data2DWorker
 
-    worker = Data2DWorker(data2d)
-    return worker
+@pytest.fixture
+def worker(worker_cls, data2d):
+    return worker_cls(data2d)
 
 @pytest.mark.default
 def test_has_changed_no_change(worker: "Data2DWorker"):

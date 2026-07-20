@@ -5,6 +5,7 @@ dist
 
 # Python compiled bytecode files
 *.pyc
+__pycache__
 # Backup files created by editors
 *~
 # Image files (PNG, JPG)
@@ -35,3 +36,5 @@ utils/.venv_utils
 *.pkl
 # Compressed archive files
 *.zip
+
+vtk_work

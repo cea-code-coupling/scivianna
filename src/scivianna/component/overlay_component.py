@@ -6,6 +6,7 @@ import param
 
 class Overlay(ReactiveHTML):
     """This component allow displaying buttons over a figure only when the mouse is in the area."""
+    key = param.String("")
 
     figure = Child()
     """Figure : main component"""
@@ -20,7 +21,10 @@ class Overlay(ReactiveHTML):
     """Distance between the title and the left of the figure (increased when the axis are displayed)"""
 
     _template = """
-<div id="figure-container" style="position: relative; width: 100%; height: 100%;">
+<div id="figure-container" 
+     onmouseenter="${script('enter')}"
+     onmouseleave="${script('leave')}"
+     style="position: relative; width: 100%; height: 100%;">
   <!-- Figure -->
   <div id="figure" style="width: 100%; height: 100%;">
     ${figure}
@@ -41,6 +45,30 @@ class Overlay(ReactiveHTML):
 </div>
                 """
     """HTML code of the elemet display"""
+
+    # Script to listen to key events and update the `key` parameter accordingly
+    _scripts = {
+    "enter": """
+        state.inside = true;
+
+        if (!state.keyHandler) {
+            state.keyHandler = (event) => {
+                if (state.inside)
+                    data.key = event.key;
+            };
+            window.addEventListener("keydown", state.keyHandler);
+        }
+    """,
+
+    "leave": """
+        state.inside = false;
+    """,
+
+    "remove": """
+        if (state.keyHandler)
+            window.removeEventListener("keydown", state.keyHandler);
+    """
+}
 
     @pn.io.hold()
     def hide_buttons(self, *args, **kwargs):

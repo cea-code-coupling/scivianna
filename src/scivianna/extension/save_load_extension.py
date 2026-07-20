@@ -8,6 +8,7 @@ import panel_material_ui as pmui
 import scivianna
 from scivianna.component.server_file_browser import ServerFileBrowser
 from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
 
@@ -30,7 +31,7 @@ class SaveLoadExtension(Extension):
         panel : VisualizationPanel
             Panel to which the extension is attached
         """
-        super().__init__("Save/Load slave", "save", slave, plotter, panel)
+        super().__init__("Save/Load slave", get_icon("save"), slave, plotter, panel)
 
         self.description = """
 The save/load extension allows you to save a frame state for later fast loading.

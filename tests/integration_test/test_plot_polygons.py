@@ -7,13 +7,13 @@ from scivianna.constants import GEOMETRY, X, Y
 from scivianna.slave import ComputeSlave
 from scivianna.plotter_2d.api import plot_frame_in_axes
 
-from scivianna.interface.med_interface import MEDInterface
 
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_plot_polygons():
     """Simple test to make sure things happen before more tests are actually implemented
     """
+    from scivianna.interface.med_interface import MEDInterface
 
     # Field example
     slave = ComputeSlave(MEDInterface)
@@ -28,11 +28,9 @@ def test_plot_polygons():
         slave,
         u=X,
         v=Y,
-        u_min=-10.0,
-        u_max=10.0,
-        v_min=-10.0,
-        v_max=10.0,
-        w_value=0.0,
+        origin=(0.0, 0.0, 0.0),
+        size_u=20.0,
+        size_v=20.0,
         coloring_label="INTEGRATED_POWER",
         color_map="viridis",
         display_colorbar=True,

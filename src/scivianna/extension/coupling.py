@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import scivianna
 from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
 
@@ -44,7 +45,7 @@ class CouplingExtension(Extension, param.Parameterized):
         param.Parameterized.__init__(self, **params)
         super().__init__(
             "Time management",
-            "timer",
+            get_icon("timer"),
             slave,
             plotter,
             panel,
@@ -63,15 +64,15 @@ This extension allows you run coupling simulations.
             visible = False
         )
         self.display_last = pmui.Checkbox(
-            label = "Display last time",
+            label = "Display last time", 
             value = True,
             width = 280,
             visible = False
         )
         self.time_slider = pmui.DiscreteSlider(
-            label = "Time selector",
-            value = 0.,
-            options = [0.],
+            label = "Time selector", 
+            value = 0., 
+            options = [0.], 
             description="Time at which display the results",
             width = 260,
             show_value=False,

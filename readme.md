@@ -19,7 +19,7 @@ Scivianna offers several optional dependency sets for specific features:
 pip install scivianna[agent]
 
 # PyVista 3D visualization
-pip install scivianna[pyvista]
+pip install scivianna[3d]
 
 # Testing and development
 pip install scivianna[test]
@@ -34,20 +34,17 @@ pip install scivianna[coupling]
 
 ```python
 from scivianna.layout.gridstack import GridStackLayout
-from scivianna.panel.visualisation_panel import VisualizationPanel
+from scivianna.panel.panel2d import Panel2D
 from scivianna.slave import ComputeSlave
 
 # Create a slave with your data interface
 slave = ComputeSlave(YourInterface)
 
 # Create a visualization panel
-panel = VisualizationPanel(slave, name="My Panel")
-
-# Create a layout and add the panel
-layout = GridStackLayout({"panel1": panel})
+panel = Panel2D(slave, name="My Panel")
 
 # Display
-layout.show()
+panel.show()
 ```
 
 ### Running the Demonstrator
@@ -68,8 +65,11 @@ demo.show()
 
 ## Key Features
 
-### 1. Simultaneous 1D and 2D Visualization
-Visualize line plots and 2D geometries together in an integrated dashboard.
+### 1. Simultaneous 1D, 2D and 3D Visualization
+
+Visualize line plots, 2D geometries and vtk.js plots together in an integrated dashboard with inter-plot interactions.
+
+![Demonstration 2D - 3D interaction](gifs/3d_demo.gif)
 
 ### 2. Real-Time Code Coupling
 Connect to simulations in real-time using the C3PO coupling platform and ICOCO interface. The visualizer can receive field updates during simulation execution.
@@ -91,6 +91,40 @@ Extensions can be added to panels for additional functionality:
 - File loaders
 - Layout management
 - AI assistant integration
+
+## Panel interactions
+
+Visualisation panels can interact with one another based on a update event parameter. This UpdateEvent class provide the following options:
+
+-   CLIC
+-   MOUSE_POSITION_CHANGE
+-   MOUSE_CELL_CHANGE
+-   PERIODIC
+-   RANGE_CHANGE
+-   AXES_CHANGE
+
+The behavior impacts differently based on the current panel type.
+
+### Sending panel
+
+| Event                 | Panel1D |                       Panel2D                       |                          Panel3D                         |
+|-----------------------|:-------:|:---------------------------------------------------:|:--------------------------------------------------------:|
+| CLIC                  |    -    |       Sends mouse location and cell id on clic      |         Sends mouse location and cell id on clic         |
+| MOUSE_POSITION_CHANGE |    -    |    Sends mouse location and cell id on mouse move   |      Sends mouse location and cell id on mouse move      |
+| MOUSE_CELL_CHANGE     |    -    | Sends mouse location and cell id on hovered cell id |    Sends mouse location and cell id on hovered cell id   |
+| PERIODIC              |    -    |                          -                          |                             -                            |
+| RANGE_CHANGE          |    -    |       Sends frame center and size on zoom/drag      |                             -                            |
+| AXES_CHANGE           |    -    |            Sends new axes on axes change            | Sends clip plane origin and axes on translation/rotation |
+
+### Receiving panel
+| Event                 |              Panel1D              |                 Panel2D                 |               Panel3D               |
+|-----------------------|:---------------------------------:|:---------------------------------------:|:-----------------------------------:|
+| CLIC                  | Updates at mouse location/cell id | Updates moving origin to mouse location |    Moves clip plane to new origin   |
+| MOUSE_POSITION_CHANGE | Updates at mouse location/cell id | Updates moving origin to mouse location |    Moves clip plane to new origin   |
+| MOUSE_CELL_CHANGE     | Updates at mouse location/cell id | Updates moving origin to mouse location |    Moves clip plane to new origin   |
+| PERIODIC              |  Updates at last location/cell id |                    -                    |                  -                  |
+| RANGE_CHANGE          |                 -                 |       Updates for new origin/range      |    Moves clip plane to new origin   |
+| AXES_CHANGE           |                 -                 |       Updates for new origin/axes       | Moves clip plane to new origin/axes |
 
 ## Code Coupling with C3PO
 
@@ -133,8 +167,11 @@ The `scivianna_example` module provides ready-to-use examples showcasing Scivian
 | Example | Description |
 |---------|-------------|
 | **Europe Grid** | Plots an interactive Europe map displaying electricity production and consumption per country with weekly time-steps. Hover over countries to see values. |
-| **Medcoupling** | Demonstrates MED file format handling with three synchronized views. Click in one view to offset others at the click location. |
 | **Mandelbrot** | Computes the Mandelbrot set on a 2D grid and converts it to polygons for visualization. |
+| **Medcoupling** | Demonstrates MED file format handling with three synchronized views. Click in one view to offset others at the click location. (if medcoupling  available) |
+| **Coupling example** | Plot of a coupled simulation to see time dependant data (if salome-c3po installed) |
+| **3D example** | 3D plot interacting with a 2D plot. (if medcoupling and pyvista available) |
+
 
 ## License
 

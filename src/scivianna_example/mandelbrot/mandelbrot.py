@@ -191,11 +191,9 @@ class MandelBrotInterface(Geometry2DGrid):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -208,16 +206,12 @@ class MandelBrotInterface(Geometry2DGrid):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice corner
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
@@ -232,19 +226,21 @@ class MandelBrotInterface(Geometry2DGrid):
         bool
             Were the data updated compared to the past call
         """
-        print("Computing", 
-              u,
-                v,
-                u_min,
-                u_max,
-                v_min,
-                v_max,
-                w_value,
-                q_tasks,
-                options,
-                caller
-              )
-        last_frame_key = (*u, *v, u_min, u_max, v_min, v_max, w_value, options.get("u_steps", 50), options.get("v_steps", 50), options.get("Max iter", 10))
+        # Convert new-style params back to old-style for Mandelbrot computation
+        u_arr = np.array(u, dtype=float)
+        v_arr = np.array(v, dtype=float)
+        origin_arr = np.array(origin, dtype=float)
+
+        # Project origin (center) onto u and v to get center_u and center_v
+        center_u = float(np.dot(origin_arr, u_arr) / np.dot(u_arr, u_arr))
+        center_v = float(np.dot(origin_arr, v_arr) / np.dot(v_arr, v_arr))
+        # Convert center + size to min/max
+        u_min = center_u - size_u / 2
+        v_min = center_v - size_v / 2
+        u_max = center_u + size_u / 2
+        v_max = center_v + size_v / 2
+
+        last_frame_key = (*u, *v, u_min, u_max, v_min, v_max, options.get("u_steps", 50), options.get("v_steps", 50), options.get("Max iter", 10))
         if (caller in self.last_computed_frame) and (
             self.last_computed_frame[caller] == last_frame_key
         ) and (caller in self.data):
@@ -359,7 +355,7 @@ class MandelBrotInterface(Geometry2DGrid):
         return []
 
 
-def make_panel(_, return_slaves=False):
+def make_panel(_, return_slaves=False) -> Union[SplitLayout, Tuple[SplitLayout, List[ComputeSlave]]]:
     slave = ComputeSlave(MandelBrotInterface)
     panel = Panel2D(slave, name="Mandelbrot polygons")
     panel.update_event = UpdateEvent.RANGE_CHANGE

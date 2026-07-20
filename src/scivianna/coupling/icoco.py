@@ -306,6 +306,8 @@ class LayoutProblem(Problem):
         self._up_rate = 1
         self._up_skipped = 0
 
+        Path(self._working_directory).mkdir(exist_ok=True, parents=True)
+
         if self._working_directory is not None:
             if isinstance(self.layout, GridStackLayout):
                 save_gridstack_to_zip(self.layout, Path(self._working_directory) / "save_layout")

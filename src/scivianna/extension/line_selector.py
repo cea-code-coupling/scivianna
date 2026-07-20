@@ -3,6 +3,7 @@ import panel as pn
 import panel_material_ui as pmui
 
 from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
 from scivianna.plotter_1d.generic_plotter import Plotter1D
 
 if TYPE_CHECKING:
@@ -34,7 +35,7 @@ class LineSelector(Extension):
         ), "LineSelector extension is only compatible with Plotter1D"
         super().__init__(
             "Line selection",
-            "line_axis",
+            get_icon("line_axis"),
             slave,
             plotter,
             panel,

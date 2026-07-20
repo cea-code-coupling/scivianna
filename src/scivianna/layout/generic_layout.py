@@ -2,6 +2,7 @@ import functools
 from pathlib import Path
 from typing import Callable, Dict, List, Literal, Tuple, Type, Union
 
+import numpy as np
 import panel as pn
 import panel_material_ui as pmui
 
@@ -111,6 +112,7 @@ class GenericLayout:
             panel.provide_on_clic_callback(self.on_clic_callback)
             panel.provide_on_mouse_move_callback(self.mouse_move_callback)
             panel.provide_field_change_callback(self.field_change_callback)
+            panel.provide_on_axes_change_callback(self.on_axes_change_callback)
 
             # 2: assuming the two first are the button to open and close the tab
             self.button_columns[panel.panel_name] = [b[0] for b in panel.gui.buttons]
@@ -278,25 +280,23 @@ class GenericLayout:
     def stop_periodic_update(
         self,
     ):
-        """Stops the curdoc a periodic task (every 100 ms) to automatically update the plots."""
+        """Stops the periodic task that automatically updates the plots."""
         self.periodic_recompute_added = False
-        pn.state.curdoc.add_timeout_callback(self.recompute, 100)
 
     def add_periodic_update(
         self,
     ):
-        """Add to the curdoc a periodic task (every 100 ms) to automatically update the plots."""
+        """Starts a periodic task (every 100 ms) to automatically update the plots."""
         self.periodic_recompute_added = True
-        pn.state.curdoc.add_timeout_callback(self.recompute, 100)
 
     def recompute(
         self,
     ):
-        """Periodically called function that requests calling async_update_data at the end of current tick."""
+        """Schedules updates on marked panels via add_next_tick_callback."""
         if pn.state.curdoc is not None:
-            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
+            pn.state.curdoc.add_next_tick_callback(self._apply_updates)
         elif scivianna.utils._testing:
-            self.async_update_data()
+            self._apply_updates()
 
     def recompute_all(
         self,
@@ -313,15 +313,13 @@ class GenericLayout:
         self.layout_extension.on_coupling_update()
         self.recompute()
 
-
-    @pn.io.hold()
-    async def async_update_data(
-        self,
-    ):
-        """Request all panels to update themselves. This function being called between two ticks, it will not trigger collisions between automatic and user update requests."""
+    def _apply_updates(self):
+        """Apply pending updates on all marked panels.
+        Called on the UI thread to ensure thread safety.
+        """
         for panel in self.panels_to_recompute:
-            self.visualisation_panels[panel].recompute()
-            self.visualisation_panels[panel].async_update_data()
+            if panel in self.visualisation_panels:
+                self.visualisation_panels[panel].recompute()
         self.panels_to_recompute.clear()
 
         if self.periodic_recompute_added:
@@ -405,6 +403,32 @@ class GenericLayout:
         for panel in self.visualisation_panels.values():
             if panel.sync_field:
                 panel.set_field(new_field)
+
+    def on_axes_change_callback(self, u: np.ndarray, v: np.ndarray, origin: Tuple[float, float, float] = None, size_u: float = None, size_v: float = None):
+        """Function calling panels update when axes change.
+
+        Parameters
+        ----------
+        u : np.ndarray
+            u axis direction vector
+        v : np.ndarray
+            v axis direction vector
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center
+        size_u : float, optional
+            Size of the slice along the u axis
+        size_v : float, optional
+            Size of the slice along the v axis
+        """
+        for panel in self.visualisation_panels.values():
+            if panel.update_event == UpdateEvent.AXES_CHANGE or (isinstance(panel.update_event, list) and UpdateEvent.AXES_CHANGE in panel.update_event):
+                panel.set_coordinates(
+                    u=u, 
+                    v=v,
+                    origin=origin,
+                    size_u=size_u,
+                    size_v=size_v
+                )
 
     def add_time_widget(self,):
         """Adds a time management widget to the layout

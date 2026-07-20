@@ -15,23 +15,26 @@ if TYPE_CHECKING:
     from scivianna.plotter_2d.generic_plotter import Plotter2D
 
 import scivianna
-from scivianna.extension.extension import Extension
-import scivianna.icon
+
 from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface
-from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+from scivianna.data.data3d import Data3D
+
 from scivianna.enums import GeometryType, VisualizationMode
+from scivianna.extension.extension import Extension
+from scivianna.icon import get_icon
+from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface, Geometry3D
+from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 
 import medcoupling
 
 from scivianna.constants import MESH, GEOMETRY, CSV
 
+
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
     import time
 
-with open(Path(scivianna.icon.__file__).parent / "salome.svg", "r") as f:
-    icon_svg = f.read()
+icon_svg = get_icon("salome")
 
 
 class MEDCouplingExtension(Extension):
@@ -109,10 +112,9 @@ This extension allows defining the medcoupling field display parameters.
         self.u = (1, 0, 0)
         self.v = (0, 1, 0)
 
-        self.u_bounds = (0., 1.)
-        self.v_bounds = (0., 1.)
+        self.origin = (0.01, 0.01, 0.01)
 
-        self.w = 0.5
+        self.w = 0.01
 
         self.on_file_load(None, None)
 
@@ -153,7 +155,9 @@ This extension allows defining the medcoupling field display parameters.
         if self._restoring:
             return
         if self.slider_w.value != self.w:
-            self.panel.set_coordinates(w=self.slider_w.value)
+            origin = np.array(self.origin) + np.cross(self.u, self.v) * (self.slider_w.value - self.w)
+            print(f"Setting origin to {origin}")
+            self.panel.set_coordinates(origin=origin)
 
     @pn.io.hold()
     def update_slider_range(self,):
@@ -172,6 +176,7 @@ This extension allows defining the medcoupling field display parameters.
 
         w = np.cross(self.u, self.v).astype(float)
         w /= np.linalg.norm(w).astype(float)
+        self.w = np.dot(w, self.origin)
 
         min_vect = np.array([x_range[0], y_range[0], z_range[0]])
         max_vect = np.array([x_range[1], y_range[1], z_range[1]])
@@ -191,22 +196,19 @@ This extension allows defining the medcoupling field display parameters.
         if not self.slider_w.visible:
             self.slider_w.visible = True
 
-    def on_range_change(self, u_bounds: Tuple[float, float], v_bounds: Tuple[float, float], w_value: float):
-        """Saves the frame bounds on both coordinates and the normal coordinate
+    def on_range_change(self, origin: Tuple[float, float, float], size_u: float, size_v: float):
+        """Saves the frame bounds on both coordinates
 
         Parameters
         ----------
-        u_bounds : Tuple[float, float]
-            Bounds on the horizontal axis
-        v_bounds : Tuple[float, float]
-            Bounds on the vertical axis
-        w_value : float
-            Normal axis coordinate
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         """
-        self.u_bounds = u_bounds
-        self.v_bounds = v_bounds
-        self.w = w_value
-
+        self.origin = origin
         self.update_slider_range()
 
     def on_frame_change(self, u_vector, v_vector):
@@ -305,8 +307,7 @@ This extension allows defining the medcoupling field display parameters.
             "field_name": self.field_name,
             "iteration": self.iteration_input.value,
             "order": self.order_input.value,
-            "u_bounds": self.u_bounds,
-            "v_bounds": self.v_bounds,
+            "origin": self.origin,
             "w": self.w,
         }
 
@@ -337,11 +338,8 @@ This extension allows defining the medcoupling field display parameters.
         if info_dict.get("order") is not None:
             extension.order_input.value = info_dict["order"]
 
-        if info_dict.get("u_bounds") is not None:
-            extension.u_bounds = info_dict["u_bounds"]
-
-        if info_dict.get("v_bounds") is not None:
-            extension.v_bounds = info_dict["v_bounds"]
+        if info_dict.get("origin") is not None:
+            extension.origin = info_dict["origin"]
 
         if info_dict.get("w") is not None:
             extension.w = info_dict["w"]
@@ -351,7 +349,7 @@ This extension allows defining the medcoupling field display parameters.
         return extension
 
 
-class MEDInterface(Geometry2DPolygon, CouplingInterface):
+class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
     file_path: str
     """MEDCoupling .med file path saved to read MedCouplingFields later."""
 
@@ -403,6 +401,11 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         self.current_time = 0.0
         """Current simulation time"""
         self.templates = {}
+        
+        self.data3d: Dict[str, Data3D] = {}
+        """Dictionary with caller as key storing past computed data3D for each caller"""
+        self.last_computed_3d_time = -1
+        """Last computed 3D time"""
 
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
@@ -512,11 +515,9 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -529,16 +530,12 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
@@ -563,7 +560,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         current_mesh, mesh_time = self._get_mesh_at_time(time)
 
         if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*u, *v, w_value, mesh_time]
+            self.last_computed_frame.get(caller) == [*origin, *list(u), *list(v), mesh_time]
         ) and (caller in self.data):
             print("Skipping polygon computation.")
             return self.data[caller], False
@@ -581,22 +578,13 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
         elif mesh_dimension == 3:
             vec = [float(e) for e in np.cross(u, v)]
 
-            if any([u_min is None, v_min is None, w_value is None]):
-                print(f"u_min : {u_min}")
-                print(f"v_min : {v_min}")
-                print(f"w_value : {w_value}")
-
-            origin = [u_min * u[i] + v_min * v[i] + w_value * vec[i] for i in range(3)]
-
             try:
                 eps = 0.0
                 mesh: medcoupling.MEDCouplingUMesh = current_mesh.buildSlice3D(
                     origin, vec, eps
                 )[0]
 
-                cells_ids = current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-
-                cell_ids = [int(c) for c in cells_ids]
+                cell_ids = current_mesh.getCellIdsCrossingPlane(origin, vec, eps).toNumPyArray().astype(int)
 
             except Exception:
                 eps = 1e-7
@@ -605,9 +593,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                     origin, vec, eps
                 )[0]
 
-                cell_ids = [
-                    int(c) for c in current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-                ]
+                cell_ids = current_mesh.getCellIdsCrossingPlane(origin, vec, eps).toNumPyArray().astype(int)
 
             if len(cell_ids) != mesh.getNumberOfCells():
                 use_cell_id = False
@@ -624,7 +610,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
 
         polygons = []
 
-        vertices_coords = [list(c) for c in mesh.getCoords()]
+        vertices_coords = [list(c) for c in list(mesh.getCoords())]
         caller_cell_dict = {}
 
         for cell in range(cells_count):
@@ -648,14 +634,14 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                 PolygonElement(
                     exterior_polygon=PolygonCoords(x_coords=u_vals, y_coords=v_vals),
                     holes=[],
-                    cell_id=str(cell),
+                    cell_id=int(cell),
                 )
             )
 
             if not use_cell_id:
-                caller_cell_dict[cell] = current_mesh.getCellContainingPoint(
+                caller_cell_dict[int(cell)] = int(current_mesh.getCellContainingPoint(
                     [np.mean(x_vals), np.mean(y_vals), np.mean(z_vals)], eps=0.0
-                )
+                ))
 
         if use_cell_id:
             caller_cell_dict = dict(zip(list(range(cells_count)), cell_ids))
@@ -667,7 +653,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
                 f"Gathering cells id time: {time.time() - start_time} using cell id {use_cell_id}"
             )
 
-        self.last_computed_frame[caller] = [*u, *v, w_value, mesh_time]
+        self.last_computed_frame[caller] = [*origin, *list(u), *list(v), mesh_time]
         self.data[caller] = Data2D.from_polygon_list(polygons)
         return self.data[caller], True
 
@@ -707,7 +693,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             start_time = time.time()
 
         if value_label == MESH:
-            return {str(v): np.nan for v in cells}
+            return {int(v): np.nan for v in cells}
 
         if "Iteration" not in options:
             print(f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}")
@@ -719,7 +705,6 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
 
         # Get time from options, default to 0 if absent
         coupling_time = options.get("time", 0.0)
-        print(f"Coupling time : {coupling_time}")
 
         field_np_array = None
 
@@ -761,10 +746,13 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
 
         if field_np_array is not None:
             caller_cell_dict = self.cell_dicts.get(caller, dict(zip(cells, cells)))
-            indexes = np.array(list(caller_cell_dict.values())).astype(int)
-            values = field_np_array[indexes[np.array(cells).astype(int)].tolist()]
+            indexes = np.array(list(caller_cell_dict.values()))
+            
+            values = field_np_array[
+                indexes[np.array(cells)].tolist()
+            ]
 
-            value_dict = dict(zip(np.array(cells).astype(str), values))
+            value_dict = dict(zip(np.array(cells), values))
 
             if profile_time:
                 print(f"Get value dict time: {coupling_time.time() - start_time}")
@@ -772,7 +760,7 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
 
         # Allowing the field not to be defined at start, in which case we return only the mesh
         if "time" in options:
-            return {str(v): np.nan for v in cells}
+            return {int(v): np.nan for v in cells}
         
         raise NotImplementedError(
             f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
@@ -795,6 +783,308 @@ class MEDInterface(Geometry2DPolygon, CouplingInterface):
             return VisualizationMode.NONE
 
         return VisualizationMode.FROM_VALUE
+
+    def compute_3D_data(
+        self,
+        options: Dict[str, Any]
+    ) -> Tuple[Data3D, bool]:
+        """Returns a list of polygons that defines the geometry in a given frame
+
+        Parameters
+        ----------
+        options : Dict[str, Any]
+            Additional options for frame computation.
+
+        Returns
+        -------
+        Data3D
+            Geometry to display
+        bool
+            Were the polygons updated compared to the past call
+        """
+        import pyvista as pv
+        MC_TO_PV_CELLTYPE = {
+            medcoupling.NORM_POINT1: pv.CellType.VERTEX,
+            medcoupling.NORM_QUAD4: pv.CellType.QUAD,
+            medcoupling.NORM_TRI3: pv.CellType.TRIANGLE,
+            medcoupling.NORM_HEXA8: pv.CellType.HEXAHEDRON,
+            medcoupling.NORM_SEG2: pv.CellType.LINE,
+            medcoupling.NORM_SEG3: pv.CellType.QUADRATIC_EDGE,
+            medcoupling.NORM_TETRA4: pv.CellType.TETRA,
+            medcoupling.NORM_POLYGON: pv.CellType.POLYGON,
+            medcoupling.NORM_QPOLYG: pv.CellType.QUADRATIC_POLYGON,
+            medcoupling.NORM_POLYHED: pv.CellType.POLYHEDRON,
+        }
+
+        MC_DIM = {
+            medcoupling.NORM_POINT1: 0,
+            medcoupling.NORM_QUAD4: 2,
+            medcoupling.NORM_TRI3: 2,
+            medcoupling.NORM_HEXA8: 3,
+            medcoupling.NORM_SEG2: 1,
+            medcoupling.NORM_SEG3: 1,
+            medcoupling.NORM_TETRA4: 3,
+            medcoupling.NORM_POLYGON: 2,
+            medcoupling.NORM_QPOLYG: 3,  # only UnstructuredGrid
+            medcoupling.NORM_POLYHED: 3,
+        }
+
+        def _mc_ph_to_vtk_fast(connectivity: np.ndarray, offsets: np.ndarray) -> np.ndarray:
+            if len(connectivity) == 0:
+                return np.array([], dtype=int)
+            cell_length = offsets[1:] - offsets[:-1]
+            face_delims = connectivity == -1  # all face seperator
+            face_delims[offsets[:-1]] = True  # all cell seperator
+
+            face_offsets = np.r_[np.flatnonzero(face_delims), len(connectivity)]
+
+            # Compute number of face per cell
+            cell_delim_in_face_offsets = face_offsets.searchsorted(offsets)
+            num_faces = cell_delim_in_face_offsets[1:] - cell_delim_in_face_offsets[:-1]
+
+            # Replace -1 and cell_type with face length
+            face_length = face_offsets[1:] - face_offsets[:-1] - 1
+            connectivity[face_delims] = face_length
+
+            inds = np.empty((2 * len(cell_length),), dtype=int)
+            inds[::2] = offsets[:-1]
+            inds[1::2] = offsets[:-1]
+
+            vals = np.empty((2 * len(cell_length),), dtype=int)
+            vals[::2] = cell_length + 1
+            vals[1::2] = num_faces
+
+            return np.insert(connectivity, obj=inds, values=vals)
+
+
+        def _to_unstructured(
+            mesh: medcoupling.MEDCouplingUMesh, coords: np.ndarray
+        ) -> pv.UnstructuredGrid:
+            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
+            cell_length = offsets[1:] - offsets[:-1] - 1
+
+            cell_types_idx = offsets[:-1]
+            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
+            mc_cell_types = np.array(connectivity[cell_types_idx])
+
+            # Split off polyhedrons
+            # NOTE: polyhedrons should be higher types id
+            # TODO: I should check that and isolate the POLYHED case...
+            ind_l = np.searchsorted(mc_cell_types, medcoupling.NORM_POLYHED, side="left")
+            ind_r = np.searchsorted(mc_cell_types, medcoupling.NORM_POLYHED, side="right")
+            cell_types = np.array(mc_cell_types)
+
+            # Non polyhedron case
+            types_idx = dict()
+            for mc_type in MC_TO_PV_CELLTYPE:
+                types_idx[mc_type] = cell_types == mc_type
+            for mc_type, pv_type in MC_TO_PV_CELLTYPE.items():
+                cell_types[types_idx[mc_type]] = pv_type
+
+            connectivity_npl = connectivity[: offsets[ind_l]]
+            connectivity_npl[cell_types_idx[:ind_l]] = cell_length[:ind_l]
+            connectivity_npr = connectivity[offsets[ind_r] :]
+            connectivity_npr[cell_types_idx[ind_r:]] = cell_length[ind_r:]
+
+            # Polyhedron case
+            connectivity_ph = _mc_ph_to_vtk_fast(
+                connectivity[offsets[ind_l] : offsets[ind_r]],
+                offsets=offsets[ind_l : ind_r + 1] - offsets[ind_l],
+            )
+
+            # Combination
+            connectivity = np.r_[connectivity_npl, connectivity_npr, connectivity_ph]
+
+            pv_mesh = pv.UnstructuredGrid(connectivity, cell_types, coords)
+            return pv_mesh
+
+
+        def _to_polydata(mesh: medcoupling.MEDCouplingUMesh, coords: np.ndarray) -> pv.PolyData:
+            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
+            cell_length = offsets[1:] - offsets[:-1] - 1
+            cell_types_idx = offsets[:-1]
+
+            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
+            any_type = connectivity[0]
+            connectivity[cell_types_idx] = cell_length
+
+            if MC_DIM[any_type] == 0:
+                return pv.PolyData(coords, verts=connectivity)
+            if MC_DIM[any_type] == 1:
+                return pv.PolyData(coords, lines=connectivity)
+            if MC_DIM[any_type] == 2:
+                return pv.PolyData(coords, faces=connectivity)
+            else:
+                raise Exception(f"{any_type} if not in known types: {MC_DIM=}")
+
+
+        def to_pv(
+            mesh: medcoupling.MEDCouplingUMesh | medcoupling.MEDCouplingFieldDouble,
+        ) -> pv.UnstructuredGrid | pv.PolyData:
+            if isinstance(mesh, medcoupling.MEDCouplingFieldDouble):
+                field: medcoupling.MEDCouplingFieldDouble = mesh
+                mesh = mesh.getMesh()
+            else:
+                field = None
+                fname = None
+
+            # Prepare mesh : make copy and sort cell types
+            mesh = mesh.deepCopyConnectivityOnly()
+            permut = mesh.sortCellsInMEDFileFrmt()
+
+            coords = np.array(mesh.getCoords().toNumPyArray())
+            coords = np.c_[coords, np.zeros((coords.shape[0], 3 - coords.shape[1]))]
+
+            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
+            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
+            last_cell_type = connectivity[offsets[-2]]
+            max_type = MC_DIM[last_cell_type]
+
+            if max_type == 3:
+                pv_mesh = _to_unstructured(mesh, coords)
+            elif max_type < 3:
+                pv_mesh = _to_polydata(mesh, coords)
+            else:
+                raise Exception(f"The coords shape is not valid: {coords.shape=}")
+
+            if field is not None:
+                fname = mesh.getName()
+                farr = field.getArray().toNumPyArray()
+                if fname is None or fname == "":
+                    fname = "Field"
+                if field.getTypeOfField() == medcoupling.ON_CELLS:
+                    permut = permut.toNumPyArray()
+                    p = np.empty_like(permut)
+                    p[permut] = np.arange(permut.size)
+                    pv_mesh.cell_data[fname] = farr[p]
+                elif field.getTypeOfField() == medcoupling.ON_NODES:
+                    pv_mesh.point_data[fname] = farr
+                else:
+                    raise NotImplementedError(f"{field.getTypeOfField()=} is not supported.")
+
+            return pv_mesh
+
+            
+        # Get time from options, default to 0 if absent
+        time = options.get("time", 0.0)
+
+        if len(self.mesh) == 0:
+            self.data3d = Data3D.from_vtk(None)
+            return self.data3d, True
+
+        current_mesh, _ = self._get_mesh_at_time(time)
+
+        if time == self.last_computed_3d_time and self.data3d is not None:
+            print("Skipping 3D mesh computation.")
+            return self.data3d, False
+
+        if profile_time:
+            start_time = time.time()
+
+        self.last_computed_3d_time = time
+        pv_mesh = to_pv(current_mesh)
+        pv_mesh.cell_data["cell_id"] = list(range(pv_mesh.GetNumberOfCells()))
+
+        self.data3d = Data3D.from_vtk(pv_mesh)
+
+        if profile_time:
+            print(f"Compute 3D mesh time {time.time() - start_time}")
+
+        return self.data3d, True
+
+    def get_3d_value_dict(
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+        """
+        if profile_time:
+            start_time = time.time()
+
+        if value_label == MESH:
+            return {int(v): np.nan for v in cells}
+
+        if "Iteration" not in options:
+            print(f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}")
+            options["Iteration"] = self.fields_iterations[value_label][0][0]
+
+        if "Order" not in options:
+            print(f"Order not found in medcoupling option, setting {self.fields_iterations[value_label][0][1]}")
+            options["Order"] = self.fields_iterations[value_label][0][1]
+
+        # Get time from options, default to 0 if absent
+        coupling_time = options.get("time", 0.0)
+
+        field_np_array = None
+
+        # Array already loaded in fields
+        if value_label in self.fields and len(self.fields[value_label]) > 0:
+            # Get field data at specified time
+            field_np_array, _ = self._get_field_at_time(value_label, coupling_time)
+
+        # Loading it if available
+        else:
+            print(f"Reading MEDCouplingFieldDouble in {self.file_path}")
+            if value_label in self.fields_iterations:
+                # if "Iteration" in options and "Order" in options and (options["Iteration"], options["Order"]) in self.fields_iterations[value_label]:
+                if True:
+                    field_name = value_label.split("@")[0]
+                    field: medcoupling.MEDCouplingFieldDouble = medcoupling.ReadField(
+                        medcoupling.ON_CELLS,
+                        self.file_path,
+                        self.meshnames[0],
+                        0,
+                        field_name,
+                        options["Iteration"],
+                        options["Order"],
+                    )
+                    field_array: medcoupling.DataArrayDouble = field.getArray()
+                    field_np_array: np.ndarray = field_array.toNumPyArray()
+
+                    if "@" in value_label:
+                        components: List[str] = field_array.getInfoOnComponents()
+                        field_np_array = field_np_array[
+                            :, components.index(value_label.split("@")[1])
+                        ]
+                    else:
+                        field_np_array = field_np_array
+
+            if field_np_array is not None:
+                # Store as list of (array, time) tuples
+                self.fields[value_label] = [(field_np_array, coupling_time)]
+
+        if field_np_array is not None:
+            values = field_np_array[cells.tolist()]
+
+            value_dict = dict(zip(np.array(cells).astype(int), values.astype(np.float32)))
+
+            if profile_time:
+                print(f"Get value dict time: {coupling_time.time() - start_time}")
+
+            return value_dict
+
+        # Allowing the field not to be defined at start, in which case we return only the mesh
+        if "time" in options:
+            return {int(v): np.nan for v in cells}
+        
+        raise NotImplementedError(
+            f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
+        )
 
     def get_file_input_list(self) -> List[Tuple[str, str]]:
         """Returns a list of file label and its description for the GUI

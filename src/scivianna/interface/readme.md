@@ -48,7 +48,7 @@ Extends GenericInterface with 2D geometry capabilities:
 
 | Function | Description |
 |----------|-------------|
-| `compute_2D_data(u, v, u_min, u_max, v_min, v_max, w_value, q_tasks, options, caller)` | Returns 2D geometry polygons for a given frame |
+| `compute_2D_data(u, v, origin, size_u, size_v, w_value, q_tasks, options, caller)` | Returns 2D geometry polygons for a given frame |
 | `get_value_dict(value_label, cells, options, caller)` | Returns cell name to field value mapping |
 
 ### Geometry2DPolygon Interface

@@ -87,7 +87,7 @@ class GridStackLayout(GenericLayout):
             Allow resize frames check box
         """
         self.allow_resize_box = pn.widgets.Checkbox(
-            name="Allow frames resize", value=False
+            label="Allow frames resize", value=False
         )
 
         def enable_disable_resize(event):

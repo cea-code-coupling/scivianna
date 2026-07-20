@@ -18,6 +18,7 @@ Subpackages
    scivianna.panel
    scivianna.plotter_1d
    scivianna.plotter_2d
+   scivianna.plotter_3d
    scivianna.utils
 
 Submodules

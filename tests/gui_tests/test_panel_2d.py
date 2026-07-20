@@ -179,7 +179,7 @@ def test_set_coordinates_v(panel_fixture):
         assert np.allclose(source_coords["v1"][0], 1.0), f"Expected initial v1=1.0, got {source_coords['v1'][0]}"
         assert np.allclose(source_coords["v2"][0], 0.0), f"Expected initial v2=0.0, got {source_coords['v2'][0]}"
         xs, ys = get_polygons(panel)
-        assert np.array(ys).flatten().mean() == 6.5 # 0.5 * 10 + 1 * 1 + 0.5
+        assert np.allclose(np.array(ys).flatten().mean(), 1.6), f"Expected initial 1.6, got {np.array(ys).flatten().mean()}" # 0.01 * 10 + 1 * 1 + .5
 
         # Set a new V direction
         new_v = [1.0, 0.0, 0.0]
@@ -195,7 +195,7 @@ def test_set_coordinates_v(panel_fixture):
         # Verify polygons are in the plotter
         xs, ys = get_polygons(panel)
         assert len(xs) > 0, "Expected polygons in the plotter"
-        assert np.array(ys).flatten().mean() == 5.5 # 0.5 * 10 + 0 * 1 + 0.5
+        assert np.allclose(np.array(ys).flatten().mean(), .6), f"Expected initial .1, got {np.array(ys).flatten().mean()}"
     except Exception as e:
         raise e
     finally:
@@ -204,24 +204,23 @@ def test_set_coordinates_v(panel_fixture):
 
 @pytest.mark.default
 def test_set_coordinates_ranges(panel_fixture):
-    """Test setting coordinate ranges (u_min, u_max, v_min, v_max) and verifying plotter."""
+    """Test setting coordinate ranges (origin, size_u, size_v) and verifying plotter."""
     panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
-        # Initial ranges - use tuple() to handle both list and tuple after deserialization
-        assert tuple(panel.u_range) == (0., 1.), f"Expected initial u_range (0., 1.), got {panel.u_range}"
-        assert tuple(panel.v_range) == (0., 1.), f"Expected initial v_range (0., 1.), got {panel.v_range}"
+        # Initial origin and sizes - default origin is computed from data bounds
+        # The test interface creates polygons at z=0, so origin defaults to (0.01, 0.01, 0.01)
+        initial_origin = tuple(panel.origin)
+        assert np.allclose(initial_origin, (0.01, 0.01, 0.01)), f"Expected initial origin (0.01, 0.01, 0.01), got {initial_origin}"
+        assert panel.size_u == 1., f"Expected initial size_u 1., got {panel.size_u}"
+        assert panel.size_v == 1., f"Expected initial size_v 1., got {panel.size_v}"
 
-        # Verify initial plotter coordinate ranges
-        source_coords = panel.plotter.source_coordinates.data
-        assert source_coords["u_min"][0] == 0, f"Expected initial u_min=0, got {source_coords['u_min'][0]}"
-        assert source_coords["v_min"][0] == 0, f"Expected initial v_min=0, got {source_coords['v_min'][0]}"
-
-        # Set new ranges
-        panel.set_coordinates(u_min=0.5, u_max=2.0, v_min=-1.0, v_max=3.0)
-        assert tuple(panel.u_range) == (0.5, 2.0), f"Expected u_range (0.5, 2.0), got {panel.u_range}"
-        assert tuple(panel.v_range) == (-1.0, 3.0), f"Expected v_range (-1.0, 3.0), got {panel.v_range}"
+        # Set new ranges (new signature: origin, size_u, size_v)
+        panel.set_coordinates(origin=[0.5, -1.0, 0.0], size_u=5.0, size_v=4.0)
+        assert np.allclose(tuple(panel.origin), (0.5, -1.0, 0.)), f"Expected origin (0.5, -1.0, 0.), got {panel.origin}"
+        assert panel.size_u == 5.0, f"Expected size_u 5.0, got {panel.size_u}"
+        assert panel.size_v == 4.0, f"Expected size_v 4.0, got {panel.size_v}"
 
         # Verify polygons exist and have expected cell IDs (test interface creates cells 0, 1, 2)
         cell_ids = get_cell_ids(panel)
@@ -233,31 +232,24 @@ def test_set_coordinates_ranges(panel_fixture):
 
 
 @pytest.mark.default
-def test_set_coordinates_w(panel_fixture):
-    """Test setting w value (normal axis location) and verifying plotter."""
+def test_set_coordinates_size(panel_fixture):
+    """Test setting size_u and size_v (plane dimensions) and verifying plotter."""
     panel, extensions, cleanup = panel_fixture
     slave = panel.slave
 
     try:
-        # Initial w_value should be 0.5
-        assert panel.w_value == 0.5, f"Expected initial w_value 0.5, got {panel.w_value}"
+        # Initial size_u and size_v should be 1.0
+        assert panel.size_u == 1.0, f"Expected initial size_u 1.0, got {panel.size_u}"
+        assert panel.size_v == 1.0, f"Expected initial size_v 1.0, got {panel.size_v}"
 
-        # Verify initial plotter w value
-        source_coords = panel.plotter.source_coordinates.data
-        assert np.allclose(source_coords["w"][0], 0.5), f"Expected initial w=0.5, got {source_coords['w'][0]}"
+        # Set new size values
+        panel.set_coordinates(size_u=5.0, size_v=3.0)
+        assert panel.size_u == 5.0, f"Expected size_u 5.0, got {panel.size_u}"
+        assert panel.size_v == 3.0, f"Expected size_v 3.0, got {panel.size_v}"
 
-        # Set a new w value
-        panel.set_coordinates(w=0.8)
-        assert panel.w_value == 0.8, f"Expected w_value 0.8, got {panel.w_value}"
-
-        # Verify plotter w value was updated
-        source_coords = panel.plotter.source_coordinates.data
-        assert np.allclose(source_coords["w"][0], 0.8), f"Expected w=0.8 after update, got {source_coords['w'][0]}"
-
-        # Verify w vector components (cross product of X and Y = Z = (0, 0, 1))
-        assert np.allclose(source_coords["w0"][0], 0.0), f"Expected w0=0.0, got {source_coords['w0'][0]}"
-        assert np.allclose(source_coords["w1"][0], 0.0), f"Expected w1=0.0, got {source_coords['w1'][0]}"
-        assert np.allclose(source_coords["w2"][0], 1.0), f"Expected w2=1.0, got {source_coords['w2'][0]}"
+        # Verify that the origin remains unchanged
+        initial_origin = tuple(panel.origin)
+        assert np.allclose(initial_origin, (0.01, 0.01, 0.01)), f"Expected origin unchanged, got {panel.origin}"
     except Exception as e:
         raise e
     finally:
@@ -283,13 +275,17 @@ def test_set_coordinates_type_errors(panel_fixture):
         with pytest.raises(ValueError):
             panel.set_coordinates(v=[1.0, 2.0])
 
-        # Test invalid u_min type
+        # Test invalid origin type
         with pytest.raises(TypeError):
-            panel.set_coordinates(u_min="invalid")
+            panel.set_coordinates(origin="invalid")
 
-        # Test invalid w type
+        # Test invalid size_u type
         with pytest.raises(TypeError):
-            panel.set_coordinates(w="invalid")
+            panel.set_coordinates(size_u="invalid")
+
+        # Test invalid size_v type
+        with pytest.raises(TypeError):
+            panel.set_coordinates(size_v="invalid")
     except Exception as e:
         raise e
     finally:
@@ -309,34 +305,30 @@ def test_set_coordinates_combined(panel_fixture):
         panel.set_coordinates(
             u=new_u,
             v=new_v,
-            u_min=0.0,
-            u_max=5.0,
-            v_min=-2.0,
-            v_max=3.0,
-            w=0.7
+            origin=[0.0, -2.0, 0.0],
+            size_u=5.0,
+            size_v=5.0,
         )
 
         assert np.allclose(panel.u, new_u), f"Expected U to be {new_u}, got {panel.u}"
         assert np.allclose(panel.v, new_v), f"Expected V to be {new_v}, got {panel.v}"
-        assert tuple(panel.u_range) == (0.0, 5.0), f"Expected u_range (0.0, 5.0), got {panel.u_range}"
-        assert tuple(panel.v_range) == (-2.0, 3.0), f"Expected v_range (-2.0, 3.0), got {panel.v_range}"
-        assert panel.w_value == 0.7, f"Expected w_value 0.7, got {panel.w_value}"
+        assert np.allclose(tuple(panel.origin), (0.0, -2.0, 0.)), f"Expected origin (0.0, -2.0, 0.), got {panel.origin}"
+        assert panel.size_u == 5.0, f"Expected size_u 5.0, got {panel.size_u}"
+        assert panel.size_v == 5.0, f"Expected size_v 5.0, got {panel.size_v}"
 
         # Verify plotter axes source has all updated values
-        source_coords = panel.plotter.source_coordinates.data
+        # Note: The plotter now uses the new parameter scheme (u, v, origin, size_u, size_v)
+        # instead of the old scheme (u, v, w, umin, umax)
         
         # U vector
-        assert np.allclose(source_coords["u0"][0], 0.0), f"Expected u0=0.0, got {source_coords['u0'][0]}"
-        assert np.allclose(source_coords["u1"][0], 1.0), f"Expected u1=1.0, got {source_coords['u1'][0]}"
-        assert np.allclose(source_coords["u2"][0], 0.0), f"Expected u2=0.0, got {source_coords['u2'][0]}"
+        assert np.allclose(panel.plotter.source_coordinates.data["u0"][0], 0.0), f"Expected u0=0.0"
+        assert np.allclose(panel.plotter.source_coordinates.data["u1"][0], 1.0), f"Expected u1=1.0"
+        assert np.allclose(panel.plotter.source_coordinates.data["u2"][0], 0.0), f"Expected u2=0.0"
         
-        # V vector (note: cross product of new_u=[0,1,0] and new_v=[1,0,0] = [0,0,-1])
-        assert np.allclose(source_coords["v0"][0], 1.0), f"Expected v0=1.0, got {source_coords['v0'][0]}"
-        assert np.allclose(source_coords["v1"][0], 0.0), f"Expected v1=0.0, got {source_coords['v1'][0]}"
-        assert np.allclose(source_coords["v2"][0], 0.0), f"Expected v2=0.0, got {source_coords['v2'][0]}"
-        
-        # W (cross product of u x v = [0, -1, 0])
-        assert np.allclose(source_coords["w"][0], 0.7), f"Expected w=0.7, got {source_coords['w'][0]}"
+        # V vector
+        assert np.allclose(panel.plotter.source_coordinates.data["v0"][0], 1.0), f"Expected v0=1.0"
+        assert np.allclose(panel.plotter.source_coordinates.data["v1"][0], 0.0), f"Expected v1=0.0"
+        assert np.allclose(panel.plotter.source_coordinates.data["v2"][0], 0.0), f"Expected v2=0.0"
 
         # Verify polygons exist in the plotter
         xs, ys = get_polygons(panel)

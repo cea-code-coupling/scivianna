@@ -41,9 +41,9 @@ class FieldChangeEvent:
 @dataclass
 class RangeChangeEvent:
     """Event recorded when a range change callback is triggered."""
-    u_bounds: Tuple[float, float]
-    v_bounds: Tuple[float, float]
-    w_value: float
+    origin: Tuple[float, float, float]
+    size_u: float
+    size_v: float
 
 
 @dataclass
@@ -143,13 +143,13 @@ This extension allows defining the medcoupling field display parameters.
 
     def on_range_change(
         self,
-        u_bounds: Tuple[float, float],
-        v_bounds: Tuple[float, float],
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
     ):
         """Override to track range change events."""
         self._range_change_history.append(RangeChangeEvent(
-            u_bounds=u_bounds, v_bounds=v_bounds, w_value=w_value
+            origin=origin, size_u=size_u, size_v=size_v
         ))
         self._on_range_change_called = True
 
@@ -224,11 +224,9 @@ class DummyTestInterface(Geometry2DPolygon):
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        u_min: float,
-        u_max: float,
-        v_min: float,
-        v_max: float,
-        w_value: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -241,16 +239,12 @@ class DummyTestInterface(Geometry2DPolygon):
             Horizontal coordinate director vector
         v : Tuple[float, float, float]
             Vertical coordinate director vector
-        u_min : float
-            Lower bound value along the u axis
-        u_max : float
-            Upper bound value along the u axis
-        v_min : float
-            Lower bound value along the v axis
-        v_max : float
-            Upper bound value along the v axis
-        w_value : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice corner
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
@@ -265,14 +259,15 @@ class DummyTestInterface(Geometry2DPolygon):
         bool
             Were the polygons updated compared to the past call
         """
-        last_frame_key = (*u, *v, w_value)
+        last_frame_key = (tuple(u), tuple(v), *origin, size_u, size_v)
         if (caller in self.last_computed_frame) and (
             self.last_computed_frame[caller] == last_frame_key
         ) and (caller in self.data):
             print("Skipping polygon computation.")
             return self.data[caller], False
 
-        v_offset = v[1] + 10*w_value
+        # origin is a 3D point, use z component for offset
+        v_offset = v[1] + 10*origin[2]
         polygons = [
             PolygonElement(
                 exterior_polygon = PolygonCoords(

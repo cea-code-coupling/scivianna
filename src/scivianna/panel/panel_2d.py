@@ -11,19 +11,7 @@ from scivianna.extension.file_loader import FileLoader
 from scivianna.extension.axes import Axes
 from scivianna.panel.visualisation_panel import VisualizationPanel
 
-try:
-    from scivianna.extension.ai_assistant import AIAssistant
-    has_agent = True
-
-except ImportError as e:
-    has_agent = False
-
-    print(f"Warning : Agent not loaded, received error : {e}")
-
-except ValueError as e:
-    has_agent = False
-    print(f"Warning : Agent not loaded, received error : {e}")
-
+from scivianna.extension.ai_assistant import AIAssistant
 
 from scivianna.data.data2d import Data2D
 from scivianna.interface.generic_interface import Geometry2D
@@ -35,7 +23,7 @@ from scivianna.utils.polygon_sorter import PolygonSorter
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.constants import MESH, X, Y
+from scivianna.constants import MESH, X, Y, Z
 import scivianna.utils
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
@@ -44,9 +32,7 @@ if profile_time:
 
 pn.config.inline = True
 
-default_extensions = [FileLoader, FieldSelector, Axes]
-if has_agent:
-    default_extensions.append(AIAssistant)
+default_extensions = [FileLoader, FieldSelector, Axes, AIAssistant]
 
 
 class Panel2D(VisualizationPanel):
@@ -71,9 +57,9 @@ class Panel2D(VisualizationPanel):
         colormap: str = "BuRd",
         u: Tuple[float, float, float] = X,
         v: Tuple[float, float, float] = Y,
-        u_range: Tuple[float, float] = (0., 1.),
-        v_range: Tuple[float, float] = (0., 1.),
-        w_value: float = 0.5,
+        origin: Tuple[float, float, float] = None,
+        size_u: float = 1.0,
+        size_v: float = 1.0,
     ):
         """Visualization panel constructor
 
@@ -97,29 +83,38 @@ class Panel2D(VisualizationPanel):
             Direction vector for the horizontal axis, defaults to X.
         v : Tuple[float, float, float]
             Direction vector for the vertical axis, defaults to Y.
-        u_range : Tuple[float, float]
-            Range (min, max) for the horizontal axis, defaults to (0., 1.).
-        v_range : Tuple[float, float]
-            Range (min, max) for the vertical axis, defaults to (0., 1.).
-        w_value : float
-            Value along the u ^ v (normal) axis, defaults to 0.5.
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis, defaults to 1.0.
+        size_v : float
+            Size of the slice along the v axis, defaults to 1.0.
         """
         code_interface: Type[Geometry2D] = slave.code_interface
         assert issubclass(
             code_interface, Geometry2D
         ), f"A VisualizationPanel can only be given a Geometry2D interface slave, received {code_interface}."
 
+        self.__data_to_update: bool = False
+        self.__new_data = {}
+
         #
         #   Initializing attributes
         #
         self.update_polygons = False
-        """Need to update the data at the next async call"""
+        """Need to update the polygons geometry (vs just colors)"""
         self.display_polygons = display_polygons
 
         self.polygon_sorter = PolygonSorter()
 
         self.field_change_callback: Callable = None
         """Function to call when the field is changed"""
+
+        self.on_axes_change_callback: Callable = None
+        """Function to call when the axes are changed"""
+
+        self._pending_updates: Dict = {}
+        """Pending visual updates to apply on next tick"""
 
         #
         #   Plotter creation
@@ -134,9 +129,12 @@ class Panel2D(VisualizationPanel):
         self.u = u
         self.v = v
 
-        self.u_range = u_range
-        self.v_range = v_range
-        self.w_value = w_value
+        # Store coordinates in new style: origin, size_u, size_v
+        # origin must be provided as a physical 3D position
+        self.origin = origin if origin is not None else [0.01, 0.01, 0.01]
+        
+        self.size_u = size_u
+        self.size_v = size_v
 
         #
         #   First plot on XY basic range
@@ -146,21 +144,21 @@ class Panel2D(VisualizationPanel):
             extension.on_field_change(displayed_field)
             extension.on_frame_change(u, v)
             extension.on_range_change(
-                u_range,
-                v_range,
-                w_value
+                self.origin,
+                self.size_u,
+                self.size_v
             )
 
         self.colormap = colormap
 
         if data is None:
-            data_ = self.compute_fn(self.u, self.v, self.u_range[0], self.v_range[0], self.u_range[1], self.v_range[1], self.w_value)
+            data_ = self.compute_fn(self.u, self.v, self.origin, self.size_u, self.size_v)
         else:
             print(f"Panel2D {self.panel_name} initialized initial Data2D object, restoring {len(data.cell_ids)} cells.")
             data_ = data
             self.update_polygons = True
         
-        self.plotter.set_axes(self.u, self.v, self.w_value)
+        self.plotter.set_axes(self.u, self.v, self.origin)
         self.plotter.plot_2d_frame(data_)
 
         self.current_data = data_
@@ -181,74 +179,163 @@ class Panel2D(VisualizationPanel):
         # Attach the range update callback to the event
         self.plotter._set_callback_on_range_update(self.ranges_callback)
 
-        self.__data_to_update: bool = False
-        self.__new_data = {}
-
         try:
             pn.state.on_session_created(self.recompute)
         except Exception:
             pass
 
-    @pn.io.hold()
-    def async_update_data(
-        self,
-    ):
-        """Update the figures and buttons based on what was added in self.__new_data. This function is called between two servers ticks to prevent multi-users collisions."""
-        if self.__data_to_update:
-            if profile_time:
-                st = time.time()
+        self.figure.param.watch(self.key_pressed, "key")
 
-            if "color_mapper" in self.__new_data:
-                self.plotter.update_colorbar(
-                    True,
-                    (
-                        self.__new_data["color_mapper"]["new_low"],
-                        self.__new_data["color_mapper"]["new_high"],
-                    ),
+    def key_pressed(self, *events):
+        """Callback function triggered when a key is pressed in the overlay component.
+        It updates the `key` parameter of the panel with the last key pressed.
+        If the key is 'X', 'Y', or 'Z', it changes the axes accordingly. If the key is 'F', it flips the u axis.
+
+        Parameters
+        ----------
+        *events : tuple
+            Event information, not used in this function.
+        """
+        if self.figure.key:
+            if self.figure.key == "x":
+                print(f"Key pressed: X - Changing axes to XZ for panel {self.panel_name}")
+                if np.array_equal(self.u, Y) and np.array_equal(self.v, Z):
+                    self.set_coordinates(
+                        u=(0, -1, 0),
+                        v=Z,
+                    )
+                else:
+                    self.set_coordinates(
+                        u=Y,
+                        v=Z,
+                    )
+            if self.figure.key == "y":
+                print(f"Key pressed: Y - Changing axes to YZ for panel {self.panel_name}")
+                if np.array_equal(self.u, X) and np.array_equal(self.v, Z):
+                    self.set_coordinates(
+                        u=(-1, 0, 0),
+                        v=Z,
+                    )
+                else:
+                    self.set_coordinates(
+                        u=X,
+                        v=Z,
+                    )
+            if self.figure.key == "z":
+                print(f"Key pressed: Z - Setting axes to X and Y for panel {self.panel_name}")
+                if np.array_equal(self.u, X) and np.array_equal(self.v, Y):
+                    self.set_coordinates(
+                        u=(-1, 0, 0),
+                        v=Y,
+                    )
+                else:
+                    self.set_coordinates(
+                        u=X,
+                        v=Y,
+                    )
+            if self.figure.key == "f":
+                print(f"Key pressed: F - Flipping u axis for panel {self.panel_name}")
+                self.set_coordinates(
+                    u=[-e for e in self.u],
+                    v=self.v,
                 )
-                self.plotter.set_color_map(self.colormap)
-            if "data" in self.__new_data:
-                self.current_data: Data2D = self.__new_data["data"]
+            self.figure.key = ""  # Reset the key after processing
 
-                if not self.update_polygons:
-                    self.plotter.update_colors(self.current_data)
-                else:
-                    self.plotter.update_2d_frame(self.current_data)
+    @pn.io.hold()
+    def _apply_update(self):
+        """Apply pending visual updates to the plotter. 
+        Called via add_next_tick_callback to ensure UI thread safety.
+        """
+        if profile_time:
+            st = time.time()
 
-            self.__data_to_update = False
+        # Update colorbar if needed
+        if self._pending_updates.get("colorbar"):
+            cb = self._pending_updates["colorbar"]
+            self.plotter.update_colorbar(True, (cb["new_low"], cb["new_high"]))
+            self.plotter.set_color_map(self.colormap)
 
-            if profile_time:
-                print(f"Async function : {time.time() - st}")
+        # Update data visualization if needed
+        if self._pending_updates.get("data"):
+            shapes_matching = self.current_data.cell_ids.shape == self._pending_updates["data"].cell_ids.shape
+            self.current_data = self._pending_updates["data"]
+            if self.update_polygons or not shapes_matching:
+                self.plotter.update_2d_frame(self.current_data)
+            else:
+                self.plotter.update_colors(self.current_data)
 
-        if "field_name" in self.__new_data:
-            if self.marked_to_recompute:
-                self.marked_to_recompute = False
-                self.async_update_data()
-        else:
-            # If marked to recompute, a safe change was applied on a plot parameter, a recompute is requested async
-            if self.marked_to_recompute:
-                if not scivianna.utils._testing:
-                    self.recompute()
-                    self.marked_to_recompute = False
-                    self.async_update_data()
-                else:
-                    self.marked_to_recompute = False
-                    self.recompute()
+        # Clear pending updates
+        self._pending_updates = {}
+        self.marked_to_recompute = False
 
-        # this is necessary only in a notebook context where sometimes we have to force Panel/Bokeh to push an update to the browser
+        if profile_time:
+            print(f"Apply update : {time.time() - st}")
+
+        # Force notebook refresh
         pn.io.push_notebook(self.figure)
 
-        self.__new_data = {}
+    def _schedule_recompute(self):
+        """Schedule a recompute on the next UI tick."""
+        self.marked_to_recompute = True
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self._do_recompute)
+        elif scivianna.utils._testing:
+            self._do_recompute()
+
+    def _schedule_update(self):
+        """Schedule a visual update on the next UI tick (no data recompute)."""
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self._apply_update)
+        elif scivianna.utils._testing:
+            self._apply_update()
+
+    def _do_recompute(self):
+        """Perform the actual recompute and schedule visual update."""
+        if not self.marked_to_recompute:
+            return
+            
+        if profile_time:
+            st = time.time()
+
+        u, v = self.get_uv()
+
+        print(
+            f"{self.panel_name} - Recomputing for axes {u}, {v}, at origin : {self.origin}, size_u : {self.size_u}, size_v : {self.size_v}, with field {self.displayed_field}"
+        )
+
+        data = self.compute_fn(u, v, self.origin, self.size_u, self.size_v)
+
+        if data is not None:
+            if profile_time:
+                print(f"Plot panel compute function : {time.time() - st}")
+                st = time.time()
+
+            # Build pending updates directly
+            self._pending_updates = {"data": data}
+
+            if (
+                self.slave.get_label_coloring_mode(
+                    self.displayed_field
+                ) == VisualizationMode.FROM_VALUE
+            ):
+                self._pending_updates["colorbar"] = {
+                    "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
+                    "new_high": np.nanmax(np.array(data.cell_values).astype(float)),
+                }
+
+            if profile_time:
+                print(f"Plot panel preparing data : {time.time() - st}")
+
+            # Schedule visual update
+            self._schedule_update()
 
     def compute_fn(
         self,
         u: Tuple[float, float, float],
         v: Tuple[float, float, float],
-        x0: float,
-        y0: float,
-        x1: float,
-        y1: float,
-        z: float,
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
     ) -> Data2D:
         """Request the slave to compute a new frame, and updates the data to display
 
@@ -258,16 +345,12 @@ class Panel2D(VisualizationPanel):
             Direction vector along the horizontal axis
         v : Tuple[float, float, float]
             Direction vector along the vertical axis
-        x0 : float
-            Lower bound value along the u axis
-        y0 : float
-            Lower bound value along the v axis
-        x1 : float
-            Upper bound value along the u axis
-        y1 : float
-            Upper bound value along the v axis
-        z : float
-            Value along the u ^ v axis
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
 
         Returns
         -------
@@ -284,13 +367,11 @@ class Panel2D(VisualizationPanel):
                 options[key] = value
 
         computed_data = self.slave.compute_2D_data(
-            u,
-            v,
-            x0,
-            x1,
-            y0,
-            y1,
-            z,
+            list(u),
+            list(v),
+            list(origin),
+            size_u,
+            size_v,
             None,
             self.displayed_field,
             options,
@@ -337,23 +418,31 @@ class Panel2D(VisualizationPanel):
         y1 : float
             Vertical axis maximum value
         """
-        to_update = {"x0": x0, "x1": x1, "y0": y0, "y1": y1}
-        self.__new_data = {**self.__new_data, **to_update}
-        if pn.state.curdoc is not None:
-            pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-        elif scivianna.utils._testing:
-            self.async_update_data()
-
-        self.u_range = (x0, x1)
-        self.v_range = (y0, y1)
-
-        for extension in self.extensions:
-            extension.on_range_change((x0, x1), (y0, y1), self.w_value)
-
+        # Convert x0, x1, y0, y1 (center coordinates in physical space) to origin/size_u/size_v
+        u_arr = np.array(self.u, dtype=float)
+        v_arr = np.array(self.v, dtype=float)
+        w_arr = np.cross(u_arr, v_arr)
+        
+        center_u = (x1 + x0) * 0.5
+        center_v = (y0 + y1) * 0.5
+        
+        new_size_u = (x1 - x0)
+        new_size_v = (y1 - y0)
+        
+        # Compute origin from center coordinates
         if self.update_event == UpdateEvent.RANGE_CHANGE or (
             isinstance(self.update_event, list) and UpdateEvent.RANGE_CHANGE in self.update_event
         ):
-            self.marked_to_recompute = True
+            self.origin = center_u * u_arr + center_v * v_arr + np.dot(w_arr, self.origin) * w_arr
+
+            if new_size_u != self.size_u or new_size_v != self.size_v:
+                self.size_u = new_size_u
+                self.size_v = new_size_v
+                
+                for extension in self.extensions:
+                    extension.on_range_change(self.origin, self.size_u, self.size_v)
+
+            self._schedule_recompute()
 
     def get_uv(
         self,
@@ -374,51 +463,9 @@ class Panel2D(VisualizationPanel):
         self, *args, **kwargs
     ):
         """Recomputes the figure based on the new bounds and parameters.
+        Public method that triggers the recompute pipeline.
         """
-        if profile_time:
-            st = time.time()
-
-        u, v = self.get_uv()
-
-        print(
-            f"{self.panel_name} - Recomputing for axes {u}, {v}, at range : {self.u}, {self.v}, ({self.w_value}), with field {self.displayed_field}"
-        )
-
-        data = self.compute_fn(
-            u, v, self.u_range[0], self.v_range[0], self.u_range[1], self.v_range[1], self.w_value
-        )
-
-        if data is not None:
-            if profile_time:
-                print(f"Plot panel compute function : {time.time() - st}")
-                st = time.time()
-
-            self.__new_data = {
-                "data": data,
-            }
-
-            if (
-                self.slave.get_label_coloring_mode(
-                    self.displayed_field
-                ) == VisualizationMode.FROM_VALUE
-            ):
-                self.__new_data["color_mapper"] = {
-                    "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
-                    "new_high": np.nanmax(np.array(data.cell_values).astype(float)),
-                }
-                self.__new_data["hide_colorbar"] = False
-            else:
-                self.__new_data["hide_colorbar"] = True
-
-            self.__data_to_update = True
-
-            if profile_time:
-                print(f"Plot panel preparing data : {time.time() - st}")
-
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
+        self._schedule_recompute()
 
     def duplicate(self, keep_name: bool = False) -> "VisualizationPanel":
         """Get a copy of the panel. A panel of the same type is generated, the current display too, but a new slave process is created.
@@ -506,35 +553,23 @@ class Panel2D(VisualizationPanel):
         cell_id : str
             cell id to provide to the slave
         """
-        u, v = self.get_uv()
+        if not np.allclose(position, self.origin):
+            self.origin = position
+            
+            for extension in self.extensions:
+                extension.on_range_change(self.origin, self.size_u, self.size_v)
 
-        w = np.cross(u, v)
-        w_val = np.dot(position, w)
+            self.plotter.set_axes(self.u, self.v, self.origin)
 
-        for extension in self.extensions:
-            extension.on_range_change(self.u_range, self.v_range, w_val)
-
-        if w_val != self.w_value:
-            pn.state.notifications.info(f"w updating to {w_val} in {self.panel_name}", 1000)
-            self.w_value = w_val
-            self.plotter.set_axes(self.u, self.v, self.w_value)
-
-            self.__data_to_update = True
-            self.marked_to_recompute = True
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
+            self._schedule_recompute()
 
     def set_coordinates(
         self,
         u: Tuple[float, float, float] = None,
         v: Tuple[float, float, float] = None,
-        u_min: float = None,
-        u_max: float = None,
-        v_min: float = None,
-        v_max: float = None,
-        w: float = None,
+        origin: Tuple[float, float, float] = None,
+        size_u: float = None,
+        size_v: float = None,
     ):
         """Updates the plot coordinates
 
@@ -544,19 +579,13 @@ class Panel2D(VisualizationPanel):
             Horizontal axis direction vector, by default None
         v : Tuple[float, float, float], optional
             Vertical axis direction vector, by default None
-        u_min : float, optional
-            Horizontal axis minimum coordinate, by default None
-        u_max : float, optional
-            Horizontal axis maximum coordinate, by default None
-        v_min : float, optional
-            Vertical axis minimum coordinate, by default None
-        v_max : float, optional
-            Vertical axis maximum coordinate, by default None
-        w : float, optional
-            Normal axis location, by default None
+        origin : Tuple[float, float, float], optional
+            Physical 3D position of the slice center, by default None
+        size_u : float, optional
+            Size of the slice along the u axis, by default None
+        size_v : float, optional
+            Size of the slice along the v axis, by default None
         """
-        self.__data_to_update = True
-
         update_axes = False
         if u is not None:
             if not type(u) in [tuple, list, np.ndarray]:
@@ -585,61 +614,65 @@ class Panel2D(VisualizationPanel):
                 extension.on_frame_change(self.u, self.v)
 
         update_range = False
-        if u_min is not None:
-            if not type(u_min) in [float, int]:
-                raise TypeError(f"u_min must be a number, found type {type(u_min)}")
-            if u_min != self.u_range[0]:
-                update_range = True
-        else:
-            u_min = self.u_range[0]
 
-        if v_min is not None:
-            if not type(v_min) in [float, int]:
-                raise TypeError(f"v_min must be a number, found type {type(v_min)}")
-            if v_min != self.v_range[0]:
+        # Handle origin parameter (tuple of 3 floats representing the slice center)
+        if origin is not None:
+            if not type(origin) in [tuple, list, np.ndarray]:
+                raise TypeError(f"origin must be a tuple/list/ndarray of 3 floats, found type {type(origin)}")
+            if len(origin) != 3:
+                raise ValueError(f"origin must be of length 3, found {len(origin)}")
+            if not np.allclose(origin, self.origin):
+                self.origin = list(origin)
                 update_range = True
-        else:
-            v_min = self.v_range[0]
 
-        if u_max is not None:
-            if not type(u_max) in [float, int]:
-                raise TypeError(f"u_max must be a number, found type {type(u_max)}")
-            if u_max != self.u_range[1]:
+        # Handle size_u and size_v parameters
+        if size_u is not None:
+            if not type(size_u) in [float, int]:
+                raise TypeError(f"size_u must be a number, found type {type(size_u)}")
+            if size_u != self.size_u:
+                self.size_u = size_u
                 update_range = True
-        else:
-            u_max = self.u_range[1]
-
-        if v_max is not None:
-            if not type(v_max) in [float, int]:
-                raise TypeError(f"v_max must be a number, found type {type(v_max)}")
-            if v_max != self.v_range[1]:
-                update_range = True
-        else:
-            v_max = self.v_range[1]
-
-        if w is not None:
-            if not type(w) in [float, int]:
-                raise TypeError(f"w must be a number, found type {type(w)}")
-            if w != self.w_value:
-                self.w_value = w
+        
+        if size_v is not None:
+            if not type(size_v) in [float, int]:
+                raise TypeError(f"size_v must be a number, found type {type(size_v)}")
+            if size_v != self.size_v:
+                self.size_v = size_v
                 update_range = True
 
         if update_range:
-            self.u_range = (u_min, u_max)
-            self.v_range = (v_min, v_max)
-
             for extension in self.extensions:
-                extension.on_range_change(self.u_range, self.v_range, self.w_value)
+                extension.on_range_change(self.origin, self.size_u, self.size_v)
+
+            if self.on_axes_change_callback is not None:
+                self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
+
+            if self.on_axes_change_callback is not None:
+                self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
 
         if update_axes or update_range:
-            self.plotter.set_axes(self.u, self.v, self.w_value)
-            
-            self.marked_to_recompute = True
+            self.plotter.set_axes(self.u, self.v, self.origin)
+            self._schedule_recompute()
 
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.async_update_data)
-            elif scivianna.utils._testing:
-                self.async_update_data()
+            if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
+                if self.on_axes_change_callback is not None:
+                    self.on_axes_change_callback(
+                        u=self.u,
+                        v=self.v,
+                        origin=self.origin,
+                        size_u=self.size_u,
+                        size_v=self.size_v,
+                    )
+
+            if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
+                if self.on_axes_change_callback is not None:
+                    self.on_axes_change_callback(
+                        u=self.u,
+                        v=self.v,
+                        origin=self.origin,
+                        size_u=self.size_u,
+                        size_v=self.size_v,
+                    )
 
     def set_field(self, field_name: str):
         """Updates the plotted field
@@ -683,15 +716,10 @@ class Panel2D(VisualizationPanel):
         """
         if colormap != self.colormap:
             self.colormap = colormap
-            self.__data_to_update = True
-
-            if pn.state.curdoc is not None:
-                pn.state.curdoc.add_next_tick_callback(self.recompute)
-            elif scivianna.utils._testing:
-                self.recompute()
+            self._schedule_recompute()
 
     def to_json(self) -> Dict:
-        """Returns a dictionnary with the information required to rebuild the visualization panel
+        """Returns a dictionnary with the information about the visualization panel
 
         Returns
         -------
@@ -702,9 +730,9 @@ class Panel2D(VisualizationPanel):
             "name": self.panel_name,
             "u": self.u,
             "v": self.v,
-            "u_range": self.u_range,
-            "v_range": self.v_range,
-            "w_value": self.w_value,
+            "origin": self.origin,
+            "size_u": self.size_u,
+            "size_v": self.size_v,
             "displayed_field": self.displayed_field,
             "display_polygons": self.display_polygons,
             "colormap": self.colormap,
@@ -748,10 +776,21 @@ class Panel2D(VisualizationPanel):
             colormap = info_dict["colormap"],
             u = info_dict["u"],
             v = info_dict["v"],
-            u_range = info_dict["u_range"],
-            v_range = info_dict["v_range"],
-            w_value = info_dict["w_value"]
+            origin = info_dict.get("origin"),
+            size_u = info_dict.get("size_u", 1.0),
+            size_v = info_dict.get("size_v", 1.0),
         )
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
         return panel
+
+    def provide_on_axes_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the axes are changed.
+        the functions takes two numpy arrays and three values (u, v, origin, size_u, size_v).
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.on_axes_change_callback = callback

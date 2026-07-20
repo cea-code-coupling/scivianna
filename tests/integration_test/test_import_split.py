@@ -38,7 +38,7 @@ def get_panel() -> SplitLayout:
     return SplitLayout(split)
 
 
-@pytest.mark.default
+@pytest.mark.medcoupling
 def test_import_split():
     """Test importing the split layout and make the panel without opening it
     """
