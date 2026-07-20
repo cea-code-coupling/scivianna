@@ -213,6 +213,7 @@ def numpy_2D_array_to_polygons(x:Union[List[float], np.ndarray],
         List of PolygonElements
     """
     if not rasterio_imported:
+        print("Rasterio not available, please pip install scivianna[grid]")
         raise rasterio_error
     
     if not isinstance(arr, np.ndarray):

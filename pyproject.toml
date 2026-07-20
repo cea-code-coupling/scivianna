@@ -11,4 +11,5 @@ markers = [
     "pyvista", # Tests for 3D plots and 3D extrusion
     "coupling", # Coupling tests that require CP3O to be installed
     "agent", # Tests for the Data2DWorker
+    "grid", # Tests related to rasterio
 ]
