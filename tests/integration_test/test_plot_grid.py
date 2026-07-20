@@ -9,7 +9,7 @@ from scivianna.plotter_2d.api import plot_frame_in_axes
 from scivianna_example.mandelbrot.mandelbrot import MandelBrotInterface
 
 
-@pytest.mark.default
+@pytest.mark.grid
 def test_plot_grid():
     """Simple test to make sure things happen before more tests are actually implemented
     """

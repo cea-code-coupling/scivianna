@@ -12,6 +12,7 @@ The `scivianna_example` package contains several use cases:
 | **MED Coupling** | Display Salome MED file data with synchronized multi-view displays |
 | **Mandelbrot** | Compute and visualize the Mandelbrot fractal set using polygon-based rendering |
 | **C3PO Coupling** | Integrate Scivianna with the C3PO coupling platform for real-time simulation |
+| **3D MED Coupling** | Display Salome MED using VTK.js and an associated 2D slice |
 
 ## Installation
 

@@ -28,10 +28,15 @@ except ImportError as e:
     print(f"Could not import 3D app, {e}, skipping demo 3D build")
     has_3d = False
 
-from scivianna_example.mandelbrot.mandelbrot import (
-    make_panel as mandelbrot_example,
-)
-import scivianna_example.mandelbrot.mandelbrot as mandelbrot
+try:
+    from scivianna_example.mandelbrot.mandelbrot import (
+        make_panel as mandelbrot_example,
+    )
+    import scivianna_example.mandelbrot.mandelbrot as mandelbrot
+    has_mandelbrot = True
+except ImportError as e:
+    print(f"Could not import mandelbrot app, {e}, skipping demo mandelbrot build")
+    has_mandelbrot = False
 
 try:
     from scivianna_example.c3po_coupling.coupling import (
@@ -74,7 +79,10 @@ def make_demo(return_slaves=False) -> pmui.Page:
         else:
             slaves_medcoupling_3d = []
 
-        mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(None, return_slaves = return_slaves)
+        if has_mandelbrot:
+            mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(None, return_slaves = return_slaves)
+        else:
+            slaves_mandelbrot = []
 
         if has_coupling:
             coupling_panel, slaves_coupling = coupling_example(computation_time = .01, return_slaves=return_slaves, start = False, use_server=False)
@@ -89,7 +97,8 @@ def make_demo(return_slaves=False) -> pmui.Page:
         if has_3d:
             medcoupling_3d_panel = medcoupling_3d_example(None)
 
-        mandelbrot_panel = mandelbrot_example(None)
+        if has_mandelbrot:
+            mandelbrot_panel = mandelbrot_example(None)
 
         if has_coupling:
             coupling_panel = coupling_example(computation_time = .01, start = False, use_server=False)
@@ -111,10 +120,11 @@ def make_demo(return_slaves=False) -> pmui.Page:
                 medcoupling_3d_panel.main_frame, pmui.Typography(f.read(), width=300)
             )
 
-    with open(Path(mandelbrot.__file__).parent / "description.md", "r") as f:
-        mandelbrot_with_description = pmui.Row(
-            mandelbrot_panel.main_frame, pmui.Typography(f.read(), width=300)
-        )
+    if has_mandelbrot:
+        with open(Path(mandelbrot.__file__).parent / "description.md", "r") as f:
+            mandelbrot_with_description = pmui.Row(
+                mandelbrot_panel.main_frame, pmui.Typography(f.read(), width=300)
+            )
 
     if has_coupling:
         with open(Path(coupling.__file__).parent / "description.md", "r") as f:
@@ -132,9 +142,10 @@ def make_demo(return_slaves=False) -> pmui.Page:
     guis = {
         "Help": help,
         "Europe example": europe_with_description,
-        "Mandelbrot example": mandelbrot_with_description,
     }
 
+    if has_mandelbrot:
+        guis["Mandelbrot example"] = mandelbrot_with_description
     if has_med:
         guis["Medcoupling example"] = medcoupling_with_description
     if has_coupling:
