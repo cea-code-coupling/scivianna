@@ -15,6 +15,7 @@ The `extension` module provides extensible components that add functionality to 
 | `layout.py` | Layout management and panel arrangement tools |
 | `line_selector.py` | Tool for setting 1D plots |
 | `save_load_extension.py` | Serialization and state save/load functionality |
+| `slice_3d.py` | 3D clip plane controls for slicing geometry |
 | `ai_assistant.py` | AI-powered assistant for visualization help |
 | `icons/` | Icon images for extension UI elements |
 
@@ -46,6 +47,13 @@ Interactive tool for setting 1D plots.
 ### Axes Extension (`axes.py`)
 Controls for 3D coordinate display and axis configuration.
 
+### Slice Plane Extension (`slice_3d.py`)
+Interactive 3D clip plane controls:
+- Enable/disable clipping with checkbox
+- Select clipping axis (X, Y, Z)
+- Adjust clip plane position with slider
+- Keyboard shortcuts in 3D viewer: `C` (toggle), `X`/`Y`/`Z` (axis), `↑`/`↓` (move)
+
 ### Save/Load Extension (`save_load_extension.py`)
 Enables saving panel configurations and restoring them later.
 
@@ -68,7 +76,7 @@ class MyCustomExtension(Extension):
         # Return Panel UI for this extension
         return pn.Column(...)
         
-    def on_mouse_clic(self, location, cell_id):
+    def on_mouse_clic(self, screen_location, space_location, cell_id):
         # Handle mouse click events
         pass
         
@@ -83,3 +91,21 @@ class MyCustomExtension(Extension):
 2. **Panel Building**: `make_panel()` returns the UI components
 3. **Event Registration**: Callbacks are registered for mouse events, file loads, etc.
 4. **State Management**: `to_json()` and `from_json()` handle serialization
+
+### Callback Signatures
+
+| Callback | Parameters | Description |
+|----------|-----------|-------------|
+| `on_file_load(file_path, file_label)` | `str`, `str` | Called when a file is loaded |
+| `on_field_change(field_name)` | `str` | Called when displayed field changes |
+| `on_updated_data(data)` | `Data2D` / `Data3D` | Called when displayed data updates |
+| `on_range_change(u_bounds, v_bounds, w_value)` | `tuple`, `tuple`, `float` | Called when viewport zoom/pan changes |
+| `on_frame_change(u_vector, v_vector)` | `tuple`, `tuple` | Called when viewport orientation changes |
+| `on_mouse_move(screen_location, space_location, cell_id)` | `tuple`, `tuple`, `str/int` | Called on mouse hover over plot |
+| `on_mouse_clic(screen_location, space_location, cell_id)` | `tuple`, `tuple`, `str/int` | Called on mouse click on plot |
+
+### Mouse Event Parameters
+
+- **screen_location**: `(x, y)` - Mouse position in screen coordinates (pixels from top-left)
+- **space_location**: `(x, y, z)` - Mouse position in 3D world coordinates
+- **cell_id**: `str` or `int` - ID of the cell currently under the mouse / clicked

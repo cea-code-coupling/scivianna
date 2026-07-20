@@ -39,6 +39,14 @@ scivianna.panel.panel\_2d module
    :undoc-members:
    :show-inheritance:
 
+scivianna.panel.panel\_3d module
+--------------------------------
+
+.. automodule:: scivianna.panel.panel_3d
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 scivianna.panel.visualisation\_panel module
 -------------------------------------------
 

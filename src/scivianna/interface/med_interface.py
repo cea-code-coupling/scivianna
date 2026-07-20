@@ -969,7 +969,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         time = options.get("time", 0.0)
 
         if len(self.mesh) == 0:
-            self.data3d = Data3D.from_polydata(None)
+            self.data3d = Data3D.from_vtk(None)
             return self.data3d, True
 
         current_mesh, _ = self._get_mesh_at_time(time)
@@ -985,7 +985,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         pv_mesh = to_pv(current_mesh)
         pv_mesh.cell_data["cell_id"] = list(range(pv_mesh.GetNumberOfCells()))
 
-        self.data3d = Data3D.from_polydata(pv_mesh)
+        self.data3d = Data3D.from_vtk(pv_mesh)
 
         if profile_time:
             print(f"Compute 3D mesh time {time.time() - start_time}")

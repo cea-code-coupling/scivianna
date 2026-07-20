@@ -28,7 +28,7 @@ class Data3D(DataContainer):
         self.cell_edge_colors = []
 
     @classmethod
-    def from_polydata(cls, polydata: "pv.PolyData") -> "Data3D":
+    def from_vtk(cls, polydata: Union["pv.PolyData", "pv.UnstructuredGrid"]) -> "Data3D":
         """Build a Data3D object from a pv.PolyData 
         
         Parameters 

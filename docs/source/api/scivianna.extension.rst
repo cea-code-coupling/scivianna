@@ -79,6 +79,14 @@ scivianna.extension.save\_load\_extension module
    :undoc-members:
    :show-inheritance:
 
+scivianna.extension.slice\_3d module
+------------------------------------
+
+.. automodule:: scivianna.extension.slice_3d
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
