@@ -69,7 +69,6 @@ def test_polygon_plt_from_polygons():
     plotter.plot_2d_frame(data_2d)
     plotter.figure.savefig("p2p.png")
 
-@pytest.mark.medcoupling
 def test_grid_plt_from_polygons():
     data_2d = build_data_grid()
 
