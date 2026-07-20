@@ -77,7 +77,7 @@ def test_grid_plt_from_polygons():
     plotter.plot_2d_frame(data_2d)
     plotter.figure.savefig("g2p.png")
 
-@pytest.mark.default
+@pytest.mark.grid
 def test_grid_plt_from_grid():
     data_2d = build_data_grid()
 
