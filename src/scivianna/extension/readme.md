@@ -103,6 +103,8 @@ class MyCustomExtension(Extension):
 | `on_frame_change(u_vector, v_vector)` | `tuple`, `tuple` | Called when viewport orientation changes |
 | `on_mouse_move(screen_location, space_location, cell_id)` | `tuple`, `tuple`, `str/int` | Called on mouse hover over plot |
 | `on_mouse_clic(screen_location, space_location, cell_id)` | `tuple`, `tuple`, `str/int` | Called on mouse click on plot |
+| `on_key_pressed(key)` | `str` | Called when a keyboard key is pressed while the mouse hovers the panel |
+| `on_scale_change(axis_name, value)` | `str`, `str` | Called when the 1D plot scale is changed |
 
 ### Mouse Event Parameters
 

@@ -38,8 +38,10 @@ Interfaces inherit from these capability classes based on what they provide:
 | `Geometry2D` | Provides 2D cell geometry and field values |
 | `Geometry2DPolygon` | Provides 2D geometry as a list of polygons |
 | `Geometry2DGrid` | Provides 2D geometry as a numpy array (rasterized) |
+| `Geometry3D` | Provides 3D geometry and cell values for volumetric visualization |
 | `ValueAtLocation` | Provides values at specific locations/cells/materials |
 | `Value1DAtLocation` | Provides 1D data profiles at locations |
+| `DataFrameInterface` | Provides data as a pandas DataFrame |
 | `CouplingInterface` | Supports runtime coupling updates (C3PO/Icoco) |
 
 ### Geometry2D Interface
@@ -56,6 +58,14 @@ Subclass of Geometry2D that provides polygon-based geometry. Inherits all Geomet
 ### Geometry2DGrid Interface
 Subclass of Geometry2D that provides grid-based (rasterized) geometry. Inherits all Geometry2D methods.
 
+### Geometry3D Interface
+Provides 3D geometry capabilities for volumetric visualization:
+
+| Function | Description |
+|----------|-------------|
+| `compute_3D_data(options)` | Returns 3D geometry data for visualization |
+| `get_3d_value_dict(value_label, cells, options, caller)` | Returns cell name to field value mapping for 3D data |
+
 ### ValueAtLocation Interface
 Provides point-value access capabilities:
 
@@ -70,6 +80,13 @@ Provides 1D data profile access:
 | Function | Description |
 |----------|-------------|
 | `get_1D_value(position, cell_index, material_name, field, options)` | Returns 1D data series (pd.Series) at a specific location/cell/material |
+
+### DataFrameInterface
+Provides data as a pandas DataFrame for tabular display via `PanelDataFrame`:
+
+| Function | Description |
+|----------|-------------|
+| `get_dataframe(cell_id, origin, options)` | Returns the interface data as a pandas DataFrame |
 
 ### CouplingInterface
 Provides runtime coupling capabilities for C3PO/Icoco integration:

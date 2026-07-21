@@ -67,6 +67,7 @@ panel.show()
 - Interactive hover tools showing country-specific values
 - Time-series navigation with weekly time-steps
 - Production vs consumption comparison
+- Synchronized DataFrame panel showing aggregated country data on hover
 
 See [`europe_grid/readme.md`](europe_grid/readme.md) for details.
 
@@ -128,3 +129,4 @@ See [`c3po_coupling/readme.md`](c3po_coupling/readme.md) for details.
 - Main Scivianna documentation: See the root `readme.md`
 - API Reference: Check individual module docstrings
 - Serialization examples: See `med/split_serialization.py` and `med/gridstack_serialization.py`
+- Custom interface registration: Use `register_interface("key", InterfaceClass)` to make your interface discoverable

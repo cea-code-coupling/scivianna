@@ -39,6 +39,7 @@ Defines the interface for all 2D plotters:
 | `set_clim(vmin, vmax)` | Set color scale limits |
 | `provide_on_mouse_move_callback(fn)` | Register mouse hover handler |
 | `provide_on_clic_callback(fn)` | Register click handler |
+| `get_mouse_location()` | Returns current mouse position in 3D world coordinates as `(x, y, z)` |
 
 ## Grid vs Polygon Rendering
 

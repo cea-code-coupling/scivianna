@@ -24,6 +24,7 @@ Defines the interface for all 1D plotters in `generic_plotter.py`:
 | `set_visible(names)` | Set which plots are visible (list of names) |
 | `set_x_scale(scale)` | Set X axis scale to "log" or "lin" |
 | `set_y_scale(scale)` | Set Y axis scale to "log" or "lin" |
+| `get_mouse_location()` | Returns current mouse position in 3D world coordinates as `(x, y, z)` |
 
 ## BokehPlotter1D
 

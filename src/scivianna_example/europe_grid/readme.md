@@ -22,6 +22,7 @@ The Europe Grid example showcases:
 - Interactive hover tools showing country-specific values
 - Time-series navigation with weekly time-steps
 - Production vs consumption comparison
+- Synchronized DataFrame panel showing aggregated country data
 
 ## Features
 
@@ -35,6 +36,11 @@ Weekly data including:
 - Electricity production per energy source
 - Electricity consumption per country
 - Net imports/exports
+
+### DataFrame Panel
+- Automatically updates when hovering over countries
+- Shows aggregated values for the selected country across all fields
+- Linked to the 2D map and 1D time-series panels via `MOUSE_CELL_CHANGE` events
 
 ## Usage
 
