@@ -82,7 +82,7 @@ class VTKExtension(Extension):
         if self.time_values == []:
             self.time_values = [0.]
 
-        self.time_slider = pmui.DiscreteSlider(name = "Time", options = self.time_values, width=280, )
+        self.time_slider = pmui.DiscreteSlider(name = "Time", options = self.time_values, width=260, )
         self.recompute_on_change = pmui.Checkbox(name = "Recompute mesh on time change", value=False)
 
         assert isinstance(plotter, (Plotter2D, Plotter3D)), f"VTKExtension can only be used with a Plotter2D or a Plotter3D, found {plotter}"
