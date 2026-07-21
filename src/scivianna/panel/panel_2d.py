@@ -23,7 +23,7 @@ from scivianna.utils.polygon_sorter import PolygonSorter
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.constants import MESH, X, Y, Z
+from scivianna.constants import MESH, X, Y, Z, DEFAULT_ORIGIN, DEFAULT_SIZE
 import scivianna.utils
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
@@ -131,10 +131,10 @@ class Panel2D(VisualizationPanel):
 
         # Store coordinates in new style: origin, size_u, size_v
         # origin must be provided as a physical 3D position
-        self.origin = origin if origin is not None else [0.01, 0.01, 0.01]
+        self.origin = origin if origin is not None else DEFAULT_ORIGIN.copy()
         
-        self.size_u = size_u
-        self.size_v = size_v
+        self.size_u = size_u if size_u is not None else DEFAULT_SIZE
+        self.size_v = size_v if size_v is not None else DEFAULT_SIZE
 
         #
         #   First plot on XY basic range
@@ -355,9 +355,10 @@ class Panel2D(VisualizationPanel):
         Data2D
             Geometry data.
         """
-        options = {key: value for options in [
-            e.provide_options() for e in self.extensions
-        ] for key, value in options.items()}
+        options = {}
+        for extension in self.extensions:
+            ext_options = extension.provide_options()
+            options.update(ext_options)
 
         if self.panel_coupling_extension is not None:
             coupling_options = self.panel_coupling_extension.provide_options()
@@ -642,25 +643,9 @@ class Panel2D(VisualizationPanel):
             for extension in self.extensions:
                 extension.on_range_change(self.origin, self.size_u, self.size_v)
 
-            if self.on_axes_change_callback is not None:
-                self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
-
-            if self.on_axes_change_callback is not None:
-                self.on_axes_change_callback(self.u, self.v, self.origin, self.size_u, self.size_v)
-
         if update_axes or update_range:
             self.plotter.set_axes(self.u, self.v, self.origin)
             self._schedule_recompute()
-
-            if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
-                if self.on_axes_change_callback is not None:
-                    self.on_axes_change_callback(
-                        u=self.u,
-                        v=self.v,
-                        origin=self.origin,
-                        size_u=self.size_u,
-                        size_v=self.size_v,
-                    )
 
             if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
                 if self.on_axes_change_callback is not None:

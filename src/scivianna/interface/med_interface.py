@@ -27,7 +27,7 @@ from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
 
 import medcoupling
 
-from scivianna.constants import MESH, GEOMETRY, CSV
+from scivianna.constants import MESH, GEOMETRY, CSV, DEFAULT_ORIGIN
 
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
@@ -112,7 +112,7 @@ This extension allows defining the medcoupling field display parameters.
         self.u = (1, 0, 0)
         self.v = (0, 1, 0)
 
-        self.origin = (0.01, 0.01, 0.01)
+        self.origin = tuple(DEFAULT_ORIGIN)
 
         self.w = 0.01
 

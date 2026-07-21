@@ -20,7 +20,6 @@ from bokeh.models import (
 )
 from bokeh.models import CustomJS
 from bokeh.events import MouseMove
-# from bokeh.models import CustomJS
 from bokeh import events
 
 import numpy as np
@@ -139,7 +138,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             return  "(" + (x*u0 + y*v0 +w*w0).toFixed(3) + ", " + (x*u1 + y*v1 +w*w1).toFixed(3)+", "+  (x*u2 + y*v2 +w*w2 ).toFixed(3) + ")"
         """
 
-        # Manifestement, ca ne marche pas avec un nom a plusieurs caracteres pour x ???
+        # Note: Bokeh requires single-character variable names for custom formatters
         TOOLTIPS = [
             ("Coordinates", "$x{custom}"),
             ("Cell ID", "@"+CELL_NAMES),

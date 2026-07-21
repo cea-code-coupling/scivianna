@@ -122,7 +122,7 @@ def worker(
     code_interface : Type[GenericInterface]
         GenericInterface to instanciate.
     """
-    code_: GenericInterface = code_interface()
+    interface: GenericInterface = code_interface()
 
     while True:
         try:
@@ -131,30 +131,30 @@ def worker(
             #   GenericInterface functions
             if task == SlaveCommand.READ_FILE:
                 file_path, file_label = data
-                code_.read_file(file_path=file_path, file_label=file_label)
+                interface.read_file(file_path=file_path, file_label=file_label)
                 q_returns.put("OK")
 
             elif task == SlaveCommand.GET_LABELS:
-                labels = code_.get_labels()
+                labels = interface.get_labels()
                 q_returns.put(labels)
 
             elif task == SlaveCommand.GET_LABEL_COLORING_MODE:
                 field_name = data
-                set_return = code_.get_label_coloring_mode(label=field_name)
+                set_return = interface.get_label_coloring_mode(label=field_name)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.GET_FILE_INPUT_LIST:
-                input_list = code_.get_file_input_list()
+                input_list = interface.get_file_input_list()
                 q_returns.put(input_list)
 
             elif task == SlaveCommand.SAVE:
                 file_path, include_files = data
-                code_.save(file_path=file_path, include_files=include_files)
+                interface.save(file_path=file_path, include_files=include_files)
                 q_returns.put("OK")
 
             elif task == SlaveCommand.LOAD:
                 file_path, include_files = data
-                code_.load(file_path=file_path, include_files=include_files)
+                interface.load(file_path=file_path, include_files=include_files)
                 q_returns.put("OK")
 
             #
@@ -172,12 +172,12 @@ def worker(
                     caller,
                 ) = data
 
-                if not isinstance(code_, Geometry2D):
+                if not isinstance(interface, Geometry2D):
                     raise TypeError(
-                        f"The requested panel is not associated to an Geometry2D, found class {type(code_)}."
+                        f"The requested panel is not associated to an Geometry2D, found class {type(interface)}."
                     )
                 data: Data2D
-                data, polygons_updated = code_.compute_2D_data(
+                data, polygons_updated = interface.compute_2D_data(
                     u=u,
                     v=v,
                     origin=origin,
@@ -188,7 +188,7 @@ def worker(
                     caller=caller,
                 )
 
-                dict_value_per_cell = code_.get_value_dict(
+                dict_value_per_cell = interface.get_value_dict(
                     value_label=coloring_label,
                     cells=data.cell_ids,
                     options=options,
@@ -205,12 +205,12 @@ def worker(
                 )
 
             elif task == SlaveCommand.GET_VALUE_DICT:
-                if not isinstance(code_, Geometry2D):
+                if not isinstance(interface, Geometry2D):
                     raise TypeError(
-                        f"The requested panel is not associated to an Geometry2D, found class {type(code_)}."
+                        f"The requested panel is not associated to an Geometry2D, found class {type(interface)}."
                     )
                 value_label, cells, options, caller = data
-                set_return = code_.get_value_dict(
+                set_return = interface.get_value_dict(
                     value_label=value_label,
                     cells=cells,
                     options=options,
@@ -219,21 +219,21 @@ def worker(
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.GET_GEOMETRY_TYPE:
-                q_returns.put(code_.geometry_type)
+                q_returns.put(interface.geometry_type)
 
             #   Geometry3D functions
             elif task == SlaveCommand.COMPUTE_3D_DATA:
                 coloring_label, options = data
-                if not isinstance(code_, Geometry3D):
+                if not isinstance(interface, Geometry3D):
                     raise TypeError(
-                        f"The requested panel is not associated to an Geometry3D, found class {type(code_)}."
+                        f"The requested panel is not associated to an Geometry3D, found class {type(interface)}."
                     )
                 data: Data3D
-                data, polygons_updated = code_.compute_3D_data(
+                data, polygons_updated = interface.compute_3D_data(
                     options=options,
                 )
 
-                dict_value_per_cell = code_.get_3d_value_dict(
+                dict_value_per_cell = interface.get_3d_value_dict(
                     value_label=coloring_label,
                     cells=data.cell_ids,
                     options=options,
@@ -249,12 +249,12 @@ def worker(
                     ]
                 )
             elif task == SlaveCommand.GET_3D_VALUE_DICT:
-                if not isinstance(code_, Geometry3D):
+                if not isinstance(interface, Geometry3D):
                     raise TypeError(
-                        f"The requested panel is not associated to an Geometry3D, found class {type(code_)}."
+                        f"The requested panel is not associated to an Geometry3D, found class {type(interface)}."
                     )
                 value_label, cells, options, caller = data
-                set_return = code_.get_3d_value_dict(
+                set_return = interface.get_3d_value_dict(
                     value_label=value_label,
                     cells=cells,
                     options=options,
@@ -265,12 +265,12 @@ def worker(
 
             #   ValueAtLocation functions
             elif task == SlaveCommand.GET_VALUE:
-                if not isinstance(code_, ValueAtLocation):
+                if not isinstance(interface, ValueAtLocation):
                     raise TypeError(
-                        f"The requested panel is not associated to an ValueAtLocation, found class {type(code_)}."
+                        f"The requested panel is not associated to an ValueAtLocation, found class {type(interface)}."
                     )
                 position, cell_index, material_name, field, options = data
-                set_return = code_.get_value(
+                set_return = interface.get_value(
                     position=position,
                     cell_index=cell_index,
                     material_name=material_name,
@@ -280,12 +280,12 @@ def worker(
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.GET_VALUES:
-                if not isinstance(code_, ValueAtLocation):
+                if not isinstance(interface, ValueAtLocation):
                     raise TypeError(
-                        f"The requested panel is not associated to an ValueAtLocation, found class {type(code_)}."
+                        f"The requested panel is not associated to an ValueAtLocation, found class {type(interface)}."
                     )
                 positions, cell_indexes, material_names, field, options = data
-                set_return = code_.get_values(
+                set_return = interface.get_values(
                     positions=positions,
                     cell_indexes=cell_indexes,
                     material_names=material_names,
@@ -297,12 +297,12 @@ def worker(
             #
             #   Value1DAtLocation functions
             elif task == SlaveCommand.GET_1D_VALUE:
-                if not isinstance(code_, Value1DAtLocation):
+                if not isinstance(interface, Value1DAtLocation):
                     raise TypeError(
-                        f"The requested panel is not associated to an Value1DAtLocation, found class {type(code_)}."
+                        f"The requested panel is not associated to an Value1DAtLocation, found class {type(interface)}."
                     )
                 position, cell_index, material_name, field, options = data
-                input_list = code_.get_1D_value(
+                input_list = interface.get_1D_value(
                     position=position,
                     cell_index=cell_index,
                     material_name=material_name,
@@ -314,12 +314,12 @@ def worker(
             #
             #   DataFrameInterface functions
             elif task == SlaveCommand.GET_DATAFRAME:
-                if not isinstance(code_, DataFrameInterface):
+                if not isinstance(interface, DataFrameInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an DataFrameInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an DataFrameInterface, found class {type(interface)}."
                     )
                 cell_id, origin, options = data
-                input_list = code_.get_dataframe(
+                input_list = interface.get_dataframe(
                     cell_id=cell_id,
                     origin=origin,
                     options=options,
@@ -329,86 +329,86 @@ def worker(
             #   CouplingInterface functions
             elif task == SlaveCommand.UPDATE_DATA:
                 key, data_value = data
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.update_data(key=key, data=data_value)
+                set_return = interface.update_data(key=key, data=data_value)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.APPEND_DATA:
                 key, data_value = data
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.append_data(key=key, data=data_value)
+                set_return = interface.append_data(key=key, data=data_value)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.UPDATE_MESH:
                 key, data_value = data
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.update_mesh(key=key, data=data_value)
+                set_return = interface.update_mesh(key=key, data=data_value)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.APPEND_MESH:
                 key, data_value = data
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.append_mesh(key=key, data=data_value)
+                set_return = interface.append_mesh(key=key, data=data_value)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.GET_TEMPLATE:
                 name = data
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.get_template(name=name)
+                set_return = interface.get_template(name=name)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.SET_TEMPLATE:
                 name, template = data
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.set_template(name=name, template=template)
+                set_return = interface.set_template(name=name, template=template)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.SET_TIME:
                 time_ = data[0]
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.set_time(time=time_)
+                set_return = interface.set_time(time=time_)
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.GET_UPDATE_POLICY:
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                set_return = code_.update_policy
+                set_return = interface.update_policy
                 q_returns.put(set_return)
 
             elif task == SlaveCommand.SET_UPDATE_POLICY:
-                if not isinstance(code_, CouplingInterface):
+                if not isinstance(interface, CouplingInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an CouplingInterface, found class {type(code_)}."
+                        f"The requested panel is not associated to an CouplingInterface, found class {type(interface)}."
                     )
-                code_.update_policy = data
+                interface.update_policy = data
                 q_returns.put("OK")
 
             elif task == SlaveCommand.CUSTOM:
                 function_name, arguments = data
-                q_returns.put(code_.__getattribute__(function_name)(**arguments))
+                q_returns.put(interface.__getattribute__(function_name)(**arguments))
 
         except queue.Empty:
             continue
@@ -982,14 +982,14 @@ class ComputeSlave:
         ComputeSlave
             ComputeSlave copy.
         """
-        duplicata = ComputeSlave(self.code_interface)
+        duplicate = ComputeSlave(self.code_interface)
 
-        duplicata.reset()
+        duplicate.reset()
 
         for f in self.file_read:
-            duplicata.read_file(f[0], f[1])
+            duplicate.read_file(f[0], f[1])
 
-        return duplicata
+        return duplicate
 
     def terminate(
         self,
@@ -1023,14 +1023,20 @@ class ComputeSlave:
         self.ongoing_request = False
         if not self.q_errors.empty():
             error = self.q_errors.get()
+            warning_msg = f"Worker process terminated unexpectedly with error: {error}"
             if self.allow_errors:
-                pn.state.notifications.error(f"Error {error}, restoring data.")
+                pn.state.notifications.error(warning_msg)
             else:
-                raise error
+                raise RuntimeError(warning_msg) from error
             return None
         elif not self.q_returns.empty():
             return self.q_returns.get()
         else:
+            warning_msg = "Worker process terminated unexpectedly without returning a result or error"
+            if self.allow_errors:
+                pn.state.notifications.warning(warning_msg)
+            else:
+                raise RuntimeError(warning_msg)
             return None
 
 

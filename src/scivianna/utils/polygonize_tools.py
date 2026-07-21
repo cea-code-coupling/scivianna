@@ -75,10 +75,10 @@ class PolygonCoords:
 
         diff = np.array([dx, dy])
 
-        new_d = np.matmul(diff.T, rotation_matrix)
+        rotated_coords = np.matmul(diff.T, rotation_matrix)
         
-        self.x_coords = new_d[:, 0]+origin[0]
-        self.y_coords = new_d[:, 1]+origin[1]
+        self.x_coords = rotated_coords[:, 0]+origin[0]
+        self.y_coords = rotated_coords[:, 1]+origin[1]
 
 class PolygonElement:
     """Object containing the exterior polygon and the holes of a polygonal object
@@ -252,18 +252,18 @@ def numpy_2D_array_to_polygons(x:Union[List[float], np.ndarray],
     transform1 = Affine.translation(x0 - (x1-x0)/len(x) / 2, y0 - (y1-y0)/len(y) / 2) * Affine.scale((x1-x0)/len(x), (y1-y0)/len(y))
     shape_gen = ((shape(s), val) for s, val in rasterio.features.shapes(index_arr, transform=transform1))
 
-    s:Polygon
-    for s, val in shape_gen:
+    polygon: Polygon
+    for polygon, value_id in shape_gen:
         #   Checking the polygons of value 1
         if simplify:
-            s = s.simplify(delta)
+            polygon = polygon.simplify(delta)
         polygon_element_list.append(
-                        PolygonElement(exterior_polygon=PolygonCoords(x_coords=np.array([vert[0] for vert in s.exterior.coords]), 
-                                                                    y_coords=np.array([vert[1] for vert in s.exterior.coords])),
-                                        holes=[PolygonCoords(x_coords=np.array([vert[0] for vert in interior.coords]),
-                                                             y_coords=np.array([vert[1] for vert in interior.coords])) 
-                                                             for interior in s.interiors],
-                                        cell_id=values[int(val)])
+                        PolygonElement(exterior_polygon=PolygonCoords(x_coords=np.array([vert[0] for vert in polygon.exterior.coords]), 
+                                                                    y_coords=np.array([vert[1] for vert in polygon.exterior.coords])),
+                                         holes=[PolygonCoords(x_coords=np.array([vert[0] for vert in interior.coords]),
+                                                              y_coords=np.array([vert[1] for vert in interior.coords])) 
+                                                              for interior in polygon.interiors],
+                                         cell_id=values[int(value_id)])
                     )
         
     return polygon_element_list

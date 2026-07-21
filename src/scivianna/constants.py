@@ -27,3 +27,17 @@ Z = (0., 0., 1.)
 
 # Cell name to define the outside world
 OUTSIDE = np.inf
+
+#   Default values
+DEFAULT_ORIGIN = [0.01, 0.01, 0.01]
+"""Default origin for 2D/3D panels when none is provided."""
+
+DEFAULT_SIZE = 1.0
+"""Default size for 2D panels when none is provided."""
+
+#   Color constants
+COLOR_SCALE_MAX = 255
+"""Maximum value for RGB color components (0-255)."""
+
+DEFAULT_EDGE_OFFSET = -20
+"""Default offset for edge color darkening."""

@@ -102,7 +102,12 @@ def interpolate_cmap_at_values(
     g = colors[:, 1]
     b = colors[:, 2]
 
-    xp_colors = np.arange(len(colors)) / (len(colors) - 1)
+    num_colors = len(colors)
+    if num_colors <= 1:
+        # Single color: return uniform color for all values
+        xp_colors = np.array([0.5] * len(colors))
+    else:
+        xp_colors = np.arange(num_colors) / (num_colors - 1)
 
     r_vals = np.interp(values, xp_colors, r)
     g_vals = np.interp(values, xp_colors, g)

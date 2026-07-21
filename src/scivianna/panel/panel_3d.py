@@ -18,7 +18,7 @@ from scivianna.enums import VisualizationMode
 from scivianna.slave import ComputeSlave
 
 from scivianna.plotter_3d.vtk_3d_plotter import Plotter3D
-from scivianna.constants import MESH, X, Y
+from scivianna.constants import MESH, X, Y, DEFAULT_ORIGIN
 import scivianna.utils
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
@@ -133,7 +133,7 @@ class Panel3D(VisualizationPanel):
             self.plotter.update_colorbar(False, (None, None))
 
         self.w_inp = 0.
-        self.origin = (0.01, 0.01, 0.01)
+        self.origin = tuple(DEFAULT_ORIGIN)
         self.u = X
         self.v = Y
         self._pending_updates: Dict = {}
