@@ -107,6 +107,7 @@ class Plotter2D:
 
     def _disable_interactions(
         self,
+        disable: bool,
     ):
         """Disables de plot interactions for multi panel web-app resizing
 

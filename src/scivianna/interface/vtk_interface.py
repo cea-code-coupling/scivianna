@@ -307,7 +307,11 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         # origin is already provided as a physical 3D position
         origin = np.array(origin, dtype=float)
 
-        mesh_slice: pv.PolyData = self.mesh.slice(normal = w, origin = origin, generate_triangles = True)
+        mesh_slice: pv.PolyData = self.mesh.slice(
+            normal = w, 
+            origin = origin, 
+            generate_triangles = True
+        )
 
         polygon_elements = []
 
@@ -316,7 +320,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         
         point_ids = [mesh_slice.get_cell(j).point_ids for j in range(len(mesh_slice.cell_data["cell_id"]))]
 
-        for i, pol in enumerate(point_ids):
+        for i, pol in zip(mesh_slice.cell_data["cell_id"], point_ids):
             ids = np.array(pol)
             polygon_elements.append(
             PolygonElement(
@@ -325,7 +329,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
                     np.array(mesh_slice.points[ids].dot(v))
                 ),
                 [],
-                mesh_slice.cell_data["cell_id"][i],
+                i,
             ))
 
         self.data[caller] = Data2D.from_polygon_list(polygon_elements)
