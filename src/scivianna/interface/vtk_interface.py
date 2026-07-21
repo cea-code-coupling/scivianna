@@ -18,19 +18,27 @@ except ImportError:
     _PYVISTA_AVAILABLE = False
 
 import scivianna
+from scivianna.data.data3d import Data3D
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
-from scivianna.interface.generic_interface import Geometry2DPolygon
+from scivianna.interface.generic_interface import Geometry2DPolygon, Geometry3D
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
-    from scivianna.plotter_2d.generic_plotter import Plotter2D
     from scivianna.slave import ComputeSlave
 
+from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.constants import MESH, GEOMETRY, CSV
 from scivianna.data.data2d import Data2D
+
+try:
+    from scivianna.plotter_3d.generic_plotter import Plotter3D
+except (ImportError, ModuleNotFoundError):
+    class Plotter3D:
+        """Stub class for Plotter3D when pyvista is not available."""
+        pass
 
 
 icon_svg = get_icon("vtk")
@@ -77,7 +85,7 @@ class VTKExtension(Extension):
         self.time_slider = pmui.DiscreteSlider(name = "Time", options = self.time_values, width=280, )
         self.recompute_on_change = pmui.Checkbox(name = "Recompute mesh on time change", value=False)
 
-        assert isinstance(plotter, Plotter2D), "VTKExtension can only be used with a Plotter2D"
+        assert isinstance(plotter, (Plotter2D, Plotter3D)), f"VTKExtension can only be used with a Plotter2D or a Plotter3D, found {plotter}"
 
         self.description = """
 This extension allows defining the VTK plot parameters.
@@ -134,7 +142,7 @@ def extract_unstructured(dataset):
         except Exception:
             return None
         
-class VTKInterface(Geometry2DPolygon):
+class VTKInterface(Geometry2DPolygon, Geometry3D):
     
     extensions = [VTKExtension]
     geometry_type = GeometryType._3D_INFINITE
@@ -154,6 +162,8 @@ class VTKInterface(Geometry2DPolygon):
         """Dictionary with caller as key storing parameters of the last computed frame"""
         self.current_time: float = -1.
 
+        self.last_3d_frame = None
+
     def read_file(self, file_path: str, file_label: str):
         """Read a file and store its content in the interface
 
@@ -170,7 +180,7 @@ class VTKInterface(Geometry2DPolygon):
             self.times = self.reader.time_values
             self.load_at_time(self.reader.time_values[-1])
 
-        if file_label == "MULTI_BLOCK":
+        elif file_label == "MULTI_BLOCK":
             self.reader = vtk.vtkXMLMultiBlockDataReader()
             self.reader.SetFileName(file_path) 
             self.reader.Update()
@@ -420,6 +430,78 @@ class VTKInterface(Geometry2DPolygon):
             Loaded file time values
         """
         return self.times
+    
+    def compute_3D_data(
+        self,
+        options: Dict[str, Any]
+    ) -> Tuple[Data3D, bool]:
+        """Returns a list of polygons that defines the geometry in a given frame
+
+        Parameters
+        ----------
+        options : Dict[str, Any]
+            Additional options for frame computation.
+
+        Returns
+        -------
+        Data3D
+            Geometry to display
+        bool
+            Were the polygons updated compared to the past call
+        """
+        if self.last_3d_frame == options:
+            return Data3D.from_vtk(self.mesh), False
+        
+        if not "recompute" in options:
+            options["recompute"] = True
+        if not "time" in options:
+            options["time"] = self.current_time
+
+        if self.current_time != options["time"]:
+            self.load_at_time(options["time"])
+
+        self.last_3d_frame = options.copy()
+            
+        return Data3D.from_vtk(self.mesh), True
+
+    def get_3d_value_dict(
+        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+        """
+        if value_label == MESH:
+            dict_compo = {v: np.nan for v in cells}
+
+            return dict_compo
+
+        if value_label in self.mesh.array_names:
+            data = self.mesh.cell_data[value_label]
+            return dict(zip(cells, data[cells]))
+
+        for res in self.results.values():
+            if value_label in res.get_fields():
+                results = res.get_values([], cells, [], value_label)
+                return {cells[i]: results[i] for i in range(len(cells))}
+
+        raise NotImplementedError(
+            f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
+        )
 
 if __name__ == "__main__":
     file_path = Path("/partage/spatial/Stages/2026_Manta_NTP/Results/Core/core.pvd")
