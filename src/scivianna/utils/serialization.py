@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.interface import INTERFACES, register_interface
 from scivianna.slave import ComputeSlave
+from scivianna.enums import UpdateEvent
 
 # =============================================================================
 # OPTIONAL PANEL3D IMPORT (pyvista dependency)
@@ -903,7 +904,6 @@ def save_layout_to_zip(
         Path to the saved zip file
     """
     from scivianna.panel.panel_2d import Panel2D
-    from scivianna.panel.panel_3d import Panel3D
     from scivianna.panel.panel_dataframe import PanelDataFrame
     
     file_path = Path(file_path)
@@ -1050,6 +1050,111 @@ def load_layout_from_zip(
         return layout
 
 
+def _extract_panel_to_temp_zip(
+    temp_path: Path,
+    panel_name: str,
+    full_data: Dict,
+    panel_json_data: Dict = None,
+    extensions: list = None,
+    extensions_data: Dict = None
+) -> Path:
+    """
+    Extract a panel's data from the layout structure into a temporary zip file
+    matching the single-panel serialization structure.
+    
+    This enables reusing load_panelX_from_file functions for layout deserialization.
+    
+    Parameters
+    ----------
+    temp_path : Path
+        Temporary directory containing extracted layout zip
+    panel_name : str
+        Name of the panel to extract
+    full_data : Dict
+        Full layout serialized data (layout.json contents)
+    panel_json_data : Dict, optional
+        Panel JSON data from the split_item tree. If None, reads from full_data.
+    extensions : list, optional
+        List of extension names. If None, reads from full_data panels dict.
+    extensions_data : Dict, optional
+        Extension state dict. If None, reads from full_data panels dict.
+        
+    Returns
+    -------
+    Path
+        Path to the created temporary zip file
+    """
+    import shutil
+    
+    panel_info = full_data["panels"][panel_name]
+    
+    # Use provided panel_json_data or read from full_data (GridStackLayout format)
+    if panel_json_data is None:
+        panel_json_data = panel_info.get("panel_json", {})
+    
+    # Use provided extensions or read from full_data (SplitLayout format)
+    if extensions is None:
+        extensions = panel_info.get("extensions", [])
+    if extensions_data is None:
+        extensions_data = panel_info.get("extensions_data", {})
+    
+    # Create a temporary directory for the panel zip contents
+    panel_temp_dir = temp_path / f"_panel_{panel_name}_temp"
+    panel_temp_dir.mkdir(exist_ok=True)
+    
+    # Build panel.json in the single-panel format
+    panel_json = {
+        "panel_type": panel_info.get("panel_type", "Panel2D"),
+        "panel_json": panel_json_data,
+        "extensions": extensions,
+        "extensions_data": extensions_data,
+        "interface_key": panel_info["interface_key"],
+        "slave_file": "slave.pkl",
+    }
+    
+    # Add current_data_file for Panel2D/Panel3D
+    if panel_info.get("current_data"):
+        panel_json["current_data_file"] = "current_data.pkl"
+    
+    panel_json_path = panel_temp_dir / "panel.json"
+    with open(panel_json_path, "w") as f:
+        json.dump(panel_json, f, indent=2)
+    
+    # Copy slave data
+    slave_src = temp_path / panel_info["data_file"]
+    slave_dst = panel_temp_dir / "slave.pkl"
+    if slave_src.exists():
+        shutil.copy2(slave_src, slave_dst)
+    
+    # Copy current_data for Panel2D/Panel3D
+    if panel_info.get("current_data"):
+        current_data_src = temp_path / panel_info["current_data"]
+        current_data_dst = panel_temp_dir / "current_data.pkl"
+        if current_data_src.exists():
+            shutil.copy2(current_data_src, current_data_dst)
+    
+    # Copy dataframe for PanelDataFrame
+    if panel_info.get("dataframe"):
+        dataframe_src = temp_path / panel_info["dataframe"]
+        dataframe_dst = panel_temp_dir / "dataframe.pkl"
+        if dataframe_src.exists():
+            shutil.copy2(dataframe_src, dataframe_dst)
+    
+    # Create the zip file
+    zip_path = temp_path / f"_panel_{panel_name}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(panel_temp_dir):
+            for file in files:
+                file_path_inside = Path(root) / file
+                arcname = file_path_inside.relative_to(panel_temp_dir)
+                zf.write(file_path_inside, arcname)
+    
+    # Clean up the temporary directory
+    shutil.rmtree(panel_temp_dir, ignore_errors=True)
+    
+    return zip_path
+
+
 def _serialize_split_item(item: Union["SplitItem", "VisualizationPanel"]) -> Dict:
     """
     Recursively serializes a SplitItem to a dictionary.
@@ -1095,6 +1200,9 @@ def _deserialize_split_item(
     """
     Recursively deserializes a SplitItem from a dictionary.
     
+    Uses load_panelX_from_file functions for panel deserialization,
+    extracting panel data into temporary zip files matching the single-panel structure.
+    
     Parameters
     ----------
     data : Dict
@@ -1112,10 +1220,6 @@ def _deserialize_split_item(
         Deserialized item
     """
     from scivianna.layout.split import SplitItem, SplitDirection
-    from scivianna.panel.panel_1d import Panel1D
-    from scivianna.panel.panel_2d import Panel2D
-    from scivianna.panel.panel_3d import Panel3D
-    from scivianna.panel.panel_dataframe import PanelDataFrame
     
     if data["type"] == "SplitItem":
         direction = SplitDirection[data["direction"]]
@@ -1124,141 +1228,40 @@ def _deserialize_split_item(
             panel_2=_deserialize_split_item(data["panel_2"], full_data, temp_path, include_files),
             direction=direction
         )
-    elif data["type"] == "Panel1D":
+    elif data["type"] in ("Panel1D", "Panel2D", "Panel3D", "PanelDataFrame"):
         panel_name = data["panel_name"]
-        panel_info = full_data["panels"][panel_name]
-        panel_json_data = data["panel_json"]
+        panel_json_data = data.get("panel_json", {})
+        extensions = data.get("extensions", [])
+        extensions_data = data.get("extensions_data", {})
         
-        # Get the interface class from the INTERFACES dictionary using the interface_key
-        interface_key = panel_info["interface_key"]
-        interface = INTERFACES.get(interface_key)
-        
-        if interface is None:
-            raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
-        
-        # Create slave and load data first (before panel creation) using the slave serialization function
-        slave = load_slave_from_file(
-            temp_path / panel_info["data_file"],
-            interface,
-            include_files=include_files
+        # Extract panel data into a temporary zip matching single-panel structure
+        panel_zip_path = _extract_panel_to_temp_zip(
+            temp_path, panel_name, full_data, panel_json_data,
+            extensions, extensions_data
         )
         
-        # Get all saved extensions and their states using the utility function
-        extensions_data = data.get("extensions_data", {})
-        saved_extensions = data.get("extensions", [])
-        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel1D")
-        
-        # Restore panel from json, passing extensions with their state
-        panel = Panel1D.from_json(panel_json_data, slave, extensions)
-        panel.sync_field = panel_json_data["sync_field"]
-        panel.update_event = panel_json_data["update_event"]
-        
-        return panel
-        
-    elif data["type"] == "Panel2D":
-        panel_name = data["panel_name"]
-        panel_info = full_data["panels"][panel_name]
-        panel_json_data = data["panel_json"]
-        
-        # Get the interface class from the INTERFACES dictionary using the interface_key
-        interface_key = panel_info["interface_key"]
-        interface = INTERFACES.get(interface_key)
-        
-        if interface is None:
-            raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
-        
-        # Create slave and load data first (before panel creation) using the slave serialization function
-        slave = load_slave_from_file(
-            temp_path / panel_info["data_file"],
-            interface,
-            include_files=include_files
-        )
-        
-        # Load current_data from pickle file for Panel2D using the utility function
-        current_data = _load_current_data(temp_path, panel_info["current_data"])
-        
-        # Get all saved extensions and their states using the utility function
-        extensions_data = data.get("extensions_data", {})
-        saved_extensions = data.get("extensions", [])
-        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel2D")
-        
-        # Restore panel from json with the loaded data
-        panel = Panel2D.from_json(panel_json_data, slave, current_data, extensions)
-        
-        return panel
-    
-    elif data["type"] == "Panel3D":
-        panel_name = data["panel_name"]
-        panel_info = full_data["panels"][panel_name]
-        panel_json_data = data["panel_json"]
-        
-        # Get the interface class from the INTERFACES dictionary using the interface_key
-        interface_key = panel_info["interface_key"]
-        interface = INTERFACES.get(interface_key)
-        
-        if interface is None:
-            raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
-        
-        # Create slave and load data first (before panel creation) using the slave serialization function
-        slave = load_slave_from_file(
-            temp_path / panel_info["data_file"],
-            interface,
-            include_files=include_files
-        )
-        
-        # Load current_data (Data3D) from pickle file
-        current_data = _load_current_data(temp_path, panel_info["current_data"])
-        
-        # Get all saved extensions and their states using the utility function
-        extensions_data = data.get("extensions_data", {})
-        saved_extensions = data.get("extensions", [])
-        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel3D")
-        
-        # Restore panel from json with the loaded data
-        panel = Panel3D.from_json(panel_json_data, slave, current_data, extensions)
-        
-        return panel
-    
-    elif data["type"] == "PanelDataFrame":
-        panel_name = data["panel_name"]
-        panel_info = full_data["panels"][panel_name]
-        panel_json_data = data["panel_json"]
-        
-        # Get the interface class from the INTERFACES dictionary using the interface_key
-        interface_key = panel_info["interface_key"]
-        interface = INTERFACES.get(interface_key)
-        
-        if interface is None:
-            raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
-        
-        # Create slave and load data first (before panel creation) using the slave serialization function
-        slave = load_slave_from_file(
-            temp_path / panel_info["data_file"],
-            interface,
-            include_files=include_files
-        )
-        
-        # Load dataframe from pickle file
-        import pandas as pd
-        dataframe_dict = None
-        dataframe_path = temp_path / "dataframe" / f"{panel_name}.pkl"
-        if dataframe_path.exists():
-            with open(dataframe_path, "rb") as f:
-                dataframe_dict = pickle.load(f)
-        
-        # Get all saved extensions and their states using the utility function
-        extensions_data = data.get("extensions_data", {})
-        saved_extensions = data.get("extensions", [])
-        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "PanelDataFrame")
-        
-        # Restore panel from json
-        panel = PanelDataFrame.from_json(panel_json_data, slave, extensions)
-        
-        if dataframe_dict is not None:
-            panel.plotter.update_data(pd.DataFrame(dataframe_dict))
-        
-        return panel
-        
+        try:
+            # Use the appropriate load_panelX_from_file function
+            if data["type"] == "Panel1D":
+                panel = load_panel1d_from_file(panel_zip_path, include_files=include_files)
+                # Restore layout-specific attributes not in single-panel format
+                panel_json_data = data["panel_json"]
+                panel.sync_field = panel_json_data.get("sync_field", False)
+                panel.update_event = panel_json_data.get("update_event", UpdateEvent.RANGE_CHANGE)
+            elif data["type"] == "Panel2D":
+                panel = load_panel2d_from_file(panel_zip_path, include_files=include_files)
+            elif data["type"] == "Panel3D":
+                panel = load_panel3d_from_file(panel_zip_path, include_files=include_files)
+            elif data["type"] == "PanelDataFrame":
+                panel = load_paneldatframe_from_file(panel_zip_path, include_files=include_files)
+            else:
+                raise ValueError(f"Unknown panel type: {data['type']}")
+            
+            return panel
+        finally:
+            # Clean up temporary zip
+            if panel_zip_path.exists():
+                panel_zip_path.unlink()
     else:
         raise ValueError(f"Unknown item type: {data['type']}")
 
@@ -1430,6 +1433,9 @@ def load_gridstack_from_zip(
     """
     Restores a GridStackLayout from a zip file.
     
+    Uses load_panelX_from_file functions for panel deserialization,
+    extracting panel data into temporary zip files matching the single-panel structure.
+    
     Parameters
     ----------
     file_path : Union[str, Path]
@@ -1445,10 +1451,6 @@ def load_gridstack_from_zip(
         Restored GridStackLayout instance
     """
     from scivianna.layout.gridstack import GridStackLayout
-    from scivianna.panel.panel_2d import Panel2D
-    from scivianna.panel.panel_1d import Panel1D
-    from scivianna.panel.panel_3d import Panel3D
-    from scivianna.panel.panel_dataframe import PanelDataFrame
     
     file_path = Path(file_path)
     
@@ -1468,56 +1470,35 @@ def load_gridstack_from_zip(
         for key, iface_class in additional_interfaces.items():
             register_interface(key, iface_class)
         
-        # Rebuild panels with their loaded data
+        # Rebuild panels with their loaded data using load_panelX_from_file functions
         restored_panels = {}
         bounds_x = {}
         bounds_y = {}
         
         for panel_name, panel_info in layout_data["panels"].items():
-            # Get the interface class from the INTERFACES dictionary using the interface_key
-            interface_key = panel_info["interface_key"]
-            interface = INTERFACES.get(interface_key)
+            # Extract panel data into a temporary zip matching single-panel structure
+            panel_zip_path = _extract_panel_to_temp_zip(temp_path, panel_name, layout_data)
             
-            if interface is None:
-                raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
+            try:
+                # Determine panel type from saved JSON data
+                panel_type = panel_info.get("panel_type", "Panel2D")
+                
+                # Use the appropriate load_panelX_from_file function
+                if panel_type == "Panel2D":
+                    panel = load_panel2d_from_file(panel_zip_path, include_files=include_files)
+                elif panel_type == "Panel3D":
+                    panel = load_panel3d_from_file(panel_zip_path, include_files=include_files)
+                elif panel_type == "PanelDataFrame":
+                    panel = load_paneldatframe_from_file(panel_zip_path, include_files=include_files)
+                else:  # Panel1D
+                    panel = load_panel1d_from_file(panel_zip_path, include_files=include_files)
+                
+                restored_panels[panel_name] = panel
+            finally:
+                # Clean up temporary zip
+                if panel_zip_path.exists():
+                    panel_zip_path.unlink()
             
-            # Create slave and load data using the slave serialization function
-            slave = load_slave_from_file(
-                temp_path / panel_info["data_file"],
-                interface,
-                include_files=include_files
-            )
-            
-            # Determine panel type from saved JSON data
-            panel_type = panel_info.get("panel_type", "Panel2D")
-            
-            # Load current_data for Panel2D using the utility function
-            current_data = _load_current_data(temp_path, panel_info["current_data"]) if panel_info.get("current_data") else None
-            
-            # Restore extensions with their saved state using the utility function
-            extensions_data = panel_info.get("extensions_data", {})
-            saved_extensions = panel_info.get("extensions", [])
-            extensions = _restore_extensions(extensions_data, saved_extensions, interface, panel_type)
-            
-            # Get the panel JSON configuration (saved by to_json())
-            panel_json = panel_info.get("panel_json")
-            
-            # Create the panel using from_json with full configuration and extensions
-            if panel_type == "Panel2D":
-                panel = Panel2D.from_json(panel_json, slave, current_data, extensions)
-            elif panel_type == "Panel3D":
-                panel = Panel3D.from_json(panel_json, slave, current_data, extensions)
-            elif panel_type == "PanelDataFrame":
-                panel = PanelDataFrame.from_json(panel_json, slave, extensions)
-                # Restore dataframe if present
-                dataframe_dict = panel_info.get("dataframe")
-                if dataframe_dict:
-                    import pandas as pd
-                    panel.plotter.update_data(pd.DataFrame(dataframe_dict))
-            else:
-                panel = Panel1D.from_json(panel_json, slave, extensions)
-            
-            restored_panels[panel_name] = panel
             bounds_x[panel_name] = tuple(layout_data["bounds_x"][panel_name])
             bounds_y[panel_name] = tuple(layout_data["bounds_y"][panel_name])
         

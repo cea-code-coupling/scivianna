@@ -4,8 +4,9 @@ import numpy as np
 
 from scivianna_vtk.plotter import VTKPlotter
 from scivianna.data.data3d import Data3D
+from scivianna.plotter_3d.generic_plotter import Plotter3D
 
-class Plotter3D:
+class Plotter3D(Plotter3D):
     """Unfinished 3D plotter to get the coupling working"""
 
     def __init__(
