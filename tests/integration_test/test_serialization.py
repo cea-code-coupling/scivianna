@@ -206,7 +206,7 @@ def test_serialize_europe():
         panel.get_slave().terminate()
 
 
-@pytest.mark.medcoupling
+@pytest.mark.pyvista
 def test_serialize_demo_3d():
     """Serialize and restore the demo_3d layout, verify 2D/3D panels and coupling survive."""
     from scivianna_example.med.demo_3d import get_panel
@@ -307,7 +307,7 @@ def test_serialize_panel1d_in_layout():
 # PANEL3D SERIALIZATION
 # =============================================================================
 
-@pytest.mark.medcoupling
+@pytest.mark.pyvista
 def test_serialize_panel3d_individual():
     """Serialize and restore a Panel3D individually, verify displayed field and colormap survive."""
     import scivianna
@@ -349,7 +349,7 @@ def test_serialize_panel3d_individual():
             panel_loaded.get_slave().terminate()
 
 
-@pytest.mark.medcoupling
+@pytest.mark.pyvista
 def test_serialize_panel3d_in_layout():
     """Serialize a layout containing Panel3D, verify 3D panel state survives round-trip."""
     from scivianna_example.med.demo_3d import get_panel
@@ -495,7 +495,7 @@ def test_serialize_europe_full_state():
         panel.get_slave().terminate()
 
 
-@pytest.mark.medcoupling
+@pytest.mark.pyvista
 def test_serialize_demo_3d_full_state():
     """Serialize the demo_3d layout with both panels, verify all state survives."""
     from scivianna_example.med.demo_3d import get_panel
