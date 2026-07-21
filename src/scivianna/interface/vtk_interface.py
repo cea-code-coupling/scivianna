@@ -357,6 +357,15 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         Dict[Union[int,str], str]
             Field value for each requested cell names
         """        
+        if not "recompute" in options:
+            options["recompute"] = True
+        if not "time" in options:
+            options["time"] = self.current_time
+
+        if self.current_time != options["time"]:
+            print(f"Loading data at time {options['time']}")
+            self.load_at_time(options["time"])
+
         if value_label == MESH:
             dict_compo = {v: np.nan for v in cells}
 
@@ -462,6 +471,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
             options["time"] = self.current_time
 
         if self.current_time != options["time"]:
+            print(f"Loading data at time {options['time']}")
             self.load_at_time(options["time"])
 
         self.last_3d_frame = options.copy()
@@ -489,6 +499,15 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         Dict[Union[int,str], str]
             Field value for each requested cell names
         """
+        if not "recompute" in options:
+            options["recompute"] = True
+        if not "time" in options:
+            options["time"] = self.current_time
+
+        if self.current_time != options["time"]:
+            print(f"Loading data at time {options['time']}")
+            self.load_at_time(options["time"])
+
         if value_label == MESH:
             dict_compo = {v: np.nan for v in cells}
 
