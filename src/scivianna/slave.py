@@ -19,9 +19,9 @@ from scivianna.interface.generic_interface import (
     Geometry2D,
     CouplingInterface,
     Geometry3D,
-    OverLine,
     ValueAtLocation,
-    Value1DAtLocation
+    Value1DAtLocation,
+    DataFrameInterface
 )
 from scivianna.enums import GeometryType, VisualizationMode
 
@@ -77,9 +77,9 @@ class SlaveCommand:
     GET_1D_VALUE = "get_1D_value"
     """Returns the 1Dvalue at a location/cell"""
 
-    #   OverLine functions
-    COMPUTE_1D_LINE_DATA = "compute_1d_line_data"
-    """Compute a 1D result along a line"""
+    #   DataFrameInterface functions
+    GET_DATAFRAME = "get_dataframe"
+    """Returns the data as a pandas DataFrame"""
 
     #   CouplingInterface functions
     UPDATE_DATA = "update_data"
@@ -312,18 +312,16 @@ def worker(
                 q_returns.put(input_list)
 
             #
-            #   OverLine functions
-            elif task == SlaveCommand.COMPUTE_1D_LINE_DATA:
-                if not isinstance(code_, OverLine):
+            #   DataFrameInterface functions
+            elif task == SlaveCommand.GET_DATAFRAME:
+                if not isinstance(code_, DataFrameInterface):
                     raise TypeError(
-                        f"The requested panel is not associated to an OverLine, found class {type(code_)}."
+                        f"The requested panel is not associated to an DataFrameInterface, found class {type(code_)}."
                     )
-                pos, u, d, q_tasks_, options = data
-                input_list = code_.compute_1D_line_data(
-                    pos=pos,
-                    u=u,
-                    d=d,
-                    q_tasks_=q_tasks_,
+                cell_id, origin, options = data
+                input_list = code_.get_dataframe(
+                    cell_id=cell_id,
+                    origin=origin,
                     options=options,
                 )
                 q_returns.put(input_list)
@@ -846,47 +844,30 @@ class ComputeSlave:
             ]
         )
 
-    #   OverLine functions
-    def compute_1D_line_data(
+    #   DataFrameInterface functions
+    def get_dataframe(
         self,
-        pos: Tuple[float, float, float],
-        u: Tuple[float, float, float],
-        d: float,
-        q_tasks: mp.Queue,
-        options: Dict[str, Any],
+        cell_id: str,
+        origin: Tuple[float, float, float],
+        options: Dict[str, Any] = None,
     ) -> pd.DataFrame:
-        """Returns a list of polygons that defines the geometry in a given frame
+        """Returns the data from the interface as a pandas DataFrame.
 
         Parameters
         ----------
-        pos : Tuple[float, float, float]
-            1D data line start location
-        u : Tuple[float, float, float]
-            Data line direction vector
-        d : float
-            Distance to travel by the 1D line
-        q_tasks : mp.Queue
-            Queue from which get orders from the master.
-        options : Dict[str, Any]
-            Additional options for frame computation.
+        cell_id : str
+            Cell identifier
+        origin : Tuple[float, float, float]
+            Origin position
+        options : Dict[str, Any], optional
+            Additional options for dataframe computation
 
         Returns
         -------
         pd.DataFrame
-            Pandas dataframe containing the data
+            Pandas DataFrame containing the data
         """
-        return self.__get_function(
-            [
-                SlaveCommand.COMPUTE_1D_LINE_DATA,
-                [
-                    pos,
-                    u,
-                    d,
-                    q_tasks,
-                    options,
-                ],
-            ]
-        )
+        return self.__get_function([SlaveCommand.GET_DATAFRAME, [cell_id, origin, options]])
 
     def set_time(self, time_: float):
         """Set the current time in an interface to associate to the received value.

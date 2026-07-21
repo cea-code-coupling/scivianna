@@ -18,6 +18,8 @@ from bokeh.models import (
     ColorBar,
     TapTool,
 )
+from bokeh.models import CustomJS
+from bokeh.events import MouseMove
 # from bokeh.models import CustomJS
 from bokeh import events
 
@@ -85,6 +87,16 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 # Pixel coordinates in plot
                 "sx": [0],
                 "sy": [0],
+            }
+        )
+
+        # Second source mouse used to fetch the mouse location on demand
+        self.permanent_source_mouse = ColumnDataSource(
+            {
+                # Geometry space coordinates
+                "x": [0],
+                "y": [0],
+                "z": [0],
             }
         )
 
@@ -166,6 +178,44 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
         self.figure.add_tools(self.hover_tool)
 
+        self.figure.js_on_event(
+            MouseMove,
+            CustomJS(
+                args=dict(
+                    mouse=self.permanent_source_mouse,
+                    full_data=self.source_coordinates,
+                ),
+                code="""
+                const x = cb_obj.x;
+                const y = cb_obj.y;
+                console.log(x, y);
+
+                const u0 = full_data.data.u0[0];
+                const u1 = full_data.data.u1[0];
+                const u2 = full_data.data.u2[0];
+
+                const v0 = full_data.data.v0[0];
+                const v1 = full_data.data.v1[0];
+                const v2 = full_data.data.v2[0];
+
+                const w0 = full_data.data.w0[0];
+                const w1 = full_data.data.w1[0];
+                const w2 = full_data.data.w2[0];
+                const w  = full_data.data.w[0];
+
+                const new_data = Object.assign({}, mouse.data);
+
+                new_data.x = [x*u0 + y*v0 + w*w0];
+                new_data.y = [x*u1 + y*v1 + w*w1];
+                new_data.z = [x*u2 + y*v2 + w*w2];
+                
+                console.log(new_data);
+
+                mouse.data = new_data;
+                mouse.change.emit();
+                """
+            )
+        )
         self.color_mapper = LinearColorMapper(
             palette=self.__get_color_mapper_from_string("BuRd"), low=0.0, high=1.0
         )
@@ -576,3 +626,17 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         new_data["w"] = [w]
 
         self.source_coordinates.update(data = new_data)
+
+    def get_mouse_location(self) -> Tuple[float, float, float]:
+        """Returns the current mouse location (returns the panel exit location if out)
+
+        Returns
+        -------
+        Tuple[float, float, float]
+            Mouse location
+        """
+        return (
+            self.permanent_source_mouse.data["x"][0],
+            self.permanent_source_mouse.data["y"][0],
+            self.permanent_source_mouse.data["z"][0],
+        )

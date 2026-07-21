@@ -389,8 +389,8 @@ class GenericLayout:
                         panel.update_event == UpdateEvent.MOUSE_CELL_CHANGE
                         or (isinstance(panel.update_event, list) and UpdateEvent.MOUSE_CELL_CHANGE in panel.update_event)
                     ):
-                self.last_hover_id = cell_id
                 panel.recompute_at(space_location, cell_id)
+        self.last_hover_id = cell_id
 
     def field_change_callback(self, new_field: str):
         """Function calling panels update a field change

@@ -1,6 +1,6 @@
 
 import pandas as pd
-from typing import List
+from typing import List, Tuple
 
 
 class Plotter1D:
@@ -79,5 +79,15 @@ class Plotter1D:
         ----------
         scale : str
             Scale to set
+        """
+        raise NotImplementedError()
+
+    def get_mouse_location(self) -> Tuple[float, float, float]:
+        """Returns the current mouse location (returns the panel exit location if out)
+
+        Returns
+        -------
+        Tuple[float, float, float]
+            Mouse location
         """
         raise NotImplementedError()

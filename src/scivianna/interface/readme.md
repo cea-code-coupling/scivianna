@@ -40,7 +40,6 @@ Interfaces inherit from these capability classes based on what they provide:
 | `Geometry2DGrid` | Provides 2D geometry as a numpy array (rasterized) |
 | `ValueAtLocation` | Provides values at specific locations/cells/materials |
 | `Value1DAtLocation` | Provides 1D data profiles at locations |
-| `OverLine` | Extracts data along user-defined lines |
 | `CouplingInterface` | Supports runtime coupling updates (C3PO/Icoco) |
 
 ### Geometry2D Interface
@@ -71,13 +70,6 @@ Provides 1D data profile access:
 | Function | Description |
 |----------|-------------|
 | `get_1D_value(position, cell_index, material_name, field, options)` | Returns 1D data series (pd.Series) at a specific location/cell/material |
-
-### OverLine Interface
-Provides line-based data extraction:
-
-| Function | Description |
-|----------|-------------|
-| `compute_1D_line_data(pos, u, d, q_tasks, options)` | Returns field values along a 1D line as a pandas DataFrame |
 
 ### CouplingInterface
 Provides runtime coupling capabilities for C3PO/Icoco integration:

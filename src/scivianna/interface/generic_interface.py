@@ -394,37 +394,30 @@ class Value1DAtLocation(GenericInterface):
         """
         raise NotImplementedError()
 
-
-class OverLine(GenericInterface):
-    """ Interface parent class to implement a function to compute a field value along a 1D line.
+class DataFrameInterface(GenericInterface):
+    """ Interface parent class for interfaces that provide data as a pandas DataFrame.
     """
-    def compute_1D_line_data(
+    def get_dataframe(
         self,
-        pos: Tuple[float, float, float],
-        u: Tuple[float, float, float],
-        d: float,
-        q_tasks: mp.Queue,
-        options: Dict[str, Any],
+        cell_id: str,
+        origin: Tuple[float, float, float],
+        options: Dict[str, Any] = None,
     ) -> pd.DataFrame:
-        """Returns a list of polygons that defines the geometry in a given frame
+        """Returns the data stored in the interface as a pandas DataFrame.
 
         Parameters
         ----------
-        pos : Tuple[float, float, float]
-            1D data line start location
-        u : Tuple[float, float, float]
-            Data line direction vector
-        d : float
-            Distance to travel by the 1D line
-        q_tasks : mp.Queue
-            Queue from which get orders from the master.
-        options : Dict[str, Any]
-            Additional options for frame computation.
+        cell_id : str
+            Cell identifier
+        origin : Tuple[float, float, float]
+            Origin position
+        options : Dict[str, Any], optional
+            Additional options for dataframe computation
 
         Returns
         -------
         pd.DataFrame
-            Pandas dataframe containing the data
+            Pandas DataFrame containing the data
 
         Raises
         ------

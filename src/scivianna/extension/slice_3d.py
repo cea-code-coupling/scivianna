@@ -51,7 +51,7 @@ Controls:
 - Enable/disable clipping with the checkbox
 - Select axis (X, Y, Z) for the clip plane normal
 - Adjust position with the slider
-- Keyboard shortcuts in viewer: C (toggle), X/Y/Z (axis), ↑/↓ (move)
+- Keyboard shortcuts in viewer: C (toggle), X/Y/Z (axis)
 """
 
         # Clip enabled checkbox

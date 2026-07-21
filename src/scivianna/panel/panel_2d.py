@@ -184,8 +184,6 @@ class Panel2D(VisualizationPanel):
         except Exception:
             pass
 
-        self.figure.param.watch(self.key_pressed, "key")
-
     def key_pressed(self, *events):
         """Callback function triggered when a key is pressed in the overlay component.
         It updates the `key` parameter of the panel with the last key pressed.
@@ -239,7 +237,7 @@ class Panel2D(VisualizationPanel):
                     u=[-e for e in self.u],
                     v=self.v,
                 )
-            self.figure.key = ""  # Reset the key after processing
+        super().key_pressed(*events)
 
     @pn.io.hold()
     def _apply_update(self):

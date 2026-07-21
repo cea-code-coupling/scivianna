@@ -153,6 +153,27 @@ class VisualizationPanel(pn.viewable.Viewer):
         for extension in self.extensions:
             self.provide_on_clic_callback(extension.on_mouse_clic)
             self.provide_on_mouse_move_callback(extension.on_mouse_move)
+            
+        self.figure.param.watch(self.key_pressed, "key")
+        
+    def key_pressed(self, *events):
+        """Callback function triggered when a key is pressed in the overlay component.
+        It updates the `key` parameter of the panel with the last key pressed.
+        If the key is 'X', 'Y', or 'Z', it changes the axes accordingly. If the key is 'F', it flips the u axis.
+
+        Parameters
+        ----------
+        *events : tuple
+            Event information, not used in this function.
+        """
+        if self.figure.key:
+            if self.figure.key == "i":
+                print(f"Current mouse location : {self.plotter.get_mouse_location()}")
+                
+            for extension in self.extensions:
+                extension.on_key_pressed(self.figure.key)
+            self.figure.key = ""  # Reset the key after processing
+
 
     def duplicate(self, keep_name: bool = False) -> "VisualizationPanel":
         """Get a copy of the panel. A panel of the same type is generated, the current display too, but a new slave process is created.

@@ -110,9 +110,7 @@ GenericInterface          # File I/O: read_file, get_labels, save/load
     │
     ├── ValueAtLocation   # + get_value, get_values (result query at cell/position)
     │
-    ├── Value1DAtLocation # + get_1D_value (tabular 1D results)
-    │
-    └── OverLine          # + compute_1d_line_data (line extraction)
+    └── Value1DAtLocation # + get_1D_value (tabular 1D results)
 
 
 IcocoInterface            # Input coupling: getInputMEDDoubleFieldTemplate, setInputMEDDoubleField, setTime

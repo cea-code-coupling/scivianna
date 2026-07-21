@@ -46,8 +46,8 @@ def test_europe_mouse_move():
     split_panel: SplitLayout
     split_panel, [slave, slave_result] = europe_example(None, return_slaves=True)
 
-    panel_1d = split_panel.split_item.panel_2
-    panel_2d = split_panel.split_item.panel_1
+    panel_1d = split_panel.visualisation_panels["Plot"]
+    panel_2d = split_panel.visualisation_panels["Map"]
 
     current_field = panel_1d.visible_fields_list[0]
 
@@ -79,8 +79,8 @@ def test_europe_mouse_clic():
     split_panel: SplitLayout
     split_panel, [slave, slave_result] = europe_example(None, return_slaves=True)
 
-    panel_1d = split_panel.split_item.panel_2
-    panel_2d = split_panel.split_item.panel_1
+    panel_1d = split_panel.visualisation_panels["Plot"]
+    panel_2d = split_panel.visualisation_panels["Map"]
 
     panel_1d.update_event = UpdateEvent.CLIC
 

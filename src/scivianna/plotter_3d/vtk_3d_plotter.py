@@ -261,3 +261,13 @@ class Plotter3D:
             u and v axes of the slice plane
         """
         return self.u, self.v
+
+    def get_mouse_location(self) -> Tuple[float, float, float]:
+        """Returns the current mouse location (returns the panel exit location if out)
+
+        Returns
+        -------
+        Tuple[float, float, float]
+            Mouse location
+        """
+        return tuple(self.plotter.hover_position)

@@ -174,7 +174,7 @@ class Extension:
     def on_scale_change(
         self, axis_name: str, value: str
     ):
-        """Function called When the scale is changed
+        """Function called when the scale is changed
 
         Parameters
         ----------
@@ -182,6 +182,18 @@ class Extension:
             Name of the axis changing its scale
         value : str
             New scale value
+        """
+        pass
+
+    def on_key_pressed(
+        self, key: str
+    ):
+        """Function called when a keyboard key is pressent and the mouse is hovering the panel
+
+        Parameters
+        ----------
+        key : str
+            Keyboard key name
         """
         pass
 

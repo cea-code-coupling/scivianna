@@ -320,3 +320,13 @@ class BokehPlotter1D(Plotter1D):
             enable or disable the plot
         """
         pass
+
+    def get_mouse_location(self) -> Tuple[float, float, float]:
+        """Returns the current mouse location (returns the panel exit location if out)
+
+        Returns
+        -------
+        Tuple[float, float, float]
+            Mouse location
+        """
+        return ()

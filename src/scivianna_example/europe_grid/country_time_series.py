@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 import pickle
 from typing import Any, Dict, List, Tuple, Union
-from scivianna.interface.generic_interface import ValueAtLocation, Value1DAtLocation
+from scivianna.interface.generic_interface import ValueAtLocation, Value1DAtLocation, DataFrameInterface
+from scivianna.interface import register_interface
 from scivianna.enums import VisualizationMode
 
 
-class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
+class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameInterface):
     def __init__(self, ):
         """CSV file interface to get results from.
         """
@@ -195,6 +196,21 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
             Coloring mode
         """
         return VisualizationMode.FLOAT
+    
+    def get_dataframe(self, cell_id, origin, field_name = None, options = None):
+        return pd.DataFrame(
+            data = [
+                cell_id
+            ] + [
+                f'{round(np.sum(self.df[f"{cell_id.lower()}_{field}"]) / 1000, 0)} MWh' 
+                if cell_id is not None and f"{cell_id.lower()}_{field}" in self.df
+                else " - "
+                for field in self.fields 
+            ],
+            index = [
+                "Country code"
+            ] + list(self.fields)
+        )
 
     def get_file_input_list(self) -> List[Tuple[str, str]]:
         """Returns a list of file label and its description for the GUI.
@@ -239,3 +255,5 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation):
         self.df = state['df']
         self.country_codes = state['country_codes']
         self.fields = state['fields']
+
+register_interface("CountryTimeSeriesInterface", CountryTimeSeriesInterface)

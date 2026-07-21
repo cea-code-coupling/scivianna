@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from scivianna.interface.generic_interface import GenericInterface, Geometry2DPolygon
+from scivianna.interface import register_interface
 from scivianna.constants import CSV, GEOMETRY, MATERIAL, MESH
 from scivianna.slave import ComputeSlave
 from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -16,6 +17,7 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
 from scivianna.layout.split import SplitLayout, SplitItem, SplitDirection
 from scivianna.panel.panel_1d import Panel1D
+from scivianna.panel.panel_dataframe import PanelDataFrame
 from scivianna.data.data2d import Data2D
 
 from scivianna_example.europe_grid.country_time_series import CountryTimeSeriesInterface
@@ -341,6 +343,7 @@ class EuropeGridInterface(Geometry2DPolygon):
         self.country_list = state.get('country_list')
         self.europe = state.get('europe')
 
+register_interface("EuropeGridInterface", EuropeGridInterface)
 
 def make_europe_panel(_, return_slaves: bool = False) -> SplitLayout:
     slave = ComputeSlave(EuropeGridInterface)
@@ -357,15 +360,21 @@ def make_europe_panel(_, return_slaves: bool = False) -> SplitLayout:
     line_panel.update_event = UpdateEvent.MOUSE_CELL_CHANGE
     line_panel.sync_field = True
     line_panel.set_field("solar_pv")
+    df_panel = PanelDataFrame(slave_result, name="Dataframe")
+    df_panel.update_event = UpdateEvent.MOUSE_CELL_CHANGE
 
     split_panel = SplitLayout(
         SplitItem(
             map_panel,
-            line_panel,
+            SplitItem(
+                line_panel,
+                df_panel,
+                SplitDirection.HORIZONTAL,
+                factor=.7
+            ),
             SplitDirection.VERTICAL,
             factor=.6
         ),
-        additional_interfaces={"EuropeGrid": EuropeGridInterface, "TimeSeries": CountryTimeSeriesInterface},
     )
 
     if return_slaves:
