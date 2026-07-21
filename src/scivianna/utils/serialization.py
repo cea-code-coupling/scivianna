@@ -39,7 +39,7 @@ from scivianna.slave import ComputeSlave
 
 try:
     from scivianna.panel.panel_3d import Panel3D
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     class Panel3D:
         """Stub class for Panel3D when pyvista is not available."""
         @classmethod
