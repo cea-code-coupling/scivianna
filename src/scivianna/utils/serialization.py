@@ -8,6 +8,7 @@ This module provides serialization and deserialization functions at different le
 - layout: Serialize/deserialize complete SplitLayout with all components
 
 Note: To avoid circular imports, actual module imports are done lazily inside functions.
+Panel3D has an optional dependency (pyvista), so it is imported lazily with a stub fallback.
 """
 
 from __future__ import annotations
@@ -23,7 +24,6 @@ from typing import Dict, Type, Union, TYPE_CHECKING, Optional, Any
 if TYPE_CHECKING:
     from scivianna.panel.panel_2d import Panel2D
     from scivianna.panel.panel_1d import Panel1D
-    from scivianna.panel.panel_3d import Panel3D
     from scivianna.panel.panel_dataframe import PanelDataFrame
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.layout.split import SplitLayout, SplitItem
@@ -32,6 +32,20 @@ if TYPE_CHECKING:
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.interface import INTERFACES, register_interface
 from scivianna.slave import ComputeSlave
+
+# =============================================================================
+# OPTIONAL PANEL3D IMPORT (pyvista dependency)
+# =============================================================================
+
+try:
+    from scivianna.panel.panel_3d import Panel3D
+except ImportError:
+    class Panel3D:
+        """Stub class for Panel3D when pyvista is not available."""
+        @classmethod
+        def from_json(*args, **kwargs):
+            raise NotImplementedError("Panel3D could not be imported, please install scivianna")
+
 
 # =============================================================================
 # UTILITY FUNCTIONS FOR EXTENSIONS AND DATA
@@ -52,7 +66,7 @@ def _get_extension_class(ext_name: str, interface: Type[GenericInterface], panel
     interface : Type[GenericInterface]
         Interface class to search in first
     panel_type : str
-        Type of panel ("Panel1D" or "Panel2D")
+        Type of panel ("Panel1D", "Panel2D", "Panel3D", or "PanelDataFrame")
         
     Returns
     -------
@@ -90,12 +104,12 @@ def _get_extension_class(ext_name: str, interface: Type[GenericInterface], panel
 
 def _save_current_data(current_data: Any, temp_path: Path, panel_name: str) -> str:
     """
-    Save current_data (Data2D) to a pickle file.
+    Save current_data (Data2D or Data3D) to a pickle file.
     
     Parameters
     ----------
     current_data : Any
-        The data to save (typically Data2D)
+        The data to save (typically Data2D or Data3D)
     temp_path : Path
         Temporary directory path
     panel_name : str
@@ -115,7 +129,7 @@ def _save_current_data(current_data: Any, temp_path: Path, panel_name: str) -> s
 
 def _load_current_data(temp_path: Path, relative_path: str) -> Optional[Any]:
     """
-    Load current_data (Data2D) from a pickle file.
+    Load current_data (Data2D or Data3D) from a pickle file.
     
     Parameters
     ----------
@@ -138,7 +152,7 @@ def _load_current_data(temp_path: Path, relative_path: str) -> Optional[Any]:
 
 def _build_panel_metadata(
     panel_type: str,
-    panel: Union["Panel1D", "Panel2D"],
+    panel: Union["Panel1D", "Panel2D", "Panel3D"],
     interface_key: str
 ) -> Dict:
     """
@@ -147,8 +161,8 @@ def _build_panel_metadata(
     Parameters
     ----------
     panel_type : str
-        Type of panel ("Panel1D" or "Panel2D")
-    panel : Union[Panel1D, Panel2D]
+        Type of panel ("Panel1D", "Panel2D", "Panel3D", or "PanelDataFrame")
+    panel : Union[Panel1D, Panel2D, Panel3D]
         Panel instance to serialize
     interface_key : str
         Interface key string
@@ -191,7 +205,7 @@ def _restore_extensions(
     interface : Type[GenericInterface]
         Interface class to search for extensions
     panel_type : str
-        Type of panel ("Panel1D" or "Panel2D")
+        Type of panel ("Panel1D", "Panel2D", "Panel3D", or "PanelDataFrame")
         
     Returns
     -------
@@ -583,7 +597,6 @@ def save_panel3d_to_file(
         Path to the saved zip file
     """
     from scivianna.interface import INTERFACES
-    from scivianna.data.data3d import Data3D
     
     file_path = Path(file_path)
     
@@ -654,8 +667,6 @@ def load_panel3d_from_file(
         The loaded panel with its associated slave
     """
     from scivianna.panel.panel_3d import Panel3D
-    from scivianna.data.data3d import Data3D
-    
     file_path = Path(file_path)
     zip_path = file_path.with_suffix(".zip") if not file_path.suffix == ".zip" else file_path
     
@@ -937,13 +948,8 @@ def save_layout_to_zip(
             slave_data_path.parent.mkdir(parents=True, exist_ok=True)
             save_slave_to_file(slave, slave_data_path, include_files=include_files)
             
-            # Save current_data for Panel2D using the utility function
-            if isinstance(panel, Panel2D):
-                _save_current_data(panel.current_data, temp_path, panel_name)
-                layout_data["panels"][panel_name]["current_data"] = f"data/{panel_name}.pkl"
-            
-            # Save current_data for Panel3D (Data3D)
-            elif isinstance(panel, Panel3D):
+            # Save current_data for Panel2D and Panel3D using the utility function
+            if isinstance(panel, (Panel2D, Panel3D)):
                 _save_current_data(panel.current_data, temp_path, panel_name)
                 layout_data["panels"][panel_name]["current_data"] = f"data/{panel_name}.pkl"
             
@@ -1538,5 +1544,3 @@ def load_gridstack_from_zip(
         layout.set_to_frame(layout_data["current_frame"])
         
         return layout
-
-
