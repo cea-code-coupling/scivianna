@@ -1,4 +1,35 @@
+"""
+ComputeSlave and worker process for Scivianna.
+
+This module implements the multiprocessing infrastructure that isolates heavy
+data computation from the UI thread. The ComputeSlave class manages a background
+worker process that executes interface methods, preventing GIL issues and keeping
+large data structures (meshes, fields) in the worker process.
+
+Key Components
+--------------
+ComputeSlave
+    Manages the worker subprocess and provides IPC via multiprocessing Queues
+worker
+    Worker function that runs in the subprocess and executes interface methods
+SlaveCommand
+    Enum-like class defining available commands for the worker
+
+Architecture
+------------
+Main Process                          Worker Process
+┌───────────────┐                     ┌──────────────────┐
+│  ComputeSlave │   ──send task── ►   │  code_interface()│
+│  (UI thread)  │   ◄──return result  │  (worker func)   │
+└───────────────┘                     └──────────────────┘
+       │                                      │
+       ├─ q_tasks (Queue)   ─────────►        │
+       ├─ q_returns (Queue) ◄─────────        │
+       └─ q_errors  (Queue) ◄─────────        │
+"""
+
 import atexit
+import logging
 import multiprocessing as mp
 import os
 import queue
@@ -11,6 +42,11 @@ import dill
 import pandas as pd
 import panel as pn
 
+from scivianna.constants import (
+    PROCESS_JOIN_TIMEOUT,
+    QUEUE_TIMEOUT_MEDIUM,
+    QUEUE_TIMEOUT_SHORT,
+)
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
 from scivianna.enums import GeometryType, VisualizationMode
@@ -23,6 +59,9 @@ from scivianna.interface.generic_interface import (
     Value1DAtLocation,
     ValueAtLocation,
 )
+from scivianna.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 #   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
 if TYPE_CHECKING:
@@ -123,7 +162,7 @@ def worker(
 
     while True:
         try:
-            task, data = q_tasks.get(timeout=0.1)  # Block for up to 100ms
+            task, data = q_tasks.get(timeout=QUEUE_TIMEOUT_MEDIUM)  # Block for up to 100ms
 
             #   GenericInterface functions
             if task == SlaveCommand.READ_FILE:
@@ -410,7 +449,7 @@ def worker(
             continue
 
         except Exception as e:
-            traceback.print_exc()
+            logger.error("Worker error: %s", e, exc_info=True)
             q_errors.put(e)
 
 
@@ -452,7 +491,7 @@ class ComputeSlave:
         self,
     ):
         """Kills the worker and create a new one."""
-        print("RESETING SLAVE.")
+        logger.info("Resetting ComputeSlave worker process")
         if self.p is not None:
             self.p.kill()
             self.p.join()
@@ -485,9 +524,9 @@ class ComputeSlave:
             File label
         """
         if isinstance(file_path, str) or isinstance(file_path, Path):
-            print(f"Reading file {file_path} as {file_label}")
+            logger.info("Reading file: %s as %s", file_path, file_label)
         else:
-            print(f"Reading object of type {type(file_path)} as {file_label}")
+            logger.info("Reading object of type %s as %s", type(file_path).__name__, file_label)
 
         file_path = self.code_interface.serialize(file_path, file_label)
 
@@ -999,14 +1038,14 @@ class ComputeSlave:
         self.running = False
         if self.p is not None and self.p.is_alive():
             self.p.terminate()
-            self.p.join(timeout=5)
+            self.p.join(timeout=PROCESS_JOIN_TIMEOUT)
 
     def get_result_or_error(self):
         """Gets the return value from the process. If an error was sent, raise the error instead."""
         while self.p.is_alive():
             try:
                 # Try to get a result with a short timeout
-                return self.q_returns.get(block=True, timeout=0.01)
+                return self.q_returns.get(block=True, timeout=QUEUE_TIMEOUT_SHORT)
             except queue.Empty:
                 # No result yet, check for errors (non-blocking)
                 try:

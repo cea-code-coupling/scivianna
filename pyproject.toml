@@ -132,15 +132,6 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
-[tool.coverage.run]
-source = ["scivianna"]
-branch = true
-omit = [
-    "*/tests/*",
-    "*/__pycache__/*",
-    "*/site-packages/*"
-]
-
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
