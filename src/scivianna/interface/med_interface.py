@@ -1364,15 +1364,15 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             assert len(data) > 5, "Loaded data is not meant for MEDInterface"
             version, med_version, python_version, inc_files, interface_name = data[:5]
             if version != scivianna.__version__:
-                warning(
+                logger.warning(
                     f"Loading file built with scivianna {version}, current version : {scivianna.__version__}."
                 )
             if med_version != medcoupling.__version__:
-                warning(
+                logger.warning(
                     f"Loading file built with medcoupling {med_version}, current version : {medcoupling.__version__}."
                 )
             if python_version != sys.version:
-                warning(
+                logger.warning(
                     f"Loading file built with Python {python_version}, current version : {sys.version}."
                 )
 

@@ -65,6 +65,8 @@ from scivianna.interface.generic_interface import Geometry2DPolygon, Geometry3D
 from scivianna.logging_config import get_logger
 
 if TYPE_CHECKING:
+    import pyvista as pv
+
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.slave import ComputeSlave
 
@@ -422,7 +424,14 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         if file_label == GEOMETRY:
             try:
                 self.reader = pv.get_reader(str(file_path))
-                self.times = self.reader.time_values
+                if hasattr(self.reader, "time_values"):
+                    self.times = self.reader.time_values
+                else:
+                    logger.info(
+                        "Reader %s does not support time series; treating file as static",
+                        type(self.reader).__name__,
+                    )
+                    self.times = [-1.]
                 logger.info("Loaded %d time steps from %s", len(self.times), file_path)
 
                 # Load last time step by default
@@ -516,13 +525,18 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         """
         _require_pyvista()
 
-        if time not in self.times:
-            raise ValueError(f"Time {time} not available. Available times: {self.times}")
+        if hasattr(self.reader, "time_values"):
+            if time not in self.times:
+                raise ValueError(f"Time {time} not available. Available times: {self.times}")
 
-        logger.debug("Loading data at time %s", time)
+            logger.debug("Loading data at time %s", time)
 
-        self.reader.set_active_time_value(time)
-        dataset = self.reader.read()[0]
+            self.reader.set_active_time_value(time)
+            dataset = self.reader.read()[0]
+        else:
+            logger.debug("No time present in file")
+            dataset = self.reader.read()
+            
         self.mesh = extract_unstructured_grid(dataset)
 
         if self.mesh is None:

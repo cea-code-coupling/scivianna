@@ -91,3 +91,44 @@ def set_log_level(level: int | str) -> None:
     # Update all handlers
     for handler in scivianna_logger.handlers:
         handler.setLevel(level)
+
+
+def set_file(filepath: str) -> None:
+    """
+    Redirect all Scivianna log output to a file.
+
+    This function removes existing handlers from the scivianna logger and adds
+    a FileHandler that writes log messages to the specified file. This is useful
+    for capturing logs during long-running simulations or for post-processing.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the log file. If the file doesn't exist, it will be created.
+        If it exists, existing content will be preserved and new logs appended.
+
+    Example
+    -------
+    >>> set_file("logs/scivianna.log")
+    >>> logger = get_logger(__name__)
+    >>> logger.info("This will be written to the file")
+    """
+    scivianna_logger = logging.getLogger("scivianna")
+
+    # Remove all existing handlers
+    for handler in scivianna_logger.handlers[:]:
+        scivianna_logger.removeHandler(handler)
+        handler.close()
+
+    # Create file handler
+    file_handler = logging.FileHandler(filepath, mode="a", encoding="utf-8")
+    file_handler.setLevel(logging.DEBUG)
+
+    # Create formatter with same style as console handler
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(formatter)
+
+    # Add file handler to scivianna logger
+    scivianna_logger.addHandler(file_handler)

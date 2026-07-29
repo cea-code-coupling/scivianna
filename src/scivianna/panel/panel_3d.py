@@ -382,7 +382,7 @@ class Panel3D(VisualizationPanel):
             self.displayed_field = field_name
 
             if field_name not in self.slave.get_labels():
-                warning(
+                logger.warning(
                     f"\n\nRequested field {field_name} : field unavailable, available values : {self.slave.get_labels()}.\n\n"
                 )
 

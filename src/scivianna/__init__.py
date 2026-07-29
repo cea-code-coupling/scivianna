@@ -230,3 +230,6 @@ def get_info() -> dict:
         info["available_components"]["interfaces"]["VTK"] = False
 
     return info
+
+from scivianna.logging_config import set_log_level, set_file
+set_log_level("INFO")

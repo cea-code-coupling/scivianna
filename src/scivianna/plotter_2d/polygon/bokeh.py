@@ -395,6 +395,11 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         colors = data.cell_colors
         cell_count = len(colors)
 
+        if len(self.source_polygons.data.keys()) == 0:
+            return self.plot_2d_frame(
+                data
+            )
+
         self.source_polygons.patch(
             {
                 CELL_VALUES: [(slice(0, cell_count), data.cell_values.tolist())],
