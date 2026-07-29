@@ -6,7 +6,7 @@ It configures logging with appropriate formatters, handlers, and log levels.
 
 Example
 -------
->>> from scivianna.logging import get_logger
+>>> from scivianna.logging_config import get_logger
 >>> logger = get_logger(__name__)
 >>> logger.info("Initialization complete")
 """

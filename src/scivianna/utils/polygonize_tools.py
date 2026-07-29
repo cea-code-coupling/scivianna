@@ -1,3 +1,9 @@
+"""
+Polygon tools for Scivianna.
+
+This module provides utilities for polygon manipulation and rasterization.
+"""
+
 import math
 from typing import Any, Dict, List, Tuple, Type, Union
 
@@ -12,6 +18,10 @@ try:
 except ImportError as e:
     rasterio_imported = False
     rasterio_error = e
+
+from scivianna.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 import shapely
 from shapely.geometry import shape
@@ -216,7 +226,7 @@ def numpy_2D_array_to_polygons(
         List of PolygonElements
     """
     if not rasterio_imported:
-        print("Rasterio not available, please pip install scivianna[grid]")
+        logger.error("Rasterio not available, please pip install scivianna[grid]")
         raise rasterio_error
 
     if not isinstance(arr, np.ndarray):

@@ -1,3 +1,9 @@
+"""
+Slice3D extension for Scivianna.
+
+This module provides 3D clip plane controls for slicing geometry.
+"""
+
 from typing import TYPE_CHECKING, Any, Dict
 
 import panel as pn
@@ -5,6 +11,9 @@ import panel_material_ui as pmui
 
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
+from scivianna.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from scivianna.panel.panel_3d import Panel3D
@@ -88,8 +97,11 @@ Controls:
             vtk_plotter.set_clip_axis(event.new)
 
     def _on_plane_change(self, event):
-        print(f"Plane origin {self.plotter.plotter.clip_origin}")
-        print(f"Plane normal {self.plotter.plotter.clip_normal}")
+        logger.debug(
+            "Clip plane - origin: %s, normal: %s",
+            self.plotter.plotter.clip_origin,
+            self.plotter.plotter.clip_normal,
+        )
 
     def make_gui(self) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.

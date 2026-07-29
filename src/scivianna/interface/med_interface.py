@@ -1,8 +1,15 @@
+"""
+MEDCoupling interface for Scivianna.
+
+This module provides an interface for reading and visualizing MED files
+using the MEDCoupling library. It supports both 2D and 3D visualization
+with field data extraction.
+"""
+
 import multiprocessing as mp
 import os
 import pickle
 import sys
-from logging import warning
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
@@ -25,7 +32,10 @@ from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
 from scivianna.interface.generic_interface import CouplingInterface, Geometry2DPolygon, Geometry3D
+from scivianna.logging_config import get_logger
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
+
+logger = get_logger(__name__)
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
@@ -141,7 +151,7 @@ This extension allows defining the medcoupling field display parameters.
             origin = np.array(self.origin) + np.cross(self.u, self.v) * (
                 self.slider_w.value - self.w
             )
-            print(f"Setting origin to {origin}")
+            logger.debug("Setting origin to %s", origin)
             self.panel.set_coordinates(origin=origin)
 
     @pn.io.hold()
@@ -245,8 +255,10 @@ This extension allows defining the medcoupling field display parameters.
             pn.state.notifications.error(
                 "Iteration/order couple not valid, see console for available values."
             )
-            print(
-                f"Available iteration/order values for field '{self.field_name}': {self.field_iterations[self.field_name]}"
+            logger.error(
+                "Available iteration/order values for field '%s': %s",
+                self.field_name,
+                self.field_iterations[self.field_name],
             )
 
             self.iteration_input.color = "error"
@@ -417,7 +429,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         if file_label == GEOMETRY:
             if profile_time:
                 start_time = time.time()
-            print("File to read", file_path)
+            logger.info("Reading MED file: %s", file_path)
 
             file_path = str(file_path)
             self.file_path = file_path
@@ -448,7 +460,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             self.mesh = [(mesh_data, 0.0)]
 
             if profile_time:
-                print(f"File reading time {time.time() - start_time}")
+                logger.debug("File reading time: %.3fs", time.time() - start_time)
         else:
             raise ValueError(f"File label '{file_label}' not implemented")
 
@@ -555,7 +567,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             and (self.last_computed_frame.get(caller) == [*origin, *list(u), *list(v), mesh_time])
             and (caller in self.data)
         ):
-            print("Skipping polygon computation.")
+            logger.debug("Skipping polygon computation (cached frame)")
             return self.data[caller], False
 
         if profile_time:
@@ -600,7 +612,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             )
 
         if profile_time:
-            print(f"Compute mesh time {time.time() - start_time}")
+            logger.debug("Compute mesh time: %.3fs", time.time() - start_time)
             start_time = time.time()
 
         cells_count = mesh.getNumberOfCells()
@@ -644,8 +656,10 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         self.cell_dicts[caller] = caller_cell_dict
 
         if profile_time:
-            print(
-                f"Gathering cells id time: {time.time() - start_time} using cell id {use_cell_id}"
+            logger.debug(
+                "Gathering cells id time: %.3fs (using cell id: %s)",
+                time.time() - start_time,
+                use_cell_id,
             )
 
         self.last_computed_frame[caller] = [*origin, *list(u), *list(v), mesh_time]
@@ -695,14 +709,18 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             return {int(v): np.nan for v in cells}
 
         if "Iteration" not in options:
-            print(
-                f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}"
+            logger.warning(
+                "Iteration not found in options for field '%s', using default: %s",
+                value_label,
+                self.fields_iterations[value_label][0][0],
             )
             options["Iteration"] = self.fields_iterations[value_label][0][0]
 
         if "Order" not in options:
-            print(
-                f"Order not found in medcoupling option, setting {self.fields_iterations[value_label][0][1]}"
+            logger.warning(
+                "Order not found in options for field '%s', using default: %s",
+                value_label,
+                self.fields_iterations[value_label][0][1],
             )
             options["Order"] = self.fields_iterations[value_label][0][1]
 
@@ -718,7 +736,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         # Loading it if available
         else:
-            print(f"Reading MEDCouplingFieldDouble in {self.file_path}")
+            logger.info("Reading MEDCouplingFieldDouble from %s", self.file_path)
             if value_label in self.fields_iterations:
                 # if "Iteration" in options and "Order" in options and (options["Iteration"], options["Order"]) in self.fields_iterations[value_label]:
                 if True:
@@ -756,7 +774,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             value_dict = dict(zip(np.array(cells), values))
 
             if profile_time:
-                print(f"Get value dict time: {coupling_time.time() - start_time}")
+                logger.debug("Get value dict time: %.3fs", coupling_time.time() - start_time)
             return value_dict
 
         # Allowing the field not to be defined at start, in which case we return only the mesh
@@ -970,7 +988,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         current_mesh, _ = self._get_mesh_at_time(time)
 
         if time == self.last_computed_3d_time and self.data3d is not None:
-            print("Skipping 3D mesh computation.")
+            logger.debug("Skipping 3D mesh computation (cached)")
             return self.data3d, False
 
         if profile_time:
@@ -983,7 +1001,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         self.data3d = Data3D.from_vtk(pv_mesh)
 
         if profile_time:
-            print(f"Compute 3D mesh time {time.time() - start_time}")
+            logger.debug("Compute 3D mesh time: %.3fs", time.time() - start_time)
 
         return self.data3d, True
 
@@ -1019,14 +1037,18 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             return {int(v): np.nan for v in cells}
 
         if "Iteration" not in options:
-            print(
-                f"Iteration not found in medcoupling option, setting {self.fields_iterations[value_label][0][0]}"
+            logger.warning(
+                "Iteration not found in options for field '%s', using default: %s",
+                value_label,
+                self.fields_iterations[value_label][0][0],
             )
             options["Iteration"] = self.fields_iterations[value_label][0][0]
 
         if "Order" not in options:
-            print(
-                f"Order not found in medcoupling option, setting {self.fields_iterations[value_label][0][1]}"
+            logger.warning(
+                "Order not found in options for field '%s', using default: %s",
+                value_label,
+                self.fields_iterations[value_label][0][1],
             )
             options["Order"] = self.fields_iterations[value_label][0][1]
 
@@ -1042,7 +1064,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
 
         # Loading it if available
         else:
-            print(f"Reading MEDCouplingFieldDouble in {self.file_path}")
+            logger.info("Reading MEDCouplingFieldDouble from %s", self.file_path)
             if value_label in self.fields_iterations:
                 # if "Iteration" in options and "Order" in options and (options["Iteration"], options["Order"]) in self.fields_iterations[value_label]:
                 if True:
@@ -1077,7 +1099,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             value_dict = dict(zip(np.array(cells).astype(int), values.astype(np.float32)))
 
             if profile_time:
-                print(f"Get value dict time: {coupling_time.time() - start_time}")
+                logger.debug("Get value dict time: %.3fs", coupling_time.time() - start_time)
 
             return value_dict
 

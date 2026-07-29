@@ -27,7 +27,6 @@ def test_demo():
 
 # Unmarked as default because it might fail on github but still works locally
 # @pytest.mark.default
-@pytest.mark.xfail(reason="Synchronisation does not always work through pytest due to event handling time")
 def test_mandelbrot():
     """Ensuring that the mandelbrot example works as expected, and that the range update works correctly."""
     def get_polygon_bounds(data):

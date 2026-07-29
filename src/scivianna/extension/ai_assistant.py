@@ -1,3 +1,9 @@
+"""
+AI Assistant extension for Scivianna.
+
+This module provides AI-assisted code generation for data transformation.
+"""
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -8,8 +14,11 @@ import scivianna
 from scivianna.data.data2d import Data2D
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
+from scivianna.logging_config import get_logger
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -189,7 +198,7 @@ Agent not loaded, received error :
                 data_worker.execute_code(self.llm_code)
                 self.current_data = data_worker.data2d.copy()
             except Exception as e:
-                print("Execution failed, got error ", e)
+                logger.error("AI code execution failed: %s", e)
                 self.current_data = data_worker.data2d_save.copy()
 
         data.cell_colors = self.current_data.cell_colors

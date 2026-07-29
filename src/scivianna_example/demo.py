@@ -4,6 +4,9 @@ from scivianna.icon import get_icon
 from scivianna.panel.demo import Demonstrator
 from scivianna_example.europe_grid.europe_grid import make_europe_panel as europe_example
 
+from scivianna.logging_config import get_logger
+logger = get_logger(__name__)
+
 try:
     import medcoupling
 
@@ -12,7 +15,7 @@ try:
 
     has_med = True
 except ImportError as e:
-    print(f"Could not import medcoupling app, {e}, skipping demo medcoupling build")
+    logger.info(f"Could not import medcoupling app, {e}, skipping demo medcoupling build")
     has_med = False
 
 try:
@@ -20,7 +23,7 @@ try:
 
     has_3d = True
 except ImportError as e:
-    print(f"Could not import 3D app, {e}, skipping demo 3D build")
+    logger.info(f"Could not import 3D app, {e}, skipping demo 3D build")
     has_3d = False
 
 try:
@@ -31,7 +34,7 @@ try:
 
     has_mandelbrot = True
 except ImportError as e:
-    print(f"Could not import mandelbrot app, {e}, skipping demo mandelbrot build")
+    logger.info(f"Could not import mandelbrot app, {e}, skipping demo mandelbrot build")
     has_mandelbrot = False
 
 try:
@@ -40,8 +43,17 @@ try:
 
     has_coupling = True
 except ImportError as e:
-    print(f"Could not import coupling app, {e}, skipping demo coupling build")
+    logger.info(f"Could not import coupling app, {e}, skipping demo coupling build")
     has_coupling = False
+
+try:
+    import scivianna_example.vtk_example.demo_3d as vtk_demo_3d
+    from scivianna_example.vtk_example.demo_3d import get_panel as vtk_3d_example
+
+    has_vtk = True
+except ImportError as e:
+    logger.info(f"Could not import VTK app, {e}, skipping demo VTK build")
+    has_vtk = False
 
 
 from pathlib import Path
@@ -59,6 +71,7 @@ def make_demo(return_slaves=False) -> pmui.Page:
         "Mandelbrot example": get_icon("grid_4x4"),
         "Coupling example": get_icon("player-play"),
         "Medcoupling 3D example": get_icon("view_in_ar"),
+        "VTK 3D example": get_icon("vtk"),
     }
 
     if return_slaves:
@@ -91,6 +104,14 @@ def make_demo(return_slaves=False) -> pmui.Page:
             )
         else:
             slaves_coupling = []
+
+        if has_vtk:
+            vtk_3d_panel, slaves_vtk_3d = vtk_3d_example(
+                None, return_slaves=return_slaves
+            )
+        else:
+            slaves_vtk_3d = []
+
     else:
         europe_panel = europe_example(None)
 
@@ -105,6 +126,9 @@ def make_demo(return_slaves=False) -> pmui.Page:
 
         if has_coupling:
             coupling_panel = coupling_example(computation_time=0.01, start=False, use_server=False)
+
+        if has_vtk:
+            vtk_3d_panel = vtk_3d_example(None)
 
     with open(Path(europe_grid.__file__).parent / "description.md", "r") as f:
         europe_with_description = pmui.Row(
@@ -135,6 +159,12 @@ def make_demo(return_slaves=False) -> pmui.Page:
                 coupling_panel.main_frame, pmui.Typography(f.read(), width=300)
             )
 
+    if has_vtk:
+        with open(Path(vtk_demo_3d.__file__).parent / "description.md", "r") as f:
+            vtk_3d_with_description = pmui.Row(
+                vtk_3d_panel.main_frame, pmui.Typography(f.read(), width=300)
+            )
+
     description_file = Path(scivianna_example.__file__).parent / "demo_description.md"
 
     image = pn.pane.Image(
@@ -157,6 +187,8 @@ def make_demo(return_slaves=False) -> pmui.Page:
         guis["Coupling example"] = coupling_with_description
     if has_3d:
         guis["Medcoupling 3D example"] = medcoupling_3d_with_description
+    if has_vtk:
+        guis["VTK 3D example"] = vtk_3d_with_description
 
     demo = Demonstrator(guis, icons)
 
@@ -167,7 +199,8 @@ def make_demo(return_slaves=False) -> pmui.Page:
             + slaves_europe
             + slaves_mandelbrot
             + slaves_coupling
-            + slaves_medcoupling_3d,
+            + slaves_medcoupling_3d
+            + slaves_vtk_3d,
         )
     else:
         return demo

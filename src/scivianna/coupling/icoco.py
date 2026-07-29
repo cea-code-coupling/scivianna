@@ -59,8 +59,11 @@ from scivianna.interface.generic_interface import CouplingInterface
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.layout.gridstack import GridStackLayout
 from scivianna.layout.split import SplitLayout
+from scivianna.logging_config import get_logger
 from scivianna.panel.panel_1d import Panel1D
 from scivianna.utils.serialization import save_gridstack_to_zip, save_layout_to_zip
+
+logger = get_logger(__name__)
 
 
 class Value:
@@ -185,7 +188,7 @@ class LayoutProblem(Problem):
         WrongContext
             Raised if called multiple times or after initialize().
         """
-        print("\n\nVisualizer initializing\n\n")
+        logger.info("Visualizer initializing")
         ip_adress = socket.gethostbyname(socket.gethostname())
 
         for panel in self.layout.visualisation_panels:
@@ -236,8 +239,10 @@ class LayoutProblem(Problem):
         """
         self._active_connections.add(session_context.id)
         pn.state.on_session_destroyed(self._on_session_destroyed)
-        print(
-            f"[LayoutProblem] New connection: {session_context.id}. Active connections: {len(self._active_connections)}"
+        logger.info(
+            "[LayoutProblem] New connection: %s. Active connections: %d",
+            session_context.id,
+            len(self._active_connections),
         )
 
     def _on_session_destroyed(self, session_context):
@@ -253,8 +258,10 @@ class LayoutProblem(Problem):
             The session context for the disconnected client.
         """
         self._active_connections.discard(session_context.id)
-        print(
-            f"[LayoutProblem] Connection closed: {session_context.id}. Active connections: {len(self._active_connections)}"
+        logger.info(
+            "[LayoutProblem] Connection closed: %s. Active connections: %d",
+            session_context.id,
+            len(self._active_connections),
         )
 
     def wait_for_disconnect(self, poll_interval: float = 0.5) -> None:
@@ -278,12 +285,13 @@ class LayoutProblem(Problem):
                 )
             )
 
-        print(
-            f"[LayoutProblem] Waiting for {len(self._active_connections)} active connection(s) to disconnect..."
+        logger.info(
+            "[LayoutProblem] Waiting for %d active connection(s) to disconnect...",
+            len(self._active_connections),
         )
         while len(self._active_connections) > 0:
             time.sleep(poll_interval)
-        print("[LayoutProblem] All connections disconnected.")
+        logger.info("[LayoutProblem] All connections disconnected.")
 
     def terminate(self) -> None:
         """
@@ -333,7 +341,7 @@ class LayoutProblem(Problem):
         self.wait_for_disconnect()
 
         for panel in self.layout.visualisation_panels.values():
-            print(f"Terminating panel {panel.panel_name}")
+            logger.info("Terminating panel: %s", panel.panel_name)
             panel.get_slave().terminate()
 
         self.server.stop()

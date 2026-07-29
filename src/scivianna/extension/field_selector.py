@@ -1,3 +1,9 @@
+"""
+FieldSelector extension for Scivianna.
+
+This module provides field selection and colormap configuration for visualization panels.
+"""
+
 import time
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -10,12 +16,15 @@ from scivianna.data.data2d import Data2D
 from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
+from scivianna.logging_config import get_logger
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.utils.color_tools import (
     beautiful_color_maps,
     get_edges_colors,
     interpolate_cmap_at_values,
 )
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -75,7 +84,7 @@ def set_colors_list(
     minmax = None
 
     if profile_time:
-        print(f"get color list prepare time {time.time() - start_time}")
+        logger.debug("get color list prepare time: %.3fs", time.time() - start_time)
         start_time = time.time()
 
     if coloring_mode == VisualizationMode.FROM_STRING:
@@ -103,7 +112,7 @@ def set_colors_list(
         no_nan_values = normalized_cell_values[~np.isnan(normalized_cell_values)]
 
         if profile_time:
-            print(f"extracting no nan {time.time() - start_time}")
+            logger.debug("extracting no nan: %.3fs", time.time() - start_time)
             start_time = time.time()
 
         if center_colormap_on_zero:
@@ -135,13 +144,13 @@ def set_colors_list(
             normalized_cell_values = (normalized_cell_values - min_val) / minmax
 
         if profile_time:
-            print(f"Rescaling data {time.time() - start_time}")
+            logger.debug("Rescaling data: %.3fs", time.time() - start_time)
             start_time = time.time()
 
         cell_colors = interpolate_cmap_at_values(color_map, normalized_cell_values)
 
         if profile_time:
-            print(f"Extracting colors {time.time() - start_time}")
+            logger.debug("Extracting colors: %.3fs", time.time() - start_time)
             start_time = time.time()
 
         # Changing the main color from black to gray in case of Nan
@@ -150,7 +159,7 @@ def set_colors_list(
                 cell_colors[c] = (200, 200, 200, 0)
 
         if profile_time:
-            print(f"Fixing nans {time.time() - start_time}")
+            logger.debug("Fixing nans: %.3fs", time.time() - start_time)
             start_time = time.time()
 
     elif coloring_mode == VisualizationMode.NONE:
@@ -272,7 +281,7 @@ If a color bar is used, you can decide to center it on zero.
 
     def update_range_visibility(self, *args, **kwargs):
         """Updates range visibility based on the field type"""
-        print(f"Setting visible for field : {self.field_color_selector.value}")
+        logger.debug("Setting visible for field: %s", self.field_color_selector.value)
         self.force_range_column.visible = (
             self.slave.get_label_coloring_mode(self.field_color_selector.value)
             == VisualizationMode.FROM_VALUE

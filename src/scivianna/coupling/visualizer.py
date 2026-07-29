@@ -1,3 +1,9 @@
+"""
+Coupling visualizer for Scivianna.
+
+This module provides visualization capabilities for code coupling using ICoCo/C3PO.
+"""
+
 import os
 from enum import Enum, auto
 from pathlib import Path
@@ -27,11 +33,14 @@ from scivianna.interface.generic_interface import (
 from scivianna.interface.time_dataframe import TimeDataFrame
 from scivianna.layout.gridstack import GridStackLayout
 from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
+from scivianna.logging_config import get_logger
 from scivianna.notebook_tools import get_med_panel
 from scivianna.panel.panel_1d import Panel1D
 from scivianna.panel.panel_2d import Panel2D
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.slave import ComputeSlave
+
+logger = get_logger(__name__)
 
 
 class CouplingPanel(BaseModel):
@@ -547,7 +556,7 @@ class GridStackProblem(LayoutProblem):
         """
         import os
 
-        print(f"server pid = {os.getpid()}")
+        logger.debug("Server PID: %d", os.getpid())
 
         if isinstance(self.data_file_path, (str, Path)):
             data_to_view = GridLayoutData.model_validate_json(Path(self.data_file_path).read_text())
@@ -683,7 +692,7 @@ class SplitLayoutProblem(LayoutProblem):
         """
         import os
 
-        print(f"server pid = {os.getpid()}")
+        logger.debug("Server PID: %d", os.getpid())
 
         if isinstance(self.data_file_path, (str, Path)):
             data_to_view = SplitLayoutData.model_validate_json(
@@ -801,7 +810,7 @@ def get_problem(
         else:
             raise TypeError(f"Data type {type(data_to_view)} not implemented")
 
-        print(f"Client pid = {os.getpid()}")
+        logger.debug("Client PID: %d", os.getpid())
 
         problem = ProblemClient(
             typeid=typeid, working_directory=working_directory, show_server=show, start=start

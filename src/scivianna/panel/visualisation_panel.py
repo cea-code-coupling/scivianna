@@ -1,3 +1,10 @@
+"""
+VisualizationPanel - Base class for visualization panels in Scivianna.
+
+This module provides the abstract base class for all visualization panels,
+defining the common interface and lifecycle methods.
+"""
+
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple, Type, Union
 
@@ -10,9 +17,12 @@ from scivianna.data.data_container import DataContainer
 from scivianna.enums import UpdateEvent
 from scivianna.extension.extension import Extension
 from scivianna.interface.generic_interface import Geometry2D
+from scivianna.logging_config import get_logger
 from scivianna.panel.gui import GUI
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
+
+logger = get_logger(__name__)
 
 pn.config.inline = True
 
@@ -172,7 +182,7 @@ class VisualizationPanel(pn.viewable.Viewer):
         """
         if self.figure.key:
             if self.figure.key == "i":
-                print(f"Current mouse location : {self.plotter.get_mouse_location()}")
+                logger.debug("Current mouse location: %s", self.plotter.get_mouse_location())
 
             for extension in self.extensions:
                 extension.on_key_pressed(self.figure.key)

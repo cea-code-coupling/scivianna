@@ -1,5 +1,11 @@
+"""
+Panel3D - 3D visualization panel for Scivianna.
+
+This module implements Panel3D, a 3D visualization panel that renders
+geometry with field coloring using VTK.
+"""
+
 import os
-from logging import warning
 from typing import Callable, Dict, List, Tuple, Type, Union
 
 import numpy as np
@@ -15,9 +21,12 @@ from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
 from scivianna.extension.slice_3d import Slice3D
 from scivianna.interface.generic_interface import Geometry3D
+from scivianna.logging_config import get_logger
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_3d.vtk_3d_plotter import Plotter3D
 from scivianna.slave import ComputeSlave
+
+logger = get_logger(__name__)
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
@@ -109,8 +118,10 @@ class Panel3D(VisualizationPanel):
         if data is None:
             data_ = self.compute_fn()
         else:
-            print(
-                f"Panel3D {self.panel_name} initialized initial Data3D object, restoring {len(data.cell_ids)} cells."
+            logger.info(
+                "Panel3D %s initialized with Data3D object, restoring %d cells",
+                self.panel_name,
+                len(data.cell_ids),
             )
             data_ = data
             self.update_polygons = True
@@ -173,7 +184,7 @@ class Panel3D(VisualizationPanel):
         self.marked_to_recompute = False
 
         if profile_time:
-            print(f"Apply update : {time.time() - st}")
+            logger.debug("Apply update: %.3fs", time.time() - st)
 
         # Force notebook refresh
         pn.io.push_notebook(self.figure)
@@ -201,13 +212,13 @@ class Panel3D(VisualizationPanel):
         if profile_time:
             st = time.time()
 
-        print(f"{self.panel_name} - Recomputing with field {self.displayed_field}")
+        logger.info("%s - Recomputing with field %s", self.panel_name, self.displayed_field)
 
         data = self.compute_fn()
 
         if data is not None:
             if profile_time:
-                print(f"Plot panel compute function : {time.time() - st}")
+                logger.debug("Plot panel compute function: %.3fs", time.time() - st)
                 st = time.time()
 
             # Build pending updates directly
@@ -223,7 +234,7 @@ class Panel3D(VisualizationPanel):
                 }
 
             if profile_time:
-                print(f"Plot panel preparing data : {time.time() - st}")
+                logger.debug("Plot panel preparing data: %.3fs", time.time() - st)
 
             # Schedule visual update
             self._schedule_update()
@@ -255,8 +266,8 @@ class Panel3D(VisualizationPanel):
         )
 
         if computed_data is None:
-            print(
-                f"\n\n Got None from computed data on {self.panel_name}, returning the past values.\n\n"
+            logger.error(
+                "Got None from computed data on %s, returning past values", self.panel_name
             )
             return None
 

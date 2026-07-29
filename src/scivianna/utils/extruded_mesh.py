@@ -1,3 +1,9 @@
+"""
+Extruded mesh utilities for Scivianna.
+
+This module provides utilities for creating extruded structured meshes from 2D polygons.
+"""
+
 import time
 from typing import Any, Dict, List, Tuple
 
@@ -6,7 +12,10 @@ import shapely
 import shapely.coords
 
 from scivianna.interface.generic_interface import Geometry2D
+from scivianna.logging_config import get_logger
 from scivianna.utils.color_tools import get_edges_colors
+
+logger = get_logger(__name__)
 
 try:
     import pyvista as pv
@@ -65,7 +74,7 @@ class ExtrudedStructuredMesh(Geometry2D):
 
         remap_cells = any([len(polygons[k].interiors) for k in range(count_cells)])
 
-        print("Warning : PyVista remapping cell IDs")
+        logger.warning("PyVista remapping cell IDs")
 
         for k in range(count_cells):
             if len(polygons[k].interiors) == 0:

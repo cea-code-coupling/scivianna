@@ -1,3 +1,9 @@
+"""
+Generic layout for Scivianna visualization panels.
+
+This module provides the base layout class for arranging multiple visualization panels.
+"""
+
 import functools
 from pathlib import Path
 from typing import Callable, Dict, List, Literal, Tuple, Type, Union
@@ -13,10 +19,13 @@ from scivianna.enums import UpdateEvent
 from scivianna.extension.coupling import CouplingExtension
 from scivianna.extension.layout import LayoutExtension
 from scivianna.interface.generic_interface import GenericInterface
+from scivianna.logging_config import get_logger
 from scivianna.panel.gui import GUI
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.slave import ComputeSlave
 from scivianna.utils.interface_tools import GenericInterfaceEnum, get_interface_default_panel
+
+logger = get_logger(__name__)
 
 pn.extension(notifications=True)
 
@@ -152,7 +161,7 @@ class GenericLayout:
             and self.available_interfaces[interface_key]
             != self.visualisation_panels[current_frame].slave.code_interface
         ):
-            print(f"Updating code interface of panel {current_frame} to {code_interface}")
+            logger.info("Updating code interface of panel %s to %s", current_frame, code_interface)
 
             default_panel = get_interface_default_panel(interface_key, title=current_frame)
 
@@ -177,7 +186,7 @@ class GenericLayout:
         event : Any
             Event to make the function linkable to the gridstack
         """
-        print("Changing to ", self.current_frame)
+        logger.info("Changing to frame: %s", self.current_frame)
         self.layout_extension.change_to_frame(self.current_frame)
 
         for key in self.side_bars:

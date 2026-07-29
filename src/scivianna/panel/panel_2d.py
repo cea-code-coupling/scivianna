@@ -1,5 +1,12 @@
+"""
+Panel2D - 2D visualization panel for Scivianna.
+
+This module implements Panel2D, a 2D visualization panel that renders
+geometry slices with field coloring. It supports both polygon and grid
+representations, with interactive zoom/pan capabilities.
+"""
+
 import os
-from logging import warning
 from typing import Callable, Dict, List, Tuple, Type, Union
 
 import numpy as np
@@ -16,12 +23,15 @@ from scivianna.extension.extension import Extension
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
 from scivianna.interface.generic_interface import Geometry2D
+from scivianna.logging_config import get_logger
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
 from scivianna.slave import ComputeSlave
 from scivianna.utils.polygon_sorter import PolygonSorter
+
+logger = get_logger(__name__)
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
@@ -147,8 +157,10 @@ class Panel2D(VisualizationPanel):
         if data is None:
             data_ = self.compute_fn(self.u, self.v, self.origin, self.size_u, self.size_v)
         else:
-            print(
-                f"Panel2D {self.panel_name} initialized initial Data2D object, restoring {len(data.cell_ids)} cells."
+            logger.info(
+                "Panel2D %s initialized with Data2D object, restoring %d cells",
+                self.panel_name,
+                len(data.cell_ids),
             )
             data_ = data
             self.update_polygons = True
@@ -189,7 +201,7 @@ class Panel2D(VisualizationPanel):
         """
         if self.figure.key:
             if self.figure.key == "x":
-                print(f"Key pressed: X - Changing axes to XZ for panel {self.panel_name}")
+                logger.info("Key pressed: X - Changing axes to XZ for panel %s", self.panel_name)
                 if np.array_equal(self.u, Y) and np.array_equal(self.v, Z):
                     self.set_coordinates(
                         u=(0, -1, 0),
@@ -201,7 +213,7 @@ class Panel2D(VisualizationPanel):
                         v=Z,
                     )
             if self.figure.key == "y":
-                print(f"Key pressed: Y - Changing axes to YZ for panel {self.panel_name}")
+                logger.info("Key pressed: Y - Setting axes to Y and Z for panel %s", self.panel_name)
                 if np.array_equal(self.u, X) and np.array_equal(self.v, Z):
                     self.set_coordinates(
                         u=(-1, 0, 0),
@@ -212,8 +224,8 @@ class Panel2D(VisualizationPanel):
                         u=X,
                         v=Z,
                     )
-            if self.figure.key == "z":
-                print(f"Key pressed: Z - Setting axes to X and Y for panel {self.panel_name}")
+            elif self.figure.key == "z":
+                logger.info("Key pressed: Z - Setting axes to X and Y for panel %s", self.panel_name)
                 if np.array_equal(self.u, X) and np.array_equal(self.v, Y):
                     self.set_coordinates(
                         u=(-1, 0, 0),
@@ -224,8 +236,9 @@ class Panel2D(VisualizationPanel):
                         u=X,
                         v=Y,
                     )
-            if self.figure.key == "f":
-                print(f"Key pressed: F - Flipping u axis for panel {self.panel_name}")
+
+            elif self.figure.key == "f":
+                logger.info("Key pressed: F - Flipping u axis for panel %s", self.panel_name)
                 self.set_coordinates(
                     u=[-e for e in self.u],
                     v=self.v,
@@ -262,7 +275,7 @@ class Panel2D(VisualizationPanel):
         self.marked_to_recompute = False
 
         if profile_time:
-            print(f"Apply update : {time.time() - st}")
+            logger.debug("Apply update: %.3fs", time.time() - st)
 
         # Force notebook refresh
         pn.io.push_notebook(self.figure)
@@ -292,15 +305,22 @@ class Panel2D(VisualizationPanel):
 
         u, v = self.get_uv()
 
-        print(
-            f"{self.panel_name} - Recomputing for axes {u}, {v}, at origin : {self.origin}, size_u : {self.size_u}, size_v : {self.size_v}, with field {self.displayed_field}"
+        logger.info(
+            "%s - Recomputing for axes %s, %s, origin: %s, size_u: %.3f, size_v: %.3f, field: %s",
+            self.panel_name,
+            u,
+            v,
+            self.origin,
+            self.size_u,
+            self.size_v,
+            self.displayed_field,
         )
 
         data = self.compute_fn(u, v, self.origin, self.size_u, self.size_v)
 
         if data is not None:
             if profile_time:
-                print(f"Plot panel compute function : {time.time() - st}")
+                logger.debug("Plot panel compute function: %.3fs", time.time() - st)
                 st = time.time()
 
             # Build pending updates directly
@@ -316,7 +336,7 @@ class Panel2D(VisualizationPanel):
                 }
 
             if profile_time:
-                print(f"Plot panel preparing data : {time.time() - st}")
+                logger.debug("Plot panel preparing data: %.3fs", time.time() - st)
 
             # Schedule visual update
             self._schedule_update()
@@ -372,8 +392,8 @@ class Panel2D(VisualizationPanel):
         )
 
         if computed_data is None:
-            print(
-                f"\n\n Got None from computed data on {self.panel_name}, returning the past values.\n\n"
+            logger.error(
+                "Got None from computed data on %s, returning past values", self.panel_name
             )
             return None
 
@@ -665,7 +685,7 @@ class Panel2D(VisualizationPanel):
             self.displayed_field = field_name
 
             if field_name not in self.slave.get_labels():
-                warning(
+                logger.warning(
                     f"\n\nRequested field {field_name} : field unavailable, available values : {self.slave.get_labels()}.\n\n"
                 )
 

@@ -51,10 +51,11 @@ try:
     import vtk
 
     _PYVISTA_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     pv = None  # type: ignore[assignment]
     vtk = None  # type: ignore[assignment]
     _PYVISTA_AVAILABLE = False
+    raise e
 
 import scivianna
 from scivianna.data.data3d import Data3D
@@ -66,7 +67,6 @@ from scivianna.logging_config import get_logger
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.slave import ComputeSlave
-    from scivianna.plotter_3d.generic_plotter import Plotter3D
 
 from scivianna.constants import (
     CSV,
@@ -76,6 +76,7 @@ from scivianna.constants import (
 from scivianna.data.data2d import Data2D
 from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.plotter_2d.generic_plotter import Plotter2D
+from scivianna.plotter_3d.generic_plotter import Plotter3D
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 # Module logger
@@ -213,11 +214,15 @@ class VTKExtension(Extension):
 
         # Create GUI components
         self.time_slider = pmui.DiscreteSlider(
-            name="Time",
+            label="Time",
             options=self.time_values,
             width=260,
         )
-        self.recompute_on_change = pmui.Checkbox(name="Recompute mesh on time change", value=False)
+        self.recompute_on_change = pmui.Checkbox(
+            label="Recompute mesh on time change", 
+            value=False,
+            width=260,
+        )
 
         # Validate plotter type
         assert isinstance(
@@ -288,7 +293,9 @@ class VTKExtension(Extension):
             Panel layout with time slider and options
         """
         return pmui.Column(
-            self.time_slider, self.recompute_on_change, margin=0, sizing_mode="stretch_width"
+            self.time_slider, 
+            self.recompute_on_change,
+            margin=0, 
         )
 
 
@@ -592,7 +599,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
             time_updated = True
 
         # Check cache
-        cache_key = [*origin, size_u, size_v]
+        cache_key = [*u, *v, *origin, size_u, size_v]
         if (
             caller in self.last_computed_frame
             and self.last_computed_frame[caller] == cache_key
