@@ -1,12 +1,12 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import scivianna
 from scivianna.constants import GEOMETRY, X, Y
 from scivianna.slave import ComputeSlave
 from scivianna.utils.file_cleaner import mark_for_deletion
-import numpy as np
 
 
 @pytest.mark.medcoupling
@@ -14,6 +14,7 @@ def test_save_load_med_with_include_files():
     """Simple test to make sure things happen before more tests are actually implemented
     """
     from scivianna.interface.med_interface import MEDInterface
+
     #   First creation of a slave
     slave = ComputeSlave(MEDInterface)
     slave.read_file(
@@ -54,6 +55,7 @@ def test_save_load_med_without_include_files():
     """Simple test to make sure things happen before more tests are actually implemented
     """
     from scivianna.interface.med_interface import MEDInterface
+
     #   First creation of a slave
     slave = ComputeSlave(MEDInterface)
     slave.read_file(

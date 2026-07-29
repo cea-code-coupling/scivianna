@@ -1,21 +1,28 @@
 import os
+import pickle
 from pathlib import Path
+from typing import Any, Dict, List, Tuple, Union
+
 import numpy as np
 import pandas as pd
-import pickle
-from typing import Any, Dict, List, Tuple, Union
-from scivianna.interface.generic_interface import ValueAtLocation, Value1DAtLocation, DataFrameInterface
-from scivianna.interface import register_interface
+
 from scivianna.enums import VisualizationMode
+from scivianna.interface import register_interface
+from scivianna.interface.generic_interface import (
+    DataFrameInterface,
+    Value1DAtLocation,
+    ValueAtLocation,
+)
 
 
 class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameInterface):
-    def __init__(self, ):
-        """CSV file interface to get results from.
-        """
+    def __init__(
+        self,
+    ):
+        """CSV file interface to get results from."""
         pass
 
-    def read_file(self, file_path:str, file_label:str):
+    def read_file(self, file_path: str, file_label: str):
         """Read CSV file to get results from.
 
         Parameters
@@ -26,18 +33,18 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
         """
         path = Path(file_path)
         self.df = pd.read_csv(path)
-        
+
         self.country_codes = []
         self.fields = []
         for col in self.df.columns:
-            if not (col.startswith("Unnamed") or col=="Time"):
+            if not (col.startswith("Unnamed") or col == "Time"):
                 if "load" in col:
                     country_code = col[:2].upper()
                     self.country_codes.append(country_code)
-                
+
                 field_name = col[3:]
                 self.fields.append(field_name)
-                
+
         self.country_codes = list(set(self.country_codes))
         self.fields = list(set(self.fields))
 
@@ -70,9 +77,9 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
             Field value
         """
         if cell_index in self.country_codes:
-            return 1.
+            return 1.0
         else:
-            return 0.
+            return 0.0
 
     def get_values(
         self,
@@ -106,7 +113,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
 
         for vol_id in cell_indexes:
             if vol_id in self.country_codes:
-                val = 0.
+                val = 0.0
 
                 for column in self.df.columns:
                     if column.startswith(vol_id.lower()) and column.endswith(field):
@@ -154,9 +161,9 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
                     else:
                         output += self.df[column]
 
-        if output is None:         
-            output = self.df["Time"].copy()*0.
-            output.replace(0., np.nan)
+        if output is None:
+            output = self.df["Time"].copy() * 0.0
+            output.replace(0.0, np.nan)
 
         output.rename(f"{cell_index}_{field}")
 
@@ -171,7 +178,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
             Fields names
         """
         return self.fields
-    
+
     def get_labels(self) -> List[str]:
         """Returns the fields names providable.
 
@@ -196,20 +203,17 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
             Coloring mode
         """
         return VisualizationMode.FLOAT
-    
-    def get_dataframe(self, cell_id, origin, field_name = None, options = None):
+
+    def get_dataframe(self, cell_id, origin, field_name=None, options=None):
         return pd.DataFrame(
-            data = [
-                cell_id
-            ] + [
-                f'{round(np.sum(self.df[f"{cell_id.lower()}_{field}"]) / 1000, 0)} MWh' 
+            data=[cell_id]
+            + [
+                f'{round(np.sum(self.df[f"{cell_id.lower()}_{field}"]) / 1000, 0)} MWh'
                 if cell_id is not None and f"{cell_id.lower()}_{field}" in self.df
                 else " - "
-                for field in self.fields 
+                for field in self.fields
             ],
-            index = [
-                "Country code"
-            ] + list(self.fields)
+            index=["Country code"] + list(self.fields),
         )
 
     def get_file_input_list(self) -> List[Tuple[str, str]]:
@@ -220,7 +224,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
         List[Tuple[str, str]]
             List of (file label, description)
         """
-        return [("csv", "CSV data file")] if hasattr(self, 'df') else []
+        return [("csv", "CSV data file")] if hasattr(self, "df") else []
 
     def save(self, file_path: Path, include_files: bool):
         """Pickle saves the slave content to a file.
@@ -233,11 +237,11 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
             Not used for this interface (CSV data is already in df)
         """
         state = {
-            'df': self.df,
-            'country_codes': self.country_codes,
-            'fields': self.fields,
+            "df": self.df,
+            "country_codes": self.country_codes,
+            "fields": self.fields,
         }
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             pickle.dump(state, f)
 
     def load(self, file_path: Path, include_files: bool):
@@ -250,10 +254,11 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
         include_files : bool
             Not used for this interface (CSV data is already in df)
         """
-        with open(file_path, 'rb') as f:
+        with open(file_path, "rb") as f:
             state = pickle.load(f)
-        self.df = state['df']
-        self.country_codes = state['country_codes']
-        self.fields = state['fields']
+        self.df = state["df"]
+        self.country_codes = state["country_codes"]
+        self.fields = state["fields"]
+
 
 register_interface("CountryTimeSeriesInterface", CountryTimeSeriesInterface)

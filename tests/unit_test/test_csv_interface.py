@@ -4,9 +4,11 @@ import os
 import shutil
 import tempfile
 import uuid
+
 import numpy as np
-import pytest
 import pandas as pd
+import pytest
+
 from scivianna.interface.csv_result import CSVInterface
 
 

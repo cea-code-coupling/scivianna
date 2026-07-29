@@ -1,9 +1,9 @@
+import time
+from typing import TYPE_CHECKING, Any, Dict
 
-from typing import Any, Dict, TYPE_CHECKING
 import numpy as np
 import panel as pn
 import panel_material_ui as pmui
-import time
 
 from scivianna.constants import OUTSIDE
 from scivianna.data.data2d import Data2D
@@ -11,7 +11,11 @@ from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.utils.color_tools import beautiful_color_maps, get_edges_colors, interpolate_cmap_at_values
+from scivianna.utils.color_tools import (
+    beautiful_color_maps,
+    get_edges_colors,
+    interpolate_cmap_at_values,
+)
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -29,7 +33,7 @@ def set_colors_list(
     options: Dict[str, Any],
     min_value: float = None,
     max_value: float = None,
-    offset: int = -20
+    offset: int = -20,
 ):
     """Sets in a Data2D the list of colors for a field per polygon.
 
@@ -85,9 +89,7 @@ def set_colors_list(
 
         _, inv = np.unique(value_list, return_inverse=True)
 
-        cell_colors = interpolate_cmap_at_values(
-            color_map, map_to[inv].astype(float)
-        )
+        cell_colors = interpolate_cmap_at_values(color_map, map_to[inv].astype(float))
 
         if OUTSIDE in data.cell_ids:
             for index_ in np.where(data.cell_ids == OUTSIDE):
@@ -105,18 +107,14 @@ def set_colors_list(
             start_time = time.time()
 
         if center_colormap_on_zero:
-            if (
-                len(no_nan_values) == 0 or max(abs(no_nan_values.min()), no_nan_values.max()) == 0.0
-            ):
+            if len(no_nan_values) == 0 or max(abs(no_nan_values.min()), no_nan_values.max()) == 0.0:
                 minmax = 1.0
             else:
                 minmax = max(abs(no_nan_values.min()), no_nan_values.max())
 
             normalized_cell_values = (normalized_cell_values + minmax) / (2 * minmax)
         else:
-            if (
-                len(no_nan_values) == 0 or max(abs(no_nan_values.min()), no_nan_values.max()) == 0.0
-            ):
+            if len(no_nan_values) == 0 or max(abs(no_nan_values.min()), no_nan_values.max()) == 0.0:
                 minmax = 1.0
                 min_val = 0.0
             elif no_nan_values.min() == no_nan_values.max():
@@ -140,9 +138,7 @@ def set_colors_list(
             print(f"Rescaling data {time.time() - start_time}")
             start_time = time.time()
 
-        cell_colors = interpolate_cmap_at_values(
-            color_map, normalized_cell_values
-        )
+        cell_colors = interpolate_cmap_at_values(color_map, normalized_cell_values)
 
         if profile_time:
             print(f"Extracting colors {time.time() - start_time}")
@@ -163,9 +159,7 @@ def set_colors_list(
         """
         cell_colors = np.array([(200, 200, 200, 0)] * (len(data.cell_ids)))
     else:
-        raise NotImplementedError(
-            f"Visualization mode {coloring_mode} not implemented."
-        )
+        raise NotImplementedError(f"Visualization mode {coloring_mode} not implemented.")
 
     data.cell_colors = cell_colors
 
@@ -183,15 +177,9 @@ def set_colors_list(
 
 
 class FieldSelector(Extension):
-    """ Extension used to select the displayed field and edit its colors.
-    """
+    """Extension used to select the displayed field and edit its colors."""
 
-    def __init__(
-        self,
-        slave: "ComputeSlave",
-        plotter: Plotter2D,
-        panel: "VisualizationPanel"
-    ):
+    def __init__(self, slave: "ComputeSlave", plotter: Plotter2D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
 
         Parameters
@@ -223,22 +211,22 @@ If a color bar is used, you can decide to center it on zero.
             options=fields_list,
             value=fields_list[0],
             width=280,
-            searchable = True
+            searchable=True,
         )
 
         self.field_color_selector.param.watch(self.trigger_field_change, "value")
         self.panel.param.watch(self.receive_colormap_change, "colormap")
 
         self.color_map_selector = pn.widgets.ColorMap(
-            options=beautiful_color_maps,
-            swatch_width=60,
-            width_policy='max'
+            options=beautiful_color_maps, swatch_width=60, width_policy="max"
         )
 
         self.color_map_selector.width = self.color_map_selector.height
         self.center_colormap_on_zero_tick = pn.widgets.Checkbox(
-            label="Center color map on zero.", value=False,
-            visible=slave.get_label_coloring_mode(self.field_color_selector.value) == VisualizationMode.FROM_VALUE,
+            label="Center color map on zero.",
+            value=False,
+            visible=slave.get_label_coloring_mode(self.field_color_selector.value)
+            == VisualizationMode.FROM_VALUE,
         )
 
         self.color_map_selector.value_name = "BuRd"
@@ -246,22 +234,18 @@ If a color bar is used, you can decide to center it on zero.
 
         self.color_map_selector.param.watch(self.trigger_colormap_change, "value")
         self.center_colormap_on_zero_tick.param.watch(self.trigger_update, "value")
-        
-        self.min_value = pmui.FloatInput(label="Min value", width = 220, disabled=True)
-        self.max_value = pmui.FloatInput(label="Max value", width = 220, disabled=True)
+
+        self.min_value = pmui.FloatInput(label="Min value", width=220, disabled=True)
+        self.max_value = pmui.FloatInput(label="Max value", width=220, disabled=True)
 
         self.min_activated = pmui.Checkbox(value=False, description="Force minimum value.")
         self.max_activated = pmui.Checkbox(value=False, description="Force maximum value.")
-        
+
         self.force_range_column = pmui.Column(
             pmui.Divider(),
             pmui.Typography("### Force value range"),
-            pmui.Row(
-                self.min_value, self.min_activated
-            ),
-            pmui.Row(
-                self.max_value, self.max_activated
-            ),
+            pmui.Row(self.min_value, self.min_activated),
+            pmui.Row(self.max_value, self.max_activated),
         )
 
         self.update_range_visibility()
@@ -271,65 +255,62 @@ If a color bar is used, you can decide to center it on zero.
 
         self.min_value.param.watch(self.trigger_update, "value")
         self.max_value.param.watch(self.trigger_update, "value")
-        
+
         self.edge_offset = pmui.IntInput(
-            label="Edge color offset", 
-            value = -20, 
-            start=-255, 
-            end=255, 
-            step=10, 
+            label="Edge color offset",
+            value=-20,
+            start=-255,
+            end=255,
+            step=10,
             description="Offset added to the edges color, if 255, everything will be white, if -255, everything will be black.",
             width=280,
         )
         self.edge_offset_column = pmui.Column(
-            pmui.Divider(),
-            pmui.Typography("### Edge color offset"),
-            self.edge_offset
+            pmui.Divider(), pmui.Typography("### Edge color offset"), self.edge_offset
         )
         self.edge_offset.param.watch(self.trigger_update, "value")
 
-
     def update_range_visibility(self, *args, **kwargs):
-        """Updates range visibility based on the field type
-        """
+        """Updates range visibility based on the field type"""
         print(f"Setting visible for field : {self.field_color_selector.value}")
-        self.force_range_column.visible = self.slave.get_label_coloring_mode(self.field_color_selector.value) == VisualizationMode.FROM_VALUE
+        self.force_range_column.visible = (
+            self.slave.get_label_coloring_mode(self.field_color_selector.value)
+            == VisualizationMode.FROM_VALUE
+        )
 
     def enable_disable_bounds(self, *args, **kwargs):
-        """Enable/disable min max widgets
-        """
+        """Enable/disable min max widgets"""
         self.min_value.disabled = not self.min_activated.value
         self.max_value.disabled = not self.max_activated.value
 
         self.trigger_update()
 
     def trigger_field_change(self, *args, **kwargs):
-        """Trigger a field change in the visualization panel
-        """
+        """Trigger a field change in the visualization panel"""
         if self._restoring:
             return
-        self.center_colormap_on_zero_tick.visible = self.slave.get_label_coloring_mode(self.field_color_selector.value) == VisualizationMode.FROM_VALUE
+        self.center_colormap_on_zero_tick.visible = (
+            self.slave.get_label_coloring_mode(self.field_color_selector.value)
+            == VisualizationMode.FROM_VALUE
+        )
         self.panel.set_field(self.field_color_selector.value)
 
     def receive_colormap_change(self, *args, **kwargs):
-        """Receive a field change from the visualization panel
-        """
+        """Receive a field change from the visualization panel"""
         if self._restoring:
             return
         if self.panel.colormap != self.color_map_selector.value_name:
             self.color_map_selector.value_name = self.panel.colormap
 
     def trigger_colormap_change(self, *args, **kwargs):
-        """Trigger a field change in the visualization panel
-        """
+        """Trigger a field change in the visualization panel"""
         if self._restoring:
             return
         self.panel.set_colormap(self.color_map_selector.value_name)
         self.panel.recompute()
 
     def trigger_update(self, *args, **kwargs):
-        """Trigger a color map change in the visualization panel
-        """
+        """Trigger a color map change in the visualization panel"""
         if self._restoring:
             return
         self.panel.recompute()
@@ -345,9 +326,7 @@ If a color bar is used, you can decide to center it on zero.
         file_key : str
             Key associated to the loaded file
         """
-        self.field_color_selector.options = list(
-            self.slave.get_labels()
-        )
+        self.field_color_selector.options = list(self.slave.get_labels())
         self.field_color_selector.value = self.field_color_selector.options[0]
 
     def on_updated_data(self, data: Data2D):
@@ -363,11 +342,13 @@ If a color bar is used, you can decide to center it on zero.
             self.slave,
             self.field_color_selector.value,
             self.color_map_selector.value_name,
-            False if any([self.min_activated.value, self.max_activated.value]) else self.center_colormap_on_zero_tick.value,
+            False
+            if any([self.min_activated.value, self.max_activated.value])
+            else self.center_colormap_on_zero_tick.value,
             {},
             min_value=self.min_value.value if self.min_activated.value else None,
             max_value=self.max_value.value if self.max_activated.value else None,
-            offset = self.edge_offset.value
+            offset=self.edge_offset.value,
         )
         if min_val is not None and minmax is not None:
             self.panel.plotter.update_colorbar(True, value_range=(min_val, min_val + minmax))
@@ -379,7 +360,9 @@ If a color bar is used, you can decide to center it on zero.
                 self.max_value.value = min_val + minmax
             self._restoring = False
 
-    def make_gui(self,) -> pn.viewable.Viewable:
+    def make_gui(
+        self,
+    ) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
         Returns
@@ -392,7 +375,7 @@ If a color bar is used, you can decide to center it on zero.
             self.color_map_selector,
             self.center_colormap_on_zero_tick,
             self.force_range_column,
-            self.edge_offset_column
+            self.edge_offset_column,
         )
 
     def on_field_change(self, field_name: str):
@@ -448,7 +431,9 @@ If a color bar is used, you can decide to center it on zero.
                 extension.field_color_selector.value = info_dict["field"]
 
             extension.color_map_selector.value_name = info_dict.get("colormap", "BuRd")
-            extension.center_colormap_on_zero_tick.value = info_dict.get("center_colormap_on_zero", False)
+            extension.center_colormap_on_zero_tick.value = info_dict.get(
+                "center_colormap_on_zero", False
+            )
 
             # Restore force range bounds
             if "min_value" in info_dict:
@@ -475,10 +460,7 @@ If a color bar is used, you can decide to center it on zero.
         return extension
 
     def on_coupling_update(self):
-        """Function called at the end of a coupling time step
-        """
+        """Function called at the end of a coupling time step"""
         labels = self.slave.get_labels()
         if set(labels) != set(self.field_color_selector.options):
-            self.field_color_selector.options = list(
-                self.slave.get_labels()
-            )
+            self.field_color_selector.options = list(self.slave.get_labels())

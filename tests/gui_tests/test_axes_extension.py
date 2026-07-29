@@ -5,20 +5,30 @@ the u and v vectors and their bounds.
 """
 
 import numpy as np
-import pytest
 import panel as pn
 import panel_material_ui as pmui
+import pytest
 
 import scivianna.utils
+
 # Enable testing mode so button callbacks call async_update_data directly
 scivianna.utils._testing = True
 
-from scivianna.extension.axes import Axes
-from scivianna.enums import GeometryType
-from scivianna.constants import XS, YS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA
-from scivianna.data.data2d import Data2D
-
 from test_interface import make_panel_2d, panel_fixture
+
+from scivianna.constants import (
+    CELL_NAMES,
+    CELL_VALUES,
+    COLORS,
+    EDGE_ALPHA,
+    EDGE_COLORS,
+    FILL_ALPHA,
+    XS,
+    YS,
+)
+from scivianna.data.data2d import Data2D
+from scivianna.enums import GeometryType
+from scivianna.extension.axes import Axes
 
 
 class TestAxesInitialization:

@@ -1,28 +1,23 @@
+import scivianna_example
+import scivianna_example.europe_grid.europe_grid as europe_grid
 from scivianna.icon import get_icon
 from scivianna.panel.demo import Demonstrator
-
-import scivianna_example
-
-from scivianna_example.europe_grid.europe_grid import (
-    make_europe_panel as europe_example,
-)
-import scivianna_example.europe_grid.europe_grid as europe_grid
+from scivianna_example.europe_grid.europe_grid import make_europe_panel as europe_example
 
 try:
     import medcoupling
-    from scivianna_example.med.split_item_example import (
-        get_panel as medcoupling_example,
-    )
+
     import scivianna_example.med.split_item_example as split_item_example
+    from scivianna_example.med.split_item_example import get_panel as medcoupling_example
+
     has_med = True
 except ImportError as e:
     print(f"Could not import medcoupling app, {e}, skipping demo medcoupling build")
     has_med = False
 
 try:
-    from scivianna_example.med.demo_3d import (
-        get_panel as medcoupling_3d_example,
-    )
+    from scivianna_example.med.demo_3d import get_panel as medcoupling_3d_example
+
     has_3d = True
 except ImportError as e:
     print(f"Could not import 3D app, {e}, skipping demo 3D build")
@@ -30,20 +25,19 @@ except ImportError as e:
 
 try:
     import rasterio
-    from scivianna_example.mandelbrot.mandelbrot import (
-        make_panel as mandelbrot_example,
-    )
+
     import scivianna_example.mandelbrot.mandelbrot as mandelbrot
+    from scivianna_example.mandelbrot.mandelbrot import make_panel as mandelbrot_example
+
     has_mandelbrot = True
 except ImportError as e:
     print(f"Could not import mandelbrot app, {e}, skipping demo mandelbrot build")
     has_mandelbrot = False
 
 try:
-    from scivianna_example.c3po_coupling.coupling import (
-        get_panel as coupling_example,
-    )
     import scivianna_example.c3po_coupling.coupling as coupling
+    from scivianna_example.c3po_coupling.coupling import get_panel as coupling_example
+
     has_coupling = True
 except ImportError as e:
     print(f"Could not import coupling app, {e}, skipping demo coupling build")
@@ -68,25 +62,33 @@ def make_demo(return_slaves=False) -> pmui.Page:
     }
 
     if return_slaves:
-        europe_panel, slaves_europe = europe_example(None, return_slaves = return_slaves)
+        europe_panel, slaves_europe = europe_example(None, return_slaves=return_slaves)
 
         if has_med:
-            medcoupling_panel, slaves_medcoupling = medcoupling_example(None, return_slaves = return_slaves)
+            medcoupling_panel, slaves_medcoupling = medcoupling_example(
+                None, return_slaves=return_slaves
+            )
         else:
             slaves_medcoupling = []
 
         if has_3d:
-            medcoupling_3d_panel, slaves_medcoupling_3d = medcoupling_3d_example(None, return_slaves = return_slaves)
+            medcoupling_3d_panel, slaves_medcoupling_3d = medcoupling_3d_example(
+                None, return_slaves=return_slaves
+            )
         else:
             slaves_medcoupling_3d = []
 
         if has_mandelbrot:
-            mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(None, return_slaves = return_slaves)
+            mandelbrot_panel, slaves_mandelbrot = mandelbrot_example(
+                None, return_slaves=return_slaves
+            )
         else:
             slaves_mandelbrot = []
 
         if has_coupling:
-            coupling_panel, slaves_coupling = coupling_example(computation_time = .01, return_slaves=return_slaves, start = False, use_server=False)
+            coupling_panel, slaves_coupling = coupling_example(
+                computation_time=0.01, return_slaves=return_slaves, start=False, use_server=False
+            )
         else:
             slaves_coupling = []
     else:
@@ -102,7 +104,7 @@ def make_demo(return_slaves=False) -> pmui.Page:
             mandelbrot_panel = mandelbrot_example(None)
 
         if has_coupling:
-            coupling_panel = coupling_example(computation_time = .01, start = False, use_server=False)
+            coupling_panel = coupling_example(computation_time=0.01, start=False, use_server=False)
 
     with open(Path(europe_grid.__file__).parent / "description.md", "r") as f:
         europe_with_description = pmui.Row(
@@ -135,10 +137,12 @@ def make_demo(return_slaves=False) -> pmui.Page:
 
     description_file = Path(scivianna_example.__file__).parent / "demo_description.md"
 
-    image = pn.pane.Image(Path(scivianna_example.__file__).parent / "image/main_page.png", sizing_mode = "stretch_both")
+    image = pn.pane.Image(
+        Path(scivianna_example.__file__).parent / "image/main_page.png", sizing_mode="stretch_both"
+    )
 
-    with open(description_file, 'r') as f:
-        help = pn.Column(pmui.Typography(f.read()), image, sizing_mode = "stretch_both")
+    with open(description_file, "r") as f:
+        help = pn.Column(pmui.Typography(f.read()), image, sizing_mode="stretch_both")
 
     guis = {
         "Help": help,
@@ -157,14 +161,22 @@ def make_demo(return_slaves=False) -> pmui.Page:
     demo = Demonstrator(guis, icons)
 
     if return_slaves:
-        return demo, slaves_medcoupling + slaves_europe + slaves_mandelbrot + slaves_coupling + slaves_medcoupling_3d
+        return (
+            demo,
+            slaves_medcoupling
+            + slaves_europe
+            + slaves_mandelbrot
+            + slaves_coupling
+            + slaves_medcoupling_3d,
+        )
     else:
         return demo
 
 
 if __name__ == "__main__":
-    import panel as pn
     import socket
+
+    import panel as pn
 
     ip_adress = socket.gethostbyname(socket.gethostname())
 

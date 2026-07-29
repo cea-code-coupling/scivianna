@@ -1,17 +1,18 @@
-
-from typing import Any, Callable
 from pathlib import Path
+from typing import Any, Callable
+
 import panel as pn
 
+from scivianna.constants import GEOMETRY
+from scivianna.enums import UpdateEvent
 from scivianna.panel.panel_2d import Panel2D
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.slave import ComputeSlave
-from scivianna.constants import GEOMETRY
-from scivianna.enums import UpdateEvent
 
 """
     Generic functions for every codes
 """
+
 
 def _show_panel(panel: VisualizationPanel, title: str = ""):
     """Display the holoviz panel associated to this compute slave.
@@ -25,7 +26,10 @@ def _show_panel(panel: VisualizationPanel, title: str = ""):
 
 
 def _serve_panel(
-    panel:VisualizationPanel = None, get_panel_function: Callable = None, slave_input: Any = None, title: str = ""
+    panel: VisualizationPanel = None,
+    get_panel_function: Callable = None,
+    slave_input: Any = None,
+    title: str = "",
 ):
 
     """Opens a holoviz panel server associated to this compute slave. The computer IP adress is chosen, and a free port is automatically selected.
@@ -54,11 +58,13 @@ def _serve_panel(
     port = sock.getsockname()[1]
     sock.close()
 
-
     if panel is not None:
         get_template = panel
     else:
-        assert get_panel_function is not None, "If panel is not provided, get_panel_function must be."
+        assert (
+            get_panel_function is not None
+        ), "If panel is not provided, get_panel_function must be."
+
         def get_template():
             return get_panel_function(slave_input)
 
@@ -109,6 +115,7 @@ def get_med_panel(geo: str, title="MED") -> Panel2D:
 
     return Panel2D(slave, name=title)
 
+
 def get_med_layout(geo, title: str = "MED Field visualizer"):
     """Opens a server on localhost to open in a browser
 
@@ -118,9 +125,11 @@ def get_med_layout(geo, title: str = "MED Field visualizer"):
         Geometry to display
     """
     from scivianna.layout.split import SplitLayout
+
     panel = get_med_panel(geo, title)
     panel.update_event = [UpdateEvent.CLIC]
     return SplitLayout(panel)
+
 
 def show_med_geometry(geo, title: str = "MED Field visualizer"):
     """Opens a server on localhost to open in a browser
@@ -153,4 +162,3 @@ def get_med_visualizer(geo, title="") -> pn.viewable.Viewable:
         Geometry to display
     """
     return get_med_panel(geo, title=title)
-

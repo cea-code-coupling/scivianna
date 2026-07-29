@@ -1,7 +1,8 @@
 from typing import Tuple
 
-import pytest
 import numpy as np
+import pytest
+
 from scivianna.data.data2d import Data2D
 from scivianna.enums import DataType
 

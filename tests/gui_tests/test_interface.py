@@ -1,32 +1,45 @@
-from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, TYPE_CHECKING, Generator
-from dataclasses import dataclass
-import numpy as np
 import multiprocessing as mp
-import panel as pn
-import panel_material_ui as pmui
-from bokeh.plotting import curdoc
-from unittest.mock import Mock, MagicMock
-import pytest
 import tempfile
 import zipfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Tuple, Union
+from unittest.mock import MagicMock, Mock
+
+import numpy as np
+import panel as pn
+import panel_material_ui as pmui
+import pytest
+from bokeh import events as bokeh_events
+from bokeh.plotting import curdoc
 
 import scivianna
+import scivianna.icon
+from scivianna.constants import (
+    CELL_NAMES,
+    CELL_VALUES,
+    COLORS,
+    CSV,
+    EDGE_ALPHA,
+    EDGE_COLORS,
+    FILL_ALPHA,
+    GEOMETRY,
+    MATERIAL,
+    MESH,
+    XS,
+    YS,
+    X,
+    Y,
+)
+from scivianna.data.data2d import Data2D
+from scivianna.enums import GeometryType, VisualizationMode
+from scivianna.extension.extension import Extension
+from scivianna.interface.generic_interface import CouplingInterface, Geometry2DPolygon
 from scivianna.panel.panel_2d import Panel2D
-from scivianna.slave import ComputeSlave
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
-
-from scivianna.extension.extension import Extension
-import scivianna.icon
-from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2DPolygon, CouplingInterface
-from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
-from scivianna.enums import GeometryType, VisualizationMode
-
-from scivianna.constants import MESH, MATERIAL, GEOMETRY, CSV, XS, YS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, EDGE_ALPHA, FILL_ALPHA, X, Y
-
-from bokeh import events as bokeh_events
+from scivianna.slave import ComputeSlave
+from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 with open(Path(scivianna.icon.__file__).parent / "salome.svg", "r") as f:
     icon_svg = f.read()
@@ -440,7 +453,7 @@ def panel_fixture(request) -> Generator[Tuple[Panel2D, Dict[type, Extension], ca
     Tuple[Panel2D, Dict[type, Extension], callable]
         (panel, extensions_dict, cleanup) tuple same as make_panel_2d()
     """
-    from scivianna.utils.serialization import save_panel2d_to_file, load_panel2d_from_file
+    from scivianna.utils.serialization import load_panel2d_from_file, save_panel2d_to_file
     
     mode = request.param
     
@@ -453,8 +466,9 @@ def panel_fixture(request) -> Generator[Tuple[Panel2D, Dict[type, Extension], ca
         # Deserialized panel - serialize then deserialize
         import tempfile
         from pathlib import Path
+
         from scivianna.interface import register_interface
-        
+
         # Create original panel
         orig_panel, _, orig_cleanup = make_panel_2d()
         

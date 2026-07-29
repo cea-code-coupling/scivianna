@@ -1,7 +1,9 @@
 from typing import Callable, Dict, List, Tuple, Type, Union
-import panel as pn
-import pandas as pd
 
+import pandas as pd
+import panel as pn
+
+import scivianna.utils
 from scivianna.data.data1d import Data1D
 from scivianna.enums import UpdateEvent
 from scivianna.extension.extension import Extension
@@ -10,10 +12,9 @@ from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_1d.bokeh_1d_plotter import BokehPlotter1D
 from scivianna.plotter_1d.generic_plotter import Plotter1D
 from scivianna.slave import ComputeSlave
-import scivianna.utils
-
 
 default_extensions = [LineSelector]
+
 
 class Panel1D(VisualizationPanel):
     """Visualisation panel associated to a code."""
@@ -30,11 +31,8 @@ class Panel1D(VisualizationPanel):
     """cell ID where request the plot"""
 
     def __init__(
-            self,
-            slave: ComputeSlave,
-            name: str = "",
-            extensions: List[Extension] = default_extensions
-        ):
+        self, slave: ComputeSlave, name: str = "", extensions: List[Extension] = default_extensions
+    ):
         """Visualization panel constructor
 
         Parameters
@@ -72,8 +70,7 @@ class Panel1D(VisualizationPanel):
             event : Any
                 Field changed trigering event
             """
-            if self.field_change_callback is not None and\
-                    len(self.fields_list) > 0:
+            if self.field_change_callback is not None and len(self.fields_list) > 0:
                 self.field_change_callback(self.fields_list)
             self.recompute(event)
 
@@ -87,7 +84,7 @@ class Panel1D(VisualizationPanel):
 
     @pn.io.hold()
     def _apply_update(self):
-        """Apply pending visual updates to the plotter. 
+        """Apply pending visual updates to the plotter.
         Called via add_next_tick_callback to ensure UI thread safety.
         """
         # Update fields if requested
@@ -150,11 +147,11 @@ class Panel1D(VisualizationPanel):
 
         for key in keys:
             series = self.slave.get_1D_value(
-                position = self.position,
-                cell_index = self.cell_id,
-                material_name = None,
-                field = key,
-                options = options
+                position=self.position,
+                cell_index=self.cell_id,
+                material_name=None,
+                field=key,
+                options=options,
             )
 
             if isinstance(series, list):
@@ -178,10 +175,7 @@ class Panel1D(VisualizationPanel):
         VisualizationPanel
             Copy of the visualisation panel
         """
-        new_visualiser = Panel1D(
-            self.panel_name,
-            extensions=[e for e in self.extension_classes]
-        )
+        new_visualiser = Panel1D(self.panel_name, extensions=[e for e in self.extension_classes])
         new_visualiser.copy_index = self.copy_index
 
         return new_visualiser
@@ -304,7 +298,7 @@ class Panel1D(VisualizationPanel):
         cls,
         info_dict: Dict,
         slave: ComputeSlave,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
+        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
     ) -> "Panel1D":
         """Restores the visualization panel from its information dict
 
@@ -322,11 +316,7 @@ class Panel1D(VisualizationPanel):
         Panel1D
             Restored panel
         """
-        panel = Panel1D(
-            slave,
-            info_dict["name"],
-            extensions
-        )
+        panel = Panel1D(slave, info_dict["name"], extensions)
         panel.position = info_dict["position"]
         panel.cell_id = info_dict["cell_id"]
         panel.set_field(info_dict["visible_field_names"])
@@ -344,9 +334,7 @@ class Panel1D(VisualizationPanel):
         """
         self.plotter.set_x_scale(scale)
         for ext in self.extensions:
-            ext.on_scale_change(
-                "x", scale
-            )
+            ext.on_scale_change("x", scale)
 
     def set_yscale(self, scale: str):
         """Sets the Y axis scale to either log or lin
@@ -358,6 +346,4 @@ class Panel1D(VisualizationPanel):
         """
         self.plotter.set_y_scale(scale)
         for ext in self.extensions:
-            ext.on_scale_change(
-                "y", scale
-            )
+            ext.on_scale_change("y", scale)

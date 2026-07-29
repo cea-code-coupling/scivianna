@@ -2,8 +2,10 @@ from pickle import PicklingError
 from typing import Any
 
 import pytest
-from scivianna.slave import ComputeSlave
+
 from scivianna.interface.generic_interface import GenericInterface
+from scivianna.slave import ComputeSlave
+
 
 class FakeIterface(GenericInterface):
     def read_file(self, file_path, file_label):

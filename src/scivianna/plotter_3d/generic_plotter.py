@@ -1,8 +1,9 @@
-from typing import Tuple, Callable, Optional
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 
 from scivianna.data.data3d import Data3D
+
 
 class Plotter3D:
     """Unfinished 3D plotter to get the coupling working"""
@@ -12,10 +13,7 @@ class Plotter3D:
     ):
         self.on_axes_change_callback = None
 
-    def plot(
-        self,
-        data: Data3D
-    ):
+    def plot(self, data: Data3D):
         """Adds a new plot to the figure from a set of polygons
 
         Parameters
@@ -25,10 +23,7 @@ class Plotter3D:
         """
         raise NotImplementedError()
 
-    def update_plot(
-        self,
-        data: Data3D
-    ):
+    def update_plot(self, data: Data3D):
         """Updates plot to the figure
 
         Parameters
@@ -38,7 +33,9 @@ class Plotter3D:
         """
         raise NotImplementedError()
 
-    def make_panel(self,):
+    def make_panel(
+        self,
+    ):
         """Returns the viewable displayed in the 3D panel
 
         Returns

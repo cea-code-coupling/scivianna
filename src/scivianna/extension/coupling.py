@@ -1,12 +1,10 @@
-
 from pathlib import Path
-
-from bokeh.plotting import curdoc
+from typing import TYPE_CHECKING
 
 import panel as pn
 import panel_material_ui as pmui
 import param
-from typing import TYPE_CHECKING
+from bokeh.plotting import curdoc
 
 import scivianna
 from scivianna.extension.extension import Extension
@@ -15,12 +13,13 @@ from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
 
 if TYPE_CHECKING:
-    from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.layout.generic_layout import GenericLayout
+    from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 class CouplingExtension(Extension, param.Parameterized):
     """Extension to start coupling simulations."""
+
     show_play_button = param.Boolean(default=False, doc="Show/hide the play button")
 
     def __init__(
@@ -29,7 +28,7 @@ class CouplingExtension(Extension, param.Parameterized):
         slave: ComputeSlave,
         plotter: Plotter2D,
         panel: "VisualizationPanel",
-        **params
+        **params,
     ):
         """Constructor of the extension, saves the slave and the panel
 
@@ -54,29 +53,26 @@ class CouplingExtension(Extension, param.Parameterized):
         self.description = """
 This extension allows you run coupling simulations.
 """
-        self.start_description = pmui.Typography("Start/pause real time display", visible = False)
+        self.start_description = pmui.Typography("Start/pause real time display", visible=False)
         self.run_button = pn.widgets.ButtonIcon(
             icon=(Path(scivianna.__file__).parent / "icon" / "player-play.svg").read_text().strip(),
             description="Start automatic update",
             height=30,
             width=30,
             align="center",
-            visible = False
+            visible=False,
         )
         self.display_last = pmui.Checkbox(
-            label = "Display last time", 
-            value = True,
-            width = 280,
-            visible = False
+            label="Display last time", value=True, width=280, visible=False
         )
         self.time_slider = pmui.DiscreteSlider(
-            label = "Time selector", 
-            value = 0., 
-            options = [0.], 
+            label="Time selector",
+            value=0.0,
+            options=[0.0],
             description="Time at which display the results",
-            width = 260,
+            width=260,
             show_value=False,
-            size="small"
+            size="small",
         )
 
         self.layout = layout
@@ -115,10 +111,10 @@ This extension allows you run coupling simulations.
             Viewable to display in the extension tab
         """
         return pn.Column(
-                self.start_description,
-                self.layout_param_card,
-                margin=(0, 0, 10, 10),
-            )
+            self.start_description,
+            self.layout_param_card,
+            margin=(0, 0, 10, 10),
+        )
 
     def request_recompute(self, event):
         """Request a recompute task on all panels, which will trigger the addition of a periodict update on the panels
@@ -177,7 +173,7 @@ This extension allows you run coupling simulations.
         return {
             "time_slider_options": self.time_slider.options,
             "time_slider_value": self.time_slider.value,
-            "display_last_value": self.display_last.value
+            "display_last_value": self.display_last.value,
         }
 
     @classmethod

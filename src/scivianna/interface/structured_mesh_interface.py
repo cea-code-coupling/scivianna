@@ -1,22 +1,21 @@
-
-import os
-from pathlib import Path
-import pickle
-from typing import Any, Dict, List, Tuple, Union
-import numpy as np
 import multiprocessing as mp
+import os
+import pickle
+from pathlib import Path
+from typing import Any, Dict, List, Tuple, Union
 
-from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2DPolygon
-from scivianna.utils.polygonize_tools import PolygonElement
-from scivianna.enums import GeometryType, VisualizationMode
-from scivianna.utils.structured_mesh import CarthesianStructuredMesh, StructuredMesh
+import numpy as np
 
 from scivianna.constants import GEOMETRY, MESH
+from scivianna.data.data2d import Data2D
+from scivianna.enums import GeometryType, VisualizationMode
+from scivianna.interface.generic_interface import Geometry2DPolygon
+from scivianna.utils.polygonize_tools import PolygonElement
+from scivianna.utils.structured_mesh import CarthesianStructuredMesh, StructuredMesh
 
 
 class StructuredMeshInterface(Geometry2DPolygon):
-    """ StructuredMesh generic interface. This interface is not usable as such as it can't load a file.
+    """StructuredMesh generic interface. This interface is not usable as such as it can't load a file.
     To use it, the developper must implement another interface inheriting from it implementing the read_file function.
     """
 
@@ -31,7 +30,9 @@ class StructuredMeshInterface(Geometry2DPolygon):
 
     geometry_type = GeometryType._3D_INFINITE
 
-    def __init__(self, ):
+    def __init__(
+        self,
+    ):
         """StructuredMesh interface constructor."""
         self.data: Dict[str, Data2D] = {}
         """Dictionary with caller as key storing past computed data for each caller"""
@@ -87,9 +88,11 @@ class StructuredMeshInterface(Geometry2DPolygon):
         bool
             Were the polygons updated compared to the past call
         """
-        if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*origin, size_u, size_v]
-        ) and (caller in self.data):
+        if (
+            (caller in self.last_computed_frame)
+            and (self.last_computed_frame.get(caller) == [*origin, size_u, size_v])
+            and (caller in self.data)
+        ):
             print("Skipping polygon computation.")
             return self.data[caller], False
 
@@ -116,7 +119,11 @@ class StructuredMeshInterface(Geometry2DPolygon):
         return labels
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -212,9 +219,9 @@ class StructuredMeshInterface(Geometry2DPolygon):
 
 
 if __name__ == "__main__":
-    from scivianna.slave import ComputeSlave
-    from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.notebook_tools import _show_panel
+    from scivianna.panel.visualisation_panel import VisualizationPanel
+    from scivianna.slave import ComputeSlave
 
     class MyMeshInterface(StructuredMeshInterface):
         def read_file(self, file_path: str, file_label: str):

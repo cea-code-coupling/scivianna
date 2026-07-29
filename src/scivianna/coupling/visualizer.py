@@ -1,34 +1,37 @@
-from enum import Enum, auto
 import os
+from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union, Type, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union
 
-from scivianna.coupling.problem_server import ServerManager, ProblemClient
-from scivianna.enums import UpdatePolicy
-from scivianna.layout.gridstack import GridStackLayout
-from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
-from scivianna.panel.panel_1d import Panel1D
-from scivianna.panel.panel_2d import Panel2D
-from scivianna.interface.generic_interface import GenericInterface, Geometry2D, Value1DAtLocation, ValueAtLocation
-from scivianna.interface.time_dataframe import TimeDataFrame
-from scivianna.interface import INTERFACES
-from scivianna.panel.visualisation_panel import VisualizationPanel
-from scivianna.slave import ComputeSlave
-from scivianna.notebook_tools import get_med_panel
-
-from scivianna.coupling.icoco import LayoutProblem
-
+import medcoupling as mc
+import numpy as np
 from pydantic import (
     BaseModel,
     ConfigDict,
     NonNegativeFloat,
     PositiveFloat,
+    field_validator,
     model_validator,
-    field_validator
 )
 
-import numpy as np
-import medcoupling as mc
+from scivianna.coupling.icoco import LayoutProblem
+from scivianna.coupling.problem_server import ProblemClient, ServerManager
+from scivianna.enums import UpdatePolicy
+from scivianna.interface import INTERFACES
+from scivianna.interface.generic_interface import (
+    GenericInterface,
+    Geometry2D,
+    Value1DAtLocation,
+    ValueAtLocation,
+)
+from scivianna.interface.time_dataframe import TimeDataFrame
+from scivianna.layout.gridstack import GridStackLayout
+from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
+from scivianna.notebook_tools import get_med_panel
+from scivianna.panel.panel_1d import Panel1D
+from scivianna.panel.panel_2d import Panel2D
+from scivianna.panel.visualisation_panel import VisualizationPanel
+from scivianna.slave import ComputeSlave
 
 
 class CouplingPanel(BaseModel):
@@ -55,6 +58,7 @@ class CouplingPanel(BaseModel):
     ...     interface=MyInterface
     ... )
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
@@ -97,6 +101,7 @@ class CouplingPanel(BaseModel):
             return resolved
         raise TypeError(f"interface must be str or type, got {type(v).__name__}")
 
+
 class FieldPanel(CouplingPanel):
     """
     Panel configuration for 2D field visualization.
@@ -137,6 +142,7 @@ class FieldPanel(CouplingPanel):
     ...     displayed_field="power"
     ... )
     """
+
     interface: Type[Geometry2D]
     """2D Geometry code interface"""
 
@@ -157,6 +163,7 @@ class FieldPanel(CouplingPanel):
 
     displayed_field: str
     """Displayed field on GUI opening"""
+
 
 class ValuePanel(CouplingPanel):
     """
@@ -190,6 +197,7 @@ class ValuePanel(CouplingPanel):
     ...     displayed_fields=["min", "max"]
     ... )
     """
+
     min_time: Optional[NonNegativeFloat] = None
     """1D plot minimum horizontal axis value"""
     max_time: Optional[PositiveFloat] = None
@@ -209,6 +217,7 @@ class ValuePanel(CouplingPanel):
     """1D data code interface"""
     displayed_fields: List[str]
     """Displayed fields on GUI opening"""
+
 
 class GridLayoutData(BaseModel):
     """
@@ -235,6 +244,7 @@ class GridLayoutData(BaseModel):
     ...     ]
     ... )
     """
+
     grid: List[List[Optional[Union[FieldPanel, ValuePanel]]]]
     title: str
 
@@ -253,6 +263,7 @@ class GridLayoutData(BaseModel):
                 found_names.add(element.name)
 
         return self
+
 
 class SplitLayoutData(BaseModel):
     """
@@ -280,6 +291,7 @@ class SplitLayoutData(BaseModel):
     ...     split=[field_panel, value_panel]
     ... )
     """
+
     split: List[Union[FieldPanel, ValuePanel, "SplitLayoutData"]]
     vertical_cut: bool
 
@@ -297,7 +309,9 @@ class SplitLayoutData(BaseModel):
 
         return self
 
-    def get_panels(self,) -> List[Union[FieldPanel, ValuePanel]]:
+    def get_panels(
+        self,
+    ) -> List[Union[FieldPanel, ValuePanel]]:
         """
         Get all FieldPanel and ValuePanel objects in this layout and children.
 
@@ -322,10 +336,14 @@ class SplitLayoutData(BaseModel):
             elif isinstance(e, SplitLayoutData):
                 panels += e.get_panels()
             else:
-                raise TypeError(f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(e)}")
+                raise TypeError(
+                    f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(e)}"
+                )
         return panels
 
-    def get_serializable(self,) -> "SplitLayoutData":
+    def get_serializable(
+        self,
+    ) -> "SplitLayoutData":
         """
         Get a serializable version of this layout.
 
@@ -348,8 +366,12 @@ class SplitLayoutData(BaseModel):
             if isinstance(element, (FieldPanel, ValuePanel)):
                 slave = element.interface.get_slave()
 
-                assert element.interface in INTERFACES.values(), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
-                element.interface = list(INTERFACES.keys())[list(INTERFACES.values()).index(element.interface)]
+                assert (
+                    element.interface in INTERFACES.values()
+                ), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
+                element.interface = list(INTERFACES.keys())[
+                    list(INTERFACES.values()).index(element.interface)
+                ]
 
                 splits.append(element)
 
@@ -357,8 +379,10 @@ class SplitLayoutData(BaseModel):
                 splits.append(element.get_serializable())
 
             else:
-                raise TypeError(f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(element)}")
-        return SplitLayoutData(split = splits, vertical_cut=self.vertical_cut, name = self.name)
+                raise TypeError(
+                    f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(element)}"
+                )
+        return SplitLayoutData(split=splits, vertical_cut=self.vertical_cut, name=self.name)
 
     def build_item(self, panels: Dict[str, VisualizationPanel]) -> SplitLayout:
         """
@@ -394,14 +418,18 @@ class SplitLayoutData(BaseModel):
             elif isinstance(self.split[0], (FieldPanel, ValuePanel)):
                 return panels[self.split[0].name]
             else:
-                raise TypeError(f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(self.split[0])}")
+                raise TypeError(
+                    f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(self.split[0])}"
+                )
         else:
             if isinstance(self.split[0], SplitLayoutData):
                 item = self.split[0].build_item(panels)
             elif isinstance(self.split[0], (FieldPanel, ValuePanel)):
                 item = panels[self.split[0].name]
             else:
-                raise TypeError(f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(self.split[0])}")
+                raise TypeError(
+                    f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(self.split[0])}"
+                )
 
             for i in range(1, len(self.split)):
                 if isinstance(self.split[i], SplitLayoutData):
@@ -409,16 +437,14 @@ class SplitLayoutData(BaseModel):
                 elif isinstance(self.split[i], (FieldPanel, ValuePanel)):
                     new_panel = panels[self.split[i].name]
                 else:
-                    raise TypeError(f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(self.split[0])}")
+                    raise TypeError(
+                        f"SplitLayoutData only accepts FieldPanel, ValuePanel, SplitLayoutData objects, found {type(self.split[0])}"
+                    )
 
-                item = SplitItem(
-                    item,
-                    new_panel,
-                    direction=direction,
-                    factor = i / (i + 1)
-                )
+                item = SplitItem(item, new_panel, direction=direction, factor=i / (i + 1))
 
             return item
+
 
 def get_serializable_data(
     visualiser_data: Union[GridLayoutData, SplitLayoutData]
@@ -453,13 +479,16 @@ def get_serializable_data(
 
         for element in line:
             if element is not None:
-                assert element.interface in INTERFACES.values(), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
-                element.interface = list(INTERFACES.keys())[list(INTERFACES.values()).index(element.interface)]
+                assert (
+                    element.interface in INTERFACES.values()
+                ), f"Interface {element.interface} is not registered in scivianna interfaces. Please first call scivianna.interface.register_interface(key, interface)"
+                element.interface = list(INTERFACES.keys())[
+                    list(INTERFACES.values()).index(element.interface)
+                ]
 
             serializable_grid[-1].append(element)
 
     return GridLayoutData(title=visualiser_data.title, grid=serializable_grid)
-
 
 
 class GridStackProblem(LayoutProblem):
@@ -483,7 +512,7 @@ class GridStackProblem(LayoutProblem):
         start : bool, optional
             Whether to start a server to access the layout (default: True).
         """
-        super().__init__(layout=None, show_server = show_server, start = start)
+        super().__init__(layout=None, show_server=show_server, start=start)
 
         self._working_directory = working_directory
 
@@ -521,13 +550,13 @@ class GridStackProblem(LayoutProblem):
         print(f"server pid = {os.getpid()}")
 
         if isinstance(self.data_file_path, (str, Path)):
-            data_to_view = GridLayoutData.model_validate_json(
-                Path(self.data_file_path).read_text()
-            )
+            data_to_view = GridLayoutData.model_validate_json(Path(self.data_file_path).read_text())
         elif isinstance(self.data_file_path, GridLayoutData):
             data_to_view = self.data_file_path
         else:
-            raise TypeError(f"Provided data_file_path type not implemented: {type(self.data_file_path)}")
+            raise TypeError(
+                f"Provided data_file_path type not implemented: {type(self.data_file_path)}"
+            )
 
         np_x = 1
         for line in data_to_view.grid:
@@ -549,7 +578,7 @@ class GridStackProblem(LayoutProblem):
                 if isinstance(element, ValuePanel):
                     slave_1d = ComputeSlave(element.interface)
 
-                    slave_1d.set_time(0.)
+                    slave_1d.set_time(0.0)
                     for field in element.displayed_fields:
                         slave_1d.update_data(field, np.nan)
 
@@ -561,7 +590,7 @@ class GridStackProblem(LayoutProblem):
                     element: FieldPanel
 
                     slave_2d = ComputeSlave(element.interface)
-                    slave_2d.set_time(0.)
+                    slave_2d.set_time(0.0)
                     slave_2d.update_policy = element.update_policy
 
                     if element.template is not None:
@@ -588,11 +617,7 @@ class GridStackProblem(LayoutProblem):
                 bounds_x[name] = (ip_x, ip_x + n_x)
                 bounds_y[name] = (ip_y, ip_y + 1)
 
-        self.layout = GridStackLayout(
-            visualisation_panels,
-            bounds_x,
-            bounds_y
-        )
+        self.layout = GridStackLayout(visualisation_panels, bounds_x, bounds_y)
 
         self.layout.add_time_widget()
         for panel in self.layout.visualisation_panels.values():
@@ -623,7 +648,7 @@ class SplitLayoutProblem(LayoutProblem):
         start : bool, optional
             Whether to start a server to access the layout (default: True).
         """
-        super().__init__(layout=None, show_server = show_server, start = start)
+        super().__init__(layout=None, show_server=show_server, start=start)
 
         self._working_directory = working_directory
 
@@ -667,7 +692,9 @@ class SplitLayoutProblem(LayoutProblem):
         elif isinstance(self.data_file_path, SplitLayoutData):
             data_to_view = self.data_file_path
         else:
-            raise TypeError(f"Provided data_file_path type not implemented: {type(self.data_file_path)}")
+            raise TypeError(
+                f"Provided data_file_path type not implemented: {type(self.data_file_path)}"
+            )
 
         visualisation_panels: Dict[str, VisualizationPanel] = {}
 
@@ -676,7 +703,7 @@ class SplitLayoutProblem(LayoutProblem):
             if isinstance(element, ValuePanel):
                 slave_1d = ComputeSlave(element.interface)
 
-                slave_1d.set_time(0.)
+                slave_1d.set_time(0.0)
                 for field in element.displayed_fields:
                     slave_1d.update_data(field, np.nan)
 
@@ -688,7 +715,7 @@ class SplitLayoutProblem(LayoutProblem):
                 element: FieldPanel
 
                 slave_2d = ComputeSlave(element.interface)
-                slave_2d.set_time(0.)
+                slave_2d.set_time(0.0)
                 slave_2d.update_policy = element.update_policy
 
                 if element.template is not None:
@@ -711,9 +738,7 @@ class SplitLayoutProblem(LayoutProblem):
             else:
                 raise
 
-        self.layout = SplitLayout(data_to_view.build_item(
-            visualisation_panels
-        ))
+        self.layout = SplitLayout(data_to_view.build_item(visualisation_panels))
 
         self.layout.add_time_widget()
         for panel in self.layout.visualisation_panels.values():
@@ -721,13 +746,14 @@ class SplitLayoutProblem(LayoutProblem):
 
         return super().initialize()
 
+
 def get_problem(
-        working_directory: Path,
-        data_to_view: Union[GridLayoutData, SplitLayoutData],
-        use_server: bool = True,
-        show: bool = True,
-        start: bool = True
-    ) -> Tuple[Union[GridStackProblem, SplitLayoutProblem], str]:
+    working_directory: Path,
+    data_to_view: Union[GridLayoutData, SplitLayoutData],
+    use_server: bool = True,
+    show: bool = True,
+    start: bool = True,
+) -> Tuple[Union[GridStackProblem, SplitLayoutProblem], str]:
     """
     Create visualization objects from a working directory and layout data.
 
@@ -763,9 +789,7 @@ def get_problem(
     >>> layout = GridLayoutData(title="Test", grid=[[field_panel]])
     >>> problem, data_file = get_problem(Path("."), layout)
     """
-    data_to_view = get_serializable_data(
-        visualiser_data = data_to_view
-    )
+    data_to_view = get_serializable_data(visualiser_data=data_to_view)
     data_file = working_directory / "visu.json"
     data_file.write_text(data_to_view.model_dump_json(indent=4), encoding="utf-8")
 
@@ -780,15 +804,16 @@ def get_problem(
         print(f"Client pid = {os.getpid()}")
 
         problem = ProblemClient(
-            typeid=typeid,
-            working_directory=working_directory,
-            show_server = show,
-            start = start
+            typeid=typeid, working_directory=working_directory, show_server=show, start=start
         )  # pylint: disable=abstract-class-instantiated
     else:
         if isinstance(data_to_view, GridLayoutData):
-            problem = GridStackProblem(working_directory=working_directory, show_server = show, start = start)
+            problem = GridStackProblem(
+                working_directory=working_directory, show_server=show, start=start
+            )
         elif isinstance(data_to_view, SplitLayoutData):
-            problem = SplitLayoutProblem(working_directory=working_directory, show_server = show, start = start)
+            problem = SplitLayoutProblem(
+                working_directory=working_directory, show_server=show, start=start
+            )
 
     return problem, data_file

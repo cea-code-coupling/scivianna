@@ -1,11 +1,12 @@
 import panel as pn
-from panel.reactive import ReactiveHTML
-from panel.custom import Child, ReactiveHTML
 import param
+from panel.custom import Child, ReactiveHTML
+from panel.reactive import ReactiveHTML
 
 
 class Overlay(ReactiveHTML):
     """This component allow displaying buttons over a figure only when the mouse is in the area."""
+
     key = param.String("")
 
     figure = Child()
@@ -48,7 +49,7 @@ class Overlay(ReactiveHTML):
 
     # Script to listen to key events and update the `key` parameter accordingly
     _scripts = {
-    "enter": """
+        "enter": """
         state.inside = true;
 
         if (!state.keyHandler) {
@@ -59,21 +60,18 @@ class Overlay(ReactiveHTML):
             window.addEventListener("keydown", state.keyHandler);
         }
     """,
-
-    "leave": """
+        "leave": """
         state.inside = false;
     """,
-
-    "remove": """
+        "remove": """
         if (state.keyHandler)
             window.removeEventListener("keydown", state.keyHandler);
-    """
-}
+    """,
+    }
 
     @pn.io.hold()
     def hide_buttons(self, *args, **kwargs):
-        """Hide all element on top of the figure
-        """
+        """Hide all element on top of the figure"""
         if self.button is not None:
             self.button.visible = False
         if self.title is not None:

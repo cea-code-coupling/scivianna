@@ -1,37 +1,36 @@
 import os
 from pathlib import Path
-from typing import Optional, Tuple, List, Any
+from typing import Any, List, Optional, Tuple
 
-from c3po.physicsDrivers.ICOCODriver import ICOCODriver
 import c3po
+from c3po.physicsDrivers.ICOCODriver import ICOCODriver
 
 import scivianna
 from scivianna.constants import X, Z
-from scivianna_example.c3po_coupling.fake_driver import DecreasingFieldProblem
 from scivianna.coupling.visualizer import (
+    FieldPanel,
     GridLayoutData,
     SplitLayoutData,
-    FieldPanel,
+    UpdatePolicy,
     ValuePanel,
     get_problem,
-    UpdatePolicy
 )
-
 from scivianna.interface.med_interface import MEDInterface
 from scivianna.interface.time_dataframe import TimeDataFrame
+from scivianna_example.c3po_coupling.fake_driver import DecreasingFieldProblem
 
 
 def get_panel(
-        working_directory: Path = Path("./results"),
-        computation_time: float = 0.01,
-        use_server: bool = True,
-        show: bool = False,
-        grid: bool = False,
-        return_slaves: bool = False,
-        start: bool = True,
-        *args,
-        **kwargs
-    ) -> Optional[Any]:
+    working_directory: Path = Path("./results"),
+    computation_time: float = 0.01,
+    use_server: bool = True,
+    show: bool = False,
+    grid: bool = False,
+    return_slaves: bool = False,
+    start: bool = True,
+    *args,
+    **kwargs,
+) -> Optional[Any]:
     """
     Set up and run a coupled C3PO-scivianna visualization demo.
 
@@ -105,21 +104,24 @@ def get_panel(
                 # first line
                 [
                     FieldPanel(
-                        name = "Field",
-                        interface = MEDInterface,
-                        update_policy = UpdatePolicy.APPEND_DATA,
-                        template = [
-                            ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
+                        name="Field",
+                        interface=MEDInterface,
+                        update_policy=UpdatePolicy.APPEND_DATA,
+                        template=[
+                            (
+                                "Field value",
+                                str(Path(scivianna.__file__).parent / "input_file" / "power.med"),
+                            ),
                         ],
                         u=X,
                         v=Z,
-                        displayed_field = "Field value"
+                        displayed_field="Field value",
                     ),
                     ValuePanel(
-                        name = "Temperature",
-                        interface = TimeDataFrame,
-                        update_policy = UpdatePolicy.APPEND_DATA,
-                        displayed_fields=["MIN", "AVERAGE", "MAX"]
+                        name="Temperature",
+                        interface=TimeDataFrame,
+                        update_policy=UpdatePolicy.APPEND_DATA,
+                        displayed_fields=["MIN", "AVERAGE", "MAX"],
                     ),
                 ]
             ],
@@ -127,23 +129,26 @@ def get_panel(
         )
     else:
         visualizer_data = SplitLayoutData(
-            split = [
+            split=[
                 FieldPanel(
-                    name = "Field",
-                    interface = MEDInterface,
-                    update_policy = UpdatePolicy.APPEND_DATA,
-                    template = [
-                        ("Field value", str(Path(scivianna.__file__).parent / "input_file" / "power.med")),
+                    name="Field",
+                    interface=MEDInterface,
+                    update_policy=UpdatePolicy.APPEND_DATA,
+                    template=[
+                        (
+                            "Field value",
+                            str(Path(scivianna.__file__).parent / "input_file" / "power.med"),
+                        ),
                     ],
                     u=X,
                     v=Z,
-                    displayed_field = "Field value"
+                    displayed_field="Field value",
                 ),
                 ValuePanel(
-                    name = "Temperature",
-                    interface = TimeDataFrame,
-                    update_policy = UpdatePolicy.APPEND_DATA,
-                    displayed_fields=["MIN", "AVERAGE", "MAX"]
+                    name="Temperature",
+                    interface=TimeDataFrame,
+                    update_policy=UpdatePolicy.APPEND_DATA,
+                    displayed_fields=["MIN", "AVERAGE", "MAX"],
                 ),
             ],
             vertical_cut=True,
@@ -152,11 +157,11 @@ def get_panel(
 
     os.makedirs(working_directory, exist_ok=True)
     visu_problem, visu_data_file = get_problem(
-        working_directory = working_directory,
-        data_to_view = visualizer_data,
-        use_server = use_server,
-        show = show,
-        start = start
+        working_directory=working_directory,
+        data_to_view=visualizer_data,
+        use_server=use_server,
+        show=show,
+        start=start,
     )
     myVIZDriver = ICOCODriver(visu_problem)
     myVIZDriver.setDataFile(visu_data_file)
@@ -166,10 +171,8 @@ def get_panel(
 
     Exchanger_to_Visualizer = LocalExchanger(
         method=c3po.DirectMatching(),
-
         fieldsToGet=[(fieldDriver, "VALUE")],
         fieldsToSet=[(myVIZDriver, "Field@Field value")],
-
         valuesToGet=[
             (fieldDriver, "MAX"),
             (fieldDriver, "AVERAGE"),
@@ -246,10 +249,7 @@ def get_panel(
             return (5.0e-4, False)  # This define time-step size
 
     transientCoupler = ExplicitCoupler(
-        {
-            "PHY": fieldDriver,
-            "VISU": myVIZDriver
-        },
+        {"PHY": fieldDriver, "VISU": myVIZDriver},
         {
             "PHY_2_VIZ": Exchanger_to_Visualizer,
         },

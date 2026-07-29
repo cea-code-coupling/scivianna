@@ -1,35 +1,101 @@
-
-from typing import Any, Dict, List, Tuple, Union
-import geopandas as gp
-from scivianna.panel.panel_2d import Panel2D
-import shapely
 import multiprocessing as mp
 from pathlib import Path
+from typing import Any, Dict, List, Tuple, Union
+
+import geopandas as gp
 import numpy as np
+import shapely
 
-from scivianna.interface.generic_interface import GenericInterface, Geometry2DPolygon
-from scivianna.interface import register_interface
 from scivianna.constants import CSV, GEOMETRY, MATERIAL, MESH
-from scivianna.slave import ComputeSlave
-from scivianna.panel.visualisation_panel import VisualizationPanel
-from scivianna.interface import csv_result
-from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
-from scivianna.layout.split import SplitLayout, SplitItem, SplitDirection
-from scivianna.panel.panel_1d import Panel1D
-from scivianna.panel.panel_dataframe import PanelDataFrame
 from scivianna.data.data2d import Data2D
-
+from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
+from scivianna.interface import csv_result, register_interface
+from scivianna.interface.generic_interface import GenericInterface, Geometry2DPolygon
+from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
+from scivianna.panel.panel_1d import Panel1D
+from scivianna.panel.panel_2d import Panel2D
+from scivianna.panel.panel_dataframe import PanelDataFrame
+from scivianna.panel.visualisation_panel import VisualizationPanel
+from scivianna.slave import ComputeSlave
+from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 from scivianna_example.europe_grid.country_time_series import CountryTimeSeriesInterface
 
 country_cat = {
-    "European Union (EU)": ["BE", "EL", "LT", "PT", "BG", "ES", "LU", "RO", "CZ", "FR", "HU", "SI", "DK", "HR", "MT", "SK", "DE", "IT", "NL", "FI", "EE", "CY", "AT", "SE", "IE", "LV", "PL"],
+    "European Union (EU)": [
+        "BE",
+        "EL",
+        "LT",
+        "PT",
+        "BG",
+        "ES",
+        "LU",
+        "RO",
+        "CZ",
+        "FR",
+        "HU",
+        "SI",
+        "DK",
+        "HR",
+        "MT",
+        "SK",
+        "DE",
+        "IT",
+        "NL",
+        "FI",
+        "EE",
+        "CY",
+        "AT",
+        "SE",
+        "IE",
+        "LV",
+        "PL",
+    ],
     "European Free Trade Association (EFTA)": ["IS", "LI", "NO", "CH"],
-    "EU candidate countries": ["BA", "ME", "MD", "MK", "GE", "AL", "RS", "TR", "UA",],
+    "EU candidate countries": [
+        "BA",
+        "ME",
+        "MD",
+        "MK",
+        "GE",
+        "AL",
+        "RS",
+        "TR",
+        "UA",
+    ],
     "Potential candidates": ["XK"],
     "East countries": ["AM", "BY", "AZ"],
-    "European Neighbourhood Policy (ENP)-South countries": ["DZ", "LB","SY","EG", "LY","TN","IL", "MA","JO","PS"],
-    "Other countries":["AR","AU","BR","CA","CN_X_HK","HK","IN","JP","MX","NG","NZ","RU","SG","ZA","KR","TW","UK","US",]
+    "European Neighbourhood Policy (ENP)-South countries": [
+        "DZ",
+        "LB",
+        "SY",
+        "EG",
+        "LY",
+        "TN",
+        "IL",
+        "MA",
+        "JO",
+        "PS",
+    ],
+    "Other countries": [
+        "AR",
+        "AU",
+        "BR",
+        "CA",
+        "CN_X_HK",
+        "HK",
+        "IN",
+        "JP",
+        "MX",
+        "NG",
+        "NZ",
+        "RU",
+        "SG",
+        "ZA",
+        "KR",
+        "TW",
+        "UK",
+        "US",
+    ],
 }
 
 
@@ -45,7 +111,7 @@ class EuropeGridInterface(Geometry2DPolygon):
 
     def __init__(
         self,
-        geometry_path: str = str(Path(__file__).parent / 'europe.geojson'),
+        geometry_path: str = str(Path(__file__).parent / "europe.geojson"),
         results: Dict[str, GenericInterface] = {},
     ):
         """Antares interface constructor."""
@@ -82,21 +148,17 @@ class EuropeGridInterface(Geometry2DPolygon):
 
             xs_dict = [
                 [
-                    {
-                        "exterior": p.exterior.xy[0],
-                        "holes": [h.xy[0] for h in p.interiors]
-                    }
-                    for p in self.polygons_per_country[c]]
+                    {"exterior": p.exterior.xy[0], "holes": [h.xy[0] for h in p.interiors]}
+                    for p in self.polygons_per_country[c]
+                ]
                 for c in self.polygons_per_country
             ]
 
             ys_dict = [
                 [
-                    {
-                        "exterior": p.exterior.xy[1],
-                        "holes": [h.xy[1] for h in p.interiors]
-                    }
-                    for p in self.polygons_per_country[c]]
+                    {"exterior": p.exterior.xy[1], "holes": [h.xy[1] for h in p.interiors]}
+                    for p in self.polygons_per_country[c]
+                ]
                 for c in self.polygons_per_country
             ]
 
@@ -161,22 +223,20 @@ class EuropeGridInterface(Geometry2DPolygon):
             Were the polygons updated compared to the past call
         """
         last_frame_key = (*origin, size_u, size_v)
-        if (caller in self.last_computed_frame) and (
-            self.last_computed_frame[caller] == last_frame_key
-        ) and (caller in self.polygons):
+        if (
+            (caller in self.last_computed_frame)
+            and (self.last_computed_frame[caller] == last_frame_key)
+            and (caller in self.polygons)
+        ):
             print("Skipping polygon computation.")
             return self.polygons[caller], False
 
         list_of_polygons = [
             PolygonElement(
                 exterior_polygon=PolygonCoords(
-                    np.array(p.exterior.xy[0]),
-                    np.array(p.exterior.xy[1])
+                    np.array(p.exterior.xy[0]), np.array(p.exterior.xy[1])
                 ),
-                holes=[
-                    PolygonCoords(np.array(h.xy[0]), np.array(h.xy[1]))
-                    for h in p.interiors
-                ],
+                holes=[PolygonCoords(np.array(h.xy[0]), np.array(h.xy[1])) for h in p.interiors],
                 cell_id=self.country_id[country],
             )
             for country in self.polygons_per_country
@@ -188,7 +248,11 @@ class EuropeGridInterface(Geometry2DPolygon):
         return self.polygons[caller], True
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -227,7 +291,12 @@ class EuropeGridInterface(Geometry2DPolygon):
 
         for res in self.results.values():
             if value_label in res.get_fields():
-                results = res.get_values([], cells, [self.country_id[list(self.country_id.values).index(vol)] for vol in cells], value_label)
+                results = res.get_values(
+                    [],
+                    cells,
+                    [self.country_id[list(self.country_id.values).index(vol)] for vol in cells],
+                    value_label,
+                )
                 return {cells[i]: results[i] for i in range(len(cells))}
 
         raise NotImplementedError(
@@ -301,18 +370,18 @@ class EuropeGridInterface(Geometry2DPolygon):
 
         # Serialize all interface state
         state = {
-            'polygons': self.polygons,
-            'results': self.results,
-            'data': getattr(self, 'data', None),
-            'country_id': getattr(self, 'country_id', None),
-            'polygons_per_country': getattr(self, 'polygons_per_country', None),
-            'xs': getattr(self, 'xs', None),
-            'ys': getattr(self, 'ys', None),
-            'country_list': getattr(self, 'country_list', None),
-            'europe': getattr(self, 'europe', None),
+            "polygons": self.polygons,
+            "results": self.results,
+            "data": getattr(self, "data", None),
+            "country_id": getattr(self, "country_id", None),
+            "polygons_per_country": getattr(self, "polygons_per_country", None),
+            "xs": getattr(self, "xs", None),
+            "ys": getattr(self, "ys", None),
+            "country_list": getattr(self, "country_list", None),
+            "europe": getattr(self, "europe", None),
         }
 
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             pickle.dump(state, f)
 
     def load(self, file_path: Path, include_files: bool):
@@ -330,20 +399,22 @@ class EuropeGridInterface(Geometry2DPolygon):
 
         file_path = PathLib(file_path)
 
-        with open(file_path, 'rb') as f:
+        with open(file_path, "rb") as f:
             state = pickle.load(f)
 
-        self.polygons = state.get('polygons')
-        self.results = state.get('results', {})
-        self.data = state.get('data')
-        self.country_id = state.get('country_id')
-        self.polygons_per_country = state.get('polygons_per_country', {})
-        self.xs = state.get('xs')
-        self.ys = state.get('ys')
-        self.country_list = state.get('country_list')
-        self.europe = state.get('europe')
+        self.polygons = state.get("polygons")
+        self.results = state.get("results", {})
+        self.data = state.get("data")
+        self.country_id = state.get("country_id")
+        self.polygons_per_country = state.get("polygons_per_country", {})
+        self.xs = state.get("xs")
+        self.ys = state.get("ys")
+        self.country_list = state.get("country_list")
+        self.europe = state.get("europe")
+
 
 register_interface("EuropeGridInterface", EuropeGridInterface)
+
 
 def make_europe_panel(_, return_slaves: bool = False) -> SplitLayout:
     slave = ComputeSlave(EuropeGridInterface)
@@ -366,14 +437,9 @@ def make_europe_panel(_, return_slaves: bool = False) -> SplitLayout:
     split_panel = SplitLayout(
         SplitItem(
             map_panel,
-            SplitItem(
-                line_panel,
-                df_panel,
-                SplitDirection.HORIZONTAL,
-                factor=.7
-            ),
+            SplitItem(line_panel, df_panel, SplitDirection.HORIZONTAL, factor=0.7),
             SplitDirection.VERTICAL,
-            factor=.6
+            factor=0.6,
         ),
     )
 

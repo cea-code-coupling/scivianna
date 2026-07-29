@@ -1,5 +1,7 @@
-from typing import List, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple, Union
+
 import numpy as np
+
 from scivianna.data.data_container import DataContainer
 
 if TYPE_CHECKING:
@@ -7,20 +9,21 @@ if TYPE_CHECKING:
 
 
 class Data3D(DataContainer):
-    """Data class containing the 3D geometry data""" 
+    """Data class containing the 3D geometry data"""
+
     polydata: Union["pv.PolyData", "pv.UnstructuredGrid"]
-    """VTK polydata defining the geometry""" 
+    """VTK polydata defining the geometry"""
     cell_ids: List[Union[int, str]]
-    """List of contained cell ids""" 
+    """List of contained cell ids"""
     cell_values: List[Union[float, str]]
-    """List of contained cell values""" 
+    """List of contained cell values"""
     cell_colors: List[Tuple[int, int, int]]
-    """List of contained cell colors""" 
+    """List of contained cell colors"""
     cell_edge_colors: List[Tuple[int, int, int]]
-    """List of contained cell edge colors""" 
+    """List of contained cell edge colors"""
 
     def __init__(self):
-        """Empty constructor of the Data3D class.""" 
+        """Empty constructor of the Data3D class."""
         self.polydata = None
         self.cell_ids = []
         self.cell_values = []
@@ -29,16 +32,16 @@ class Data3D(DataContainer):
 
     @classmethod
     def from_vtk(cls, polydata: Union["pv.PolyData", "pv.UnstructuredGrid"]) -> "Data3D":
-        """Build a Data3D object from a pv.PolyData 
-        
-        Parameters 
-        ---------- 
-        polydata : pv.PolyData 
-            VTK polydata defining the geometry 
-            
-        Returns 
-        ------- 
-        Data3D 
+        """Build a Data3D object from a pv.PolyData
+
+        Parameters
+        ----------
+        polydata : pv.PolyData
+            VTK polydata defining the geometry
+
+        Returns
+        -------
+        Data3D
             Requested Data3D
         """
         data_ = Data3D()
@@ -48,10 +51,11 @@ class Data3D(DataContainer):
         data_.cell_colors = np.zeros((len(data_.cell_ids), 4)) + 255
         data_.cell_edge_colors = np.zeros((len(data_.cell_ids), 4)) + 50
         return data_
-    
+
     def copy(self) -> "Data3D":
         """Returns a deep copy of self."""
         import pyvista as pv
+
         data3D = Data3D()
 
         poly = pv.PolyData()
@@ -65,16 +69,28 @@ class Data3D(DataContainer):
 
         return data3D
 
-    def check_valid( self, ):
+    def check_valid(
+        self,
+    ):
         """Checks if this Data3D is valid, raises an AssertionError otherwise"""
-        assert len(self.cell_ids) == len( self.cell_colors ), "The Data3D object must have the same number of cell id and colors"
-        assert len(self.cell_values) == len( self.cell_colors ), "The Data3D object must have the same number of cell values and colors"
-        assert len(self.cell_values) == len( self.cell_edge_colors ), "The Data3D object must have the same number of cell values and edge colors"
+        assert len(self.cell_ids) == len(
+            self.cell_colors
+        ), "The Data3D object must have the same number of cell id and colors"
+        assert len(self.cell_values) == len(
+            self.cell_colors
+        ), "The Data3D object must have the same number of cell values and colors"
+        assert len(self.cell_values) == len(
+            self.cell_edge_colors
+        ), "The Data3D object must have the same number of cell values and edge colors"
 
-        assert len(self.cell_values) == self.polydata.GetNumberOfCells(), "The Data3D object must have the same number of cell values and polygons"
+        assert (
+            len(self.cell_values) == self.polydata.GetNumberOfCells()
+        ), "The Data3D object must have the same number of cell values and polygons"
 
         if any(isinstance(item, str) for item in self.cell_values):
-            assert all( isinstance(item, str) for item in self.cell_values ), "If any of the values is a string, they all must be strings"
+            assert all(
+                isinstance(item, str) for item in self.cell_values
+            ), "If any of the values is a string, they all must be strings"
 
     def update_cell_data(self):
         """Updates the cell data stored in the polydata."""

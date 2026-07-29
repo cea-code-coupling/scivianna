@@ -5,6 +5,7 @@ from scivianna.data.data2d import Data2D
 from scivianna.plotter_2d.grid.grid_tools import get_grids
 from scivianna.utils.color_tools import get_edges_colors
 
+
 @pytest.mark.default
 def test_get_grid():
     size = 10

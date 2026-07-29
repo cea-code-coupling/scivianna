@@ -1,12 +1,13 @@
 import os
-from pathlib import Path
 import pickle
+from pathlib import Path
+from typing import Any, Dict, List, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Any, Dict, List, Tuple, Union
-from scivianna.enums import UpdatePolicy
-from scivianna.interface.generic_interface import ValueAtLocation, CouplingInterface
 
+from scivianna.enums import UpdatePolicy
+from scivianna.interface.generic_interface import CouplingInterface, ValueAtLocation
 
 
 class CSVInterface(ValueAtLocation, CouplingInterface):
@@ -40,7 +41,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
 
         # Store dataframes at each time step
         self.dfs: Dict[float, pd.DataFrame] = {}
-        self.time = 0.
+        self.time = 0.0
         self.update_policy = UpdatePolicy.APPEND_DATA
 
     def get_value(
@@ -139,11 +140,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
         List[str]
             Fields names
         """
-        return [
-            c
-            for c in self.df.columns
-            if c != "cell"
-        ]
+        return [c for c in self.df.columns if c != "cell"]
 
     def get_labels(self) -> List[str]:
         """Returns the fields names providable.
@@ -287,7 +284,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
             data = pickle.load(f)
 
             self.dfs, self.basename, self.time = data
-            
+
             # Restore current dataframe from the last time step
             if self.dfs:
                 self.df = self.dfs.get(self.time, list(self.dfs.values())[-1])

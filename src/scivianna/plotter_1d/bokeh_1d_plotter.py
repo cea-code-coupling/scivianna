@@ -3,12 +3,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import panel as pn
-
-from bokeh.models import (
-    ColumnDataSource,
-    HoverTool,
-    GlyphRenderer
-)
+from bokeh.models import ColumnDataSource, GlyphRenderer, HoverTool
 from bokeh.palettes import Viridis11 as palette
 from bokeh.plotting import figure
 
@@ -58,9 +53,7 @@ class BokehPlotter1D(Plotter1D):
         self.fig.x_range.only_visible = True
         self.fig.y_range.only_visible = True
 
-        self.hover = HoverTool(
-            tooltips="$name: (@x, @y)"
-        )
+        self.hover = HoverTool(tooltips="$name: (@x, @y)")
         """Tool defining the hovered label"""
         self.fig.add_tools(self.hover)
 
@@ -160,7 +153,7 @@ class BokehPlotter1D(Plotter1D):
     @pn.io.hold()
     def set_visible(
         self,
-        names:List[str],
+        names: List[str],
     ):
         """Updates the visible plots in the figure
 
@@ -175,22 +168,16 @@ class BokehPlotter1D(Plotter1D):
 
             if glyph_name in names:
                 renderer.glyph.line_color = palette[
-                    0 if len(names) == 1 else int(
-                        names.index(glyph_name)
-                        * (len(palette) - 1)
-                        / (len(names) - 1)
-                    )
+                    0
+                    if len(names) == 1
+                    else int(names.index(glyph_name) * (len(palette) - 1) / (len(names) - 1))
                 ]
 
         for legend in self.fig.legend:
             for item in legend.items:
                 item.visible = item.label.value in names
 
-        self.hover.renderers = [
-            self.line_dict[name]
-            for name in names
-            if name in self.line_dict
-        ]
+        self.hover.renderers = [self.line_dict[name] for name in names if name in self.line_dict]
 
         self.visible = names
 
@@ -309,7 +296,6 @@ class BokehPlotter1D(Plotter1D):
 
         self.y_scale_type = scale
         self._rebuild_figure()
-
 
     def _disable_interactions(self, val: bool):
         """Enable/disable the plot interactions

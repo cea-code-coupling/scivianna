@@ -1,8 +1,8 @@
 """Tests for scivianna.data.data1d module."""
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 
 @pytest.mark.default
@@ -613,7 +613,7 @@ class TestData1DIntegration:
     def test_full_workflow(self):
         """Test a complete workflow: create, copy, validate."""
         from scivianna.data.data1d import Data1D
-        
+
         # Create
         series = {
             'x': pd.Series([1.0, 2.0, 3.0]),
@@ -634,7 +634,7 @@ class TestData1DIntegration:
     def test_dataframe_to_serie_dict_conversion(self):
         """Test round-trip via dataframe and serie_dict."""
         from scivianna.data.data1d import Data1D
-        
+
         # From dataframe
         df = pd.DataFrame({'a': [1.0, 2.0], 'b': [3.0, 4.0]})
         data1d_df = Data1D.from_dataframe(df)

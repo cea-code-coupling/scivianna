@@ -1,8 +1,7 @@
-
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import panel as pn
-from typing import TYPE_CHECKING
 
 import scivianna
 from scivianna.extension.extension import Extension
@@ -12,8 +11,8 @@ from scivianna.slave import ComputeSlave
 from scivianna.utils.interface_tools import GenericInterfaceEnum
 
 if TYPE_CHECKING:
-    from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.layout.generic_layout import GenericLayout
+    from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 class LayoutExtension(Extension):
@@ -24,7 +23,7 @@ class LayoutExtension(Extension):
         layout: "GenericLayout",
         slave: ComputeSlave,
         plotter: Plotter2D,
-        panel: "VisualizationPanel"
+        panel: "VisualizationPanel",
     ):
         """Constructor of the extension, saves the slave and the panel
 
@@ -63,11 +62,12 @@ You can use the following drop box to change the currently edited panel. Otherwi
             label="Code",
             options=interface_options,
             value=interface_options[
-                list(self.layout.available_interfaces.values())
-                    .index(self.layout.visualisation_panels[self.layout.current_frame].slave.code_interface)
+                list(self.layout.available_interfaces.values()).index(
+                    self.layout.visualisation_panels[self.layout.current_frame].slave.code_interface
+                )
             ],
-            width = 280,
-            margin = 0
+            width=280,
+            margin=0,
         )
 
         """
@@ -77,27 +77,37 @@ You can use the following drop box to change the currently edited panel. Otherwi
             label="Visualizer selector",
             options=list(self.layout.visualisation_panels.keys()),
             value=list(self.layout.visualisation_panels.keys())[0],
-            width = 280,
-            margin = 0
+            width=280,
+            margin=0,
         )
 
         self.interface_selector.param.watch(self.layout.change_code_interface, "value")
         self.frame_selector.param.watch(self.set_to_frame, "value")
 
         self.duplicate_horizontally_button = pn.widgets.ButtonIcon(
-            icon=(Path(scivianna.__file__).parent / "icon" / "columns-2.svg").read_text().strip(), description="Duplicate horizontally", height=30, width=30
+            icon=(Path(scivianna.__file__).parent / "icon" / "columns-2.svg").read_text().strip(),
+            description="Duplicate horizontally",
+            height=30,
+            width=30,
         )
         self.duplicate_vertitally_button = pn.widgets.ButtonIcon(
-            icon=(Path(scivianna.__file__).parent / "icon" / "layout-rows.svg").read_text().strip(), description="Duplicate vertically", height=30, width=30
+            icon=(Path(scivianna.__file__).parent / "icon" / "layout-rows.svg").read_text().strip(),
+            description="Duplicate vertically",
+            height=30,
+            width=30,
         )
         self.split_new_horizontally_button = pn.widgets.ButtonIcon(
-            icon=(Path(scivianna.__file__).parent / "icon" / "column-insert-right.svg").read_text().strip(),
+            icon=(Path(scivianna.__file__).parent / "icon" / "column-insert-right.svg")
+            .read_text()
+            .strip(),
             description="Split horizontally",
             height=30,
             width=30,
         )
         self.split_new_vertically_button = pn.widgets.ButtonIcon(
-            icon=(Path(scivianna.__file__).parent / "icon" / "row-insert-bottom.svg").read_text().strip(),
+            icon=(Path(scivianna.__file__).parent / "icon" / "row-insert-bottom.svg")
+            .read_text()
+            .strip(),
             description="Split vertically",
             height=30,
             width=30,
@@ -141,7 +151,6 @@ You can use the following drop box to change the currently edited panel. Otherwi
     def add_widget(self, widget: pn.widgets.Widget):
         self.layout_param_card.append(widget)
 
-
     def make_gui(
         self,
     ) -> pn.viewable.Viewable:
@@ -153,9 +162,9 @@ You can use the following drop box to change the currently edited panel. Otherwi
             Viewable to display in the extension tab
         """
         return pn.Column(
-                self.layout_param_card,
-                margin=(0, 0, 10, 10),
-            )
+            self.layout_param_card,
+            margin=(0, 0, 10, 10),
+        )
 
     def change_code_interface(self, *args, **kwargs):
         self.layout.change_code_interface()
@@ -181,4 +190,3 @@ You can use the following drop box to change the currently edited panel. Otherwi
             )
 
             self.frame_selector.value = frame_name
-

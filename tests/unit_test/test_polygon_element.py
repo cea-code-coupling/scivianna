@@ -1,8 +1,10 @@
 # tests/test_polygonize_tools.py
 
-import pytest
 import numpy as np
+import pytest
+
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
+
 
 # Helper: Create a simple polygon for testing
 def create_test_polygon_coords():

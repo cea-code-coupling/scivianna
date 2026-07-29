@@ -2,20 +2,17 @@ from functools import partial
 from pathlib import Path
 from typing import List, Tuple
 
-import panel_material_ui as pmui
 import panel as pn
+import panel_material_ui as pmui
 
 import scivianna
 from scivianna.extension.extension import Extension
 
 
 class GUI:
-    """ Class defining the panels sidebar and managing the extensions
-    """
-    def __init__(
-        self,
-        extensions: List[Extension]
-    ):
+    """Class defining the panels sidebar and managing the extensions"""
+
+    def __init__(self, extensions: List[Extension]):
         """Constructor of the panels GUI
 
         Parameters
@@ -34,34 +31,34 @@ class GUI:
         self.buttons = []
 
         self.open_button = pmui.IconButton(
-            icon=(Path(scivianna.__file__).parent / "icon" / "keyboard_double_arrow_right.svg").read_text().strip(),
+            icon=(Path(scivianna.__file__).parent / "icon" / "keyboard_double_arrow_right.svg")
+            .read_text()
+            .strip(),
             size=s,
             description="Open extensions",
             margin=self.button_margin,
         )
 
         self.close_button = pmui.IconButton(
-            icon=(Path(scivianna.__file__).parent / "icon" / "keyboard_double_arrow_left.svg").read_text().strip(),
+            icon=(Path(scivianna.__file__).parent / "icon" / "keyboard_double_arrow_left.svg")
+            .read_text()
+            .strip(),
             size=s,
             description="Close extensions",
             margin=self.button_margin,
             visible=False,
         )
 
-        self.options_widget = pmui.Column(
-            self.open_button, self.close_button
-        )
+        self.options_widget = pmui.Column(self.open_button, self.close_button)
 
-        self.drawer_column = pmui.Column(
-            margin=0
-        )
+        self.drawer_column = pmui.Column(margin=0)
 
         self.drawer = pmui.Drawer(
             self.drawer_column,
             size=300,
             variant="persistent",
             sizing_mode="stretch_height",
-            open=False
+            open=False,
         )
 
         self.open_button.on_click(self.open_close_drawer)
@@ -78,8 +75,7 @@ class GUI:
     def update_colors(
         self,
     ):
-        """Update the GUI extension buttons colors: if the sidebar is open, color the active extension in purple.
-        """
+        """Update the GUI extension buttons colors: if the sidebar is open, color the active extension in purple."""
         for b in self.buttons:
             b[0].color = "primary"
             b[1].visible = False
@@ -162,7 +158,7 @@ class GUI:
             ),
             pn.Column(
                 pmui.Typography(
-                    "## "+extension.title,
+                    "## " + extension.title,
                     width_policy="max",
                 ),
                 pmui.Typography(
@@ -170,11 +166,9 @@ class GUI:
                     width_policy="max",
                 ),
                 extension.make_gui(),
-            )
+            ),
         ]
-        self.register_new_extension(
-            *self.registered_extensions[extension]
-        )
+        self.register_new_extension(*self.registered_extensions[extension])
 
     def register_new_extension(self, button: pmui.IconButton, col: pn.Column):
         """Register a button and its associated column to the GUI

@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Tuple, Union
 
 import pytest
+
 from scivianna.interface.generic_interface import ValueAtLocation
 from scivianna.slave import ComputeSlave
 

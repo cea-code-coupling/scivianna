@@ -5,19 +5,20 @@ It provides a color field selector, colormap selector, and center-on-zero option
 """
 
 import numpy as np
-import pytest
 import panel as pn
+import pytest
 
 import scivianna.utils
+
 # Enable testing mode so button callbacks call async_update_data directly
 scivianna.utils._testing = True
 
-from scivianna.extension.field_selector import FieldSelector, set_colors_list
+from test_interface import make_panel_2d, panel_fixture
+
+from scivianna.constants import OUTSIDE
 from scivianna.data.data2d import Data2D
 from scivianna.enums import VisualizationMode
-from scivianna.constants import OUTSIDE
-
-from test_interface import make_panel_2d, panel_fixture
+from scivianna.extension.field_selector import FieldSelector, set_colors_list
 
 
 class TestFieldSelectorInitialization:
@@ -227,7 +228,7 @@ class TestFieldSelectorCallbacks:
 
         try:
             # Create mock Data2D
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
             
             polygons = [
                 PolygonElement(
@@ -308,7 +309,7 @@ class TestSetColorsList:
         
         try:
             # Create mock Data2D with string values
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
             
             polygons = [
                 PolygonElement(
@@ -353,7 +354,7 @@ class TestSetColorsList:
         
         try:
             # Create mock Data2D with numeric values
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
             
             polygons = [
                 PolygonElement(
@@ -399,7 +400,7 @@ class TestSetColorsList:
         
         try:
             # Create mock Data2D
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
             
             polygons = [
                 PolygonElement(
@@ -450,9 +451,10 @@ class TestSetColorsList:
 
         try:
             # Create mock Data2D with OUTSIDE cell
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
-            from scivianna.constants import OUTSIDE
             import numpy as np
+
+            from scivianna.constants import OUTSIDE
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
             polygons = [
                 PolygonElement(
@@ -508,7 +510,7 @@ class TestSetColorsList:
         
         try:
             # Create mock Data2D with NaN values
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
             
             polygons = [
                 PolygonElement(
@@ -683,7 +685,7 @@ class TestForceRangeFeature:
         field_sel = extensions_dict[FieldSelector]
 
         try:
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
             polygons = [
                 PolygonElement(
@@ -803,7 +805,7 @@ class TestEdgeOffsetFeature:
         field_sel = extensions_dict[FieldSelector]
 
         try:
-            from scivianna.utils.polygonize_tools import PolygonElement, PolygonCoords
+            from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
             polygons = [
                 PolygonElement(

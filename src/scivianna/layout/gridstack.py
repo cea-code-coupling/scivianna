@@ -1,26 +1,22 @@
 import functools
-from typing import Dict, List, Tuple, Type, Union
-import panel as pn
-import holoviews as hv
-
 from pathlib import Path
+from typing import Dict, List, Tuple, Type, Union
 
+import holoviews as hv
+import panel as pn
+
+from scivianna.component.gridstack_component import CustomGridStack
 from scivianna.interface.generic_interface import GenericInterface
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.visualisation_panel import ComputeSlave, VisualizationPanel
-from scivianna.utils.interface_tools import (
-    GenericInterfaceEnum,
-)
-from scivianna.component.gridstack_component import CustomGridStack
-from scivianna.utils.serialization import (
-    save_gridstack_to_zip,
-    load_gridstack_from_zip,
-)
+from scivianna.utils.interface_tools import GenericInterfaceEnum
+from scivianna.utils.serialization import load_gridstack_from_zip, save_gridstack_to_zip
 
 pn.extension()
 hv.extension("bokeh")
 
 card_style = {}
+
 
 class GridStackLayout(GenericLayout):
     """Displayable that lets arranging several VisualizationPanel"""
@@ -48,9 +44,7 @@ class GridStackLayout(GenericLayout):
         visualisation_panels: Dict[str, VisualizationPanel],
         bounds_x: Dict[str, Tuple[int]],
         bounds_y: Dict[str, Tuple[int]],
-        additional_interfaces: Dict[
-            Union[str, GenericInterfaceEnum], Type[GenericInterface]
-        ] = {},
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
     ):
         """VisualizationGridStack constructor
 
@@ -68,8 +62,12 @@ class GridStackLayout(GenericLayout):
         TypeError
             One of the additional interfaces classes does not inherit from GenericInterface
         """
-        assert set(bounds_x.keys()) == set(visualisation_panels.keys()), "arguments bounds_x keys are different than visualisation_panels keys"
-        assert set(bounds_y.keys()) == set(visualisation_panels.keys()), "arguments bounds_y keys are different than visualisation_panels keys"
+        assert set(bounds_x.keys()) == set(
+            visualisation_panels.keys()
+        ), "arguments bounds_x keys are different than visualisation_panels keys"
+        assert set(bounds_y.keys()) == set(
+            visualisation_panels.keys()
+        ), "arguments bounds_y keys are different than visualisation_panels keys"
 
         self.bounds_x = bounds_x
         self.bounds_y = bounds_y
@@ -82,20 +80,15 @@ class GridStackLayout(GenericLayout):
         size_x = max(1, size_x)
         size_y = max(1, size_y)
 
-
         """
             Allow resize frames check box
         """
-        self.allow_resize_box = pn.widgets.Checkbox(
-            label="Allow frames resize", value=False
-        )
+        self.allow_resize_box = pn.widgets.Checkbox(label="Allow frames resize", value=False)
 
         def enable_disable_resize(event):
             self.enable_disable_pan()
 
         self.allow_resize_box.param.watch(enable_disable_resize, "value")
-
-
 
         """
             Building interface
@@ -113,11 +106,10 @@ class GridStackLayout(GenericLayout):
 
         self.layout_extension.add_widget(self.allow_resize_box)
 
-
     @pn.io.hold()
     def change_code_interface(self, event):
         super().change_code_interface(event)
-    
+
         self.make_grid_stack()
         self.change_current_frame(None)
 
@@ -186,7 +178,7 @@ class GridStackLayout(GenericLayout):
 
             elif len(self.bounds_x[element]) == 0:
                 self.get_grid()[
-                    self.bounds_y[element][0]: self.bounds_y[element][1], :
+                    self.bounds_y[element][0] : self.bounds_y[element][1], :
                 ] = self.visualisation_panels[element].figure
                 self.get_grid().add_object(
                     self.visualisation_panels[element].figure,
@@ -196,7 +188,7 @@ class GridStackLayout(GenericLayout):
 
             elif len(self.bounds_y[element]) == 0:
                 self.get_grid()[
-                    :, self.bounds_x[element][0]: self.bounds_x[element][1]
+                    :, self.bounds_x[element][0] : self.bounds_x[element][1]
                 ] = self.visualisation_panels[element].figure
                 self.get_grid().add_object(
                     self.visualisation_panels[element].figure,
@@ -206,8 +198,8 @@ class GridStackLayout(GenericLayout):
 
             else:
                 self.get_grid()[
-                    self.bounds_y[element][0]: self.bounds_y[element][1],
-                    self.bounds_x[element][0]: self.bounds_x[element][1],
+                    self.bounds_y[element][0] : self.bounds_y[element][1],
+                    self.bounds_x[element][0] : self.bounds_x[element][1],
                 ] = self.visualisation_panels[element].figure
                 self.get_grid().add_object(
                     self.visualisation_panels[element].figure,
@@ -216,7 +208,6 @@ class GridStackLayout(GenericLayout):
                 )
 
         self.enable_disable_pan()
-    
 
     def disable_figures_pan(self):
         """Disable all figures pan"""
@@ -239,16 +230,12 @@ class GridStackLayout(GenericLayout):
         """
         current_frame = self.current_frame
         if horizontal:
-            cut_possible = (
-                self.bounds_y[current_frame][1] - self.bounds_y[current_frame][0] > 1
-            )
+            cut_possible = self.bounds_y[current_frame][1] - self.bounds_y[current_frame][0] > 1
         else:
-            cut_possible = (
-                self.bounds_x[current_frame][1] - self.bounds_x[current_frame][0] > 1
-            )
+            cut_possible = self.bounds_x[current_frame][1] - self.bounds_x[current_frame][0] > 1
 
         if cut_possible:
-            new_visualisation_panels:Dict[str, VisualizationPanel] = {}
+            new_visualisation_panels: Dict[str, VisualizationPanel] = {}
 
             old_x_min = self.bounds_x[current_frame][0]
             old_x_max = self.bounds_x[current_frame][1]
@@ -261,7 +248,7 @@ class GridStackLayout(GenericLayout):
                 cut_coordinate = int(0.5 * (old_x_min + old_x_max))
 
             new_frame = self.visualisation_panels[current_frame].duplicate()
-            
+
             new_frame.figure.show_buttons()
 
             while new_frame.panel_name in self.visualisation_panels:
@@ -285,7 +272,7 @@ class GridStackLayout(GenericLayout):
                 new_visualisation_panels[panel_name] = self.visualisation_panels[
                     panel_name
                 ].duplicate(keep_name=True)
-                
+
                 self.register_panel(new_visualisation_panels[panel_name])
 
             self.visualisation_panels = new_visualisation_panels
@@ -294,11 +281,11 @@ class GridStackLayout(GenericLayout):
 
             self.reset_interface()
 
-            
     @pn.io.hold()
-    def reset_interface(self,):
-        """Rebuilds the interface based on up-to-date SplitItem
-        """
+    def reset_interface(
+        self,
+    ):
+        """Rebuilds the interface based on up-to-date SplitItem"""
 
         #   We hide the history of objects in self.main_frame and adds a new one
         #   This practice prevents the garbage collector to delete objects that are still to be used
@@ -310,26 +297,22 @@ class GridStackLayout(GenericLayout):
         self.set_to_frame(self.current_frame)
         self.change_current_frame()
 
-    def save_to_zip(
-        self,
-        file_path: Union[str, Path],
-        include_files: bool = True
-    ) -> Path:
+    def save_to_zip(self, file_path: Union[str, Path], include_files: bool = True) -> Path:
         """
         Saves the GridStackLayout configuration and slave data to a zip file.
-        
+
         The zip file contains:
-        - layout.json: JSON file describing the layout structure, current frame, 
+        - layout.json: JSON file describing the layout structure, current frame,
           bounds, and for each panel: slave info and associated interface name
         - data/: Folder containing serialized data for each slave
-        
+
         Parameters
         ----------
         file_path : Union[str, Path]
             Path to the output zip file
         include_files : bool = True
             If True, includes loaded files in the slave serialization
-            
+
         Returns
         -------
         Path
@@ -342,11 +325,11 @@ class GridStackLayout(GenericLayout):
         cls,
         file_path: Union[str, Path],
         include_files: bool = True,
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {}
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
     ) -> "GridStackLayout":
         """
         Restores a GridStackLayout from a zip file.
-        
+
         Parameters
         ----------
         file_path : Union[str, Path]
@@ -355,7 +338,7 @@ class GridStackLayout(GenericLayout):
             If True, includes loaded files in the slave deserialization
         additional_interfaces : Dict = {}
             Additional interfaces to register
-            
+
         Returns
         -------
         GridStackLayout
@@ -366,4 +349,3 @@ class GridStackLayout(GenericLayout):
             include_files=include_files,
             additional_interfaces=additional_interfaces,
         )
-            

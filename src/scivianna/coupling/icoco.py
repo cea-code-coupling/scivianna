@@ -43,23 +43,22 @@ The process threads structure of a coupling with the visualiser works as follow:
                 -   The C3PO Thread will set a boolean to mark the need for an update;
                 -   At each periodic task, if the boolean is at True, the Visualizer thread refreshes the geometry
 """
+import atexit
+import socket
+import time
 from pathlib import Path
 from typing import List, Tuple
-import time
 
-import atexit
 import medcoupling  # type: ignore
-from icoco.exception import WrongContext, WrongArgument
-from icoco.problem import Problem, ValueType
-
 import panel as pn
-import socket
+from icoco.exception import WrongArgument, WrongContext
+from icoco.problem import Problem, ValueType
 
 from scivianna.enums import UpdatePolicy
 from scivianna.interface.generic_interface import CouplingInterface
 from scivianna.layout.generic_layout import GenericLayout
-from scivianna.layout.split import SplitLayout
 from scivianna.layout.gridstack import GridStackLayout
+from scivianna.layout.split import SplitLayout
 from scivianna.panel.panel_1d import Panel1D
 from scivianna.utils.serialization import save_gridstack_to_zip, save_layout_to_zip
 
@@ -80,6 +79,7 @@ class Value:
     NOTIFICATION_INFO = "NOTIFICATION_INFO"
     NOTIFICATION_ERROR = "NOTIFICATION_ERROR"
 
+
 class LayoutProblem(Problem):
     """
     ICoCo Problem implementation for the C3PO coupling visualizer.
@@ -94,7 +94,7 @@ class LayoutProblem(Problem):
         layout: GenericLayout,
         title="C3PO Coupling visualizer",
         show_server: bool = True,
-        start: bool = True
+        start: bool = True,
     ):
         """
         ICoCo Problem implementation for the C3PO coupling visualizer.
@@ -206,10 +206,10 @@ class LayoutProblem(Problem):
             address=ip_adress,
             websocket_origin=f"{ip_adress}:{port}",
             port=port,
-            show = self.show_server,
+            show=self.show_server,
             threaded=True,
             title=self.title,
-            start = self.start
+            start=self.start,
         )
 
         self.panels_to_recompute: List[str] = []
@@ -236,7 +236,9 @@ class LayoutProblem(Problem):
         """
         self._active_connections.add(session_context.id)
         pn.state.on_session_destroyed(self._on_session_destroyed)
-        print(f"[LayoutProblem] New connection: {session_context.id}. Active connections: {len(self._active_connections)}")
+        print(
+            f"[LayoutProblem] New connection: {session_context.id}. Active connections: {len(self._active_connections)}"
+        )
 
     def _on_session_destroyed(self, session_context):
         """
@@ -251,7 +253,9 @@ class LayoutProblem(Problem):
             The session context for the disconnected client.
         """
         self._active_connections.discard(session_context.id)
-        print(f"[LayoutProblem] Connection closed: {session_context.id}. Active connections: {len(self._active_connections)}")
+        print(
+            f"[LayoutProblem] Connection closed: {session_context.id}. Active connections: {len(self._active_connections)}"
+        )
 
     def wait_for_disconnect(self, poll_interval: float = 0.5) -> None:
         """
@@ -266,9 +270,17 @@ class LayoutProblem(Problem):
             Time in seconds between connection checks (default: 0.5).
         """
         if self._active_connections:
-            self.layout.notifications.append(("success", "COUPLING COMPLETE. CLOSE YOUR BROWSER TAB TO TERMINATE THE SIMULATION.", 0))
+            self.layout.notifications.append(
+                (
+                    "success",
+                    "COUPLING COMPLETE. CLOSE YOUR BROWSER TAB TO TERMINATE THE SIMULATION.",
+                    0,
+                )
+            )
 
-        print(f"[LayoutProblem] Waiting for {len(self._active_connections)} active connection(s) to disconnect...")
+        print(
+            f"[LayoutProblem] Waiting for {len(self._active_connections)} active connection(s) to disconnect..."
+        )
         while len(self._active_connections) > 0:
             time.sleep(poll_interval)
         print("[LayoutProblem] All connections disconnected.")
@@ -292,10 +304,11 @@ class LayoutProblem(Problem):
             (see Problem documentation).
         """
         if not self._terminate():
-            raise WrongContext(method="terminate",
-                               precondition="called before initialize() or after terminate()",
-                               prob="LayoutProblem")
-
+            raise WrongContext(
+                method="terminate",
+                precondition="called before initialize() or after terminate()",
+                prob="LayoutProblem",
+            )
 
     def _terminate(self) -> bool:
         if not self._initialized:
@@ -590,11 +603,7 @@ class LayoutProblem(Problem):
         """
         if name == Value.UPDATE_RATE:
             return ValueType.Int
-        if name in [
-            Value.NOTIFICATION_SUCCESS,
-            Value.NOTIFICATION_INFO,
-            Value.NOTIFICATION_ERROR
-        ]:
+        if name in [Value.NOTIFICATION_SUCCESS, Value.NOTIFICATION_INFO, Value.NOTIFICATION_ERROR]:
             return "String"
 
         super().getValueType(name=name)
@@ -612,7 +621,7 @@ class LayoutProblem(Problem):
             Value.UPDATE_RATE,
             Value.NOTIFICATION_SUCCESS,
             Value.NOTIFICATION_INFO,
-            Value.NOTIFICATION_ERROR
+            Value.NOTIFICATION_ERROR,
         ]
 
     def setInputIntValue(self, name: str, val: float):
@@ -657,26 +666,18 @@ class LayoutProblem(Problem):
             return
 
         if name == Value.NOTIFICATION_SUCCESS:
-            self.layout.notifications.append(
-                ("success", val, 5000)
-            )
+            self.layout.notifications.append(("success", val, 5000))
             return
         elif name == Value.NOTIFICATION_INFO:
-            self.layout.notifications.append(
-                ("info", val, 5000)
-            )
+            self.layout.notifications.append(("info", val, 5000))
             return
         elif name == Value.NOTIFICATION_ERROR:
-            self.layout.notifications.append(
-                ("error", val, 5000)
-            )
+            self.layout.notifications.append(("error", val, 5000))
             return
 
         super().setInputStringValue(name=name, val=val)
 
-    def getInputMEDDoubleFieldTemplate(
-        self, name: str
-    ) -> medcoupling.MEDCouplingFieldDouble:
+    def getInputMEDDoubleFieldTemplate(self, name: str) -> medcoupling.MEDCouplingFieldDouble:
         """
         Retrieve an empty shell for an input field.
 
@@ -721,9 +722,7 @@ class LayoutProblem(Problem):
 
         return slave.get_template(field_name)
 
-    def setInputMEDDoubleField(
-        self, name: str, afield: medcoupling.MEDCouplingFieldDouble
-    ) -> None:
+    def setInputMEDDoubleField(self, name: str, afield: medcoupling.MEDCouplingFieldDouble) -> None:
         """
         Provide the code with input data in the form of a MEDDoubleField.
 
@@ -775,7 +774,9 @@ class LayoutProblem(Problem):
         elif slave.update_policy == UpdatePolicy.APPEND_MESH:
             return_val = slave.append_mesh(field_name, afield)
         else:
-            raise ValueError(f"Update policy {slave.update_policy} not implemented in LayoutProblem.")
+            raise ValueError(
+                f"Update policy {slave.update_policy} not implemented in LayoutProblem."
+            )
 
         self.panels_to_recompute.append(visualization_panel)
 
@@ -824,7 +825,9 @@ class LayoutProblem(Problem):
         elif slave.update_policy == UpdatePolicy.APPEND_MESH:
             return_val = slave.append_mesh(field_name, val)
         else:
-            raise ValueError(f"Update policy {slave.update_policy} not implemented in LayoutProblem.")
+            raise ValueError(
+                f"Update policy {slave.update_policy} not implemented in LayoutProblem."
+            )
 
         self.panels_to_recompute.append(visualization_panel)
 

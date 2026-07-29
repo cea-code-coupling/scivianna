@@ -1,25 +1,23 @@
+import os
 from logging import warning
 from typing import Callable, Dict, List, Tuple, Type, Union
+
 import numpy as np
 import panel as pn
 import param
-import os
 
-from scivianna.extension.slice_3d import Slice3D
+import scivianna.utils
+from scivianna.constants import DEFAULT_ORIGIN, MESH, X, Y
+from scivianna.data.data3d import Data3D
+from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
-from scivianna.panel.visualisation_panel import VisualizationPanel
-
-from scivianna.data.data3d import Data3D
+from scivianna.extension.slice_3d import Slice3D
 from scivianna.interface.generic_interface import Geometry3D
-
-from scivianna.enums import VisualizationMode
-from scivianna.slave import ComputeSlave
-
+from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_3d.vtk_3d_plotter import Plotter3D
-from scivianna.constants import MESH, X, Y, DEFAULT_ORIGIN
-import scivianna.utils
+from scivianna.slave import ComputeSlave
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
@@ -111,17 +109,17 @@ class Panel3D(VisualizationPanel):
         if data is None:
             data_ = self.compute_fn()
         else:
-            print(f"Panel3D {self.panel_name} initialized initial Data3D object, restoring {len(data.cell_ids)} cells.")
+            print(
+                f"Panel3D {self.panel_name} initialized initial Data3D object, restoring {len(data.cell_ids)} cells."
+            )
             data_ = data
             self.update_polygons = True
-        
+
         self.plotter.plot(data_)
 
         self.current_data = data_
 
-        if (
-            slave.get_label_coloring_mode(self.displayed_field) == VisualizationMode.FROM_VALUE
-        ):
+        if slave.get_label_coloring_mode(self.displayed_field) == VisualizationMode.FROM_VALUE:
             self.plotter.update_colorbar(
                 True,
                 (
@@ -132,19 +130,15 @@ class Panel3D(VisualizationPanel):
         else:
             self.plotter.update_colorbar(False, (None, None))
 
-        self.w_inp = 0.
+        self.w_inp = 0.0
         self.origin = tuple(DEFAULT_ORIGIN)
         self.u = X
         self.v = Y
         self._pending_updates: Dict = {}
         """Pending visual updates to apply on next tick"""
-        
+
         for extension in self.extensions:
-            extension.on_range_change(
-                self.origin, 
-                1.0, 
-                1.0
-            )
+            extension.on_range_change(self.origin, 1.0, 1.0)
             extension.on_frame_change(*self.plotter.get_uv())
 
         try:
@@ -154,7 +148,7 @@ class Panel3D(VisualizationPanel):
 
     @pn.io.hold()
     def _apply_update(self):
-        """Apply pending visual updates to the plotter. 
+        """Apply pending visual updates to the plotter.
         Called via add_next_tick_callback to ensure UI thread safety.
         """
         if profile_time:
@@ -203,13 +197,11 @@ class Panel3D(VisualizationPanel):
         """Perform the actual recompute and schedule visual update."""
         if not self.marked_to_recompute:
             return
-            
+
         if profile_time:
             st = time.time()
 
-        print(
-            f"{self.panel_name} - Recomputing with field {self.displayed_field}"
-        )
+        print(f"{self.panel_name} - Recomputing with field {self.displayed_field}")
 
         data = self.compute_fn()
 
@@ -222,9 +214,8 @@ class Panel3D(VisualizationPanel):
             self._pending_updates = {"data": data}
 
             if (
-                self.slave.get_label_coloring_mode(
-                    self.displayed_field
-                ) == VisualizationMode.FROM_VALUE
+                self.slave.get_label_coloring_mode(self.displayed_field)
+                == VisualizationMode.FROM_VALUE
             ):
                 self._pending_updates["colorbar"] = {
                     "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
@@ -247,9 +238,11 @@ class Panel3D(VisualizationPanel):
         Data3D
             Geometry data.
         """
-        options = {key: value for options in [
-            e.provide_options() for e in self.extensions
-        ] for key, value in options.items()}
+        options = {
+            key: value
+            for options in [e.provide_options() for e in self.extensions]
+            for key, value in options.items()
+        }
 
         if self.panel_coupling_extension is not None:
             coupling_options = self.panel_coupling_extension.provide_options()
@@ -274,9 +267,7 @@ class Panel3D(VisualizationPanel):
 
         return computed_data
 
-    def recompute(
-        self, *args, **kwargs
-    ):
+    def recompute(self, *args, **kwargs):
         """Recomputes the figure based on the new bounds and parameters.
         Public method that triggers the recompute pipeline.
         """
@@ -298,7 +289,7 @@ class Panel3D(VisualizationPanel):
         new_visualiser = Panel3D(
             slave=self.slave.duplicate(),
             name=self.panel_name,
-            extensions=[e for e in self.extension_classes]
+            extensions=[e for e in self.extension_classes],
         )
         new_visualiser.copy_index = self.copy_index
 
@@ -380,7 +371,9 @@ class Panel3D(VisualizationPanel):
             self.displayed_field = field_name
 
             if field_name not in self.slave.get_labels():
-                warning(f"\n\nRequested field {field_name} : field unavailable, available values : {self.slave.get_labels()}.\n\n")
+                warning(
+                    f"\n\nRequested field {field_name} : field unavailable, available values : {self.slave.get_labels()}.\n\n"
+                )
 
             else:
 
@@ -425,11 +418,11 @@ class Panel3D(VisualizationPanel):
 
     @classmethod
     def from_json(
-        cls, 
-        info_dict: Dict, 
+        cls,
+        info_dict: Dict,
         slave: ComputeSlave,
         data: Data3D,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
+        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
     ) -> "Panel3D":
         """Restores the visualization panel from its information dict
 
@@ -448,14 +441,14 @@ class Panel3D(VisualizationPanel):
         -------
         Panel3D
             Restored panel
-        """        
+        """
         panel = Panel3D(
-            slave = slave,
-            name = info_dict["name"],
-            extensions = extensions,
-            data = data,
-            displayed_field = info_dict["displayed_field"],
-            colormap = info_dict["colormap"],
+            slave=slave,
+            name=info_dict["name"],
+            extensions=extensions,
+            data=data,
+            displayed_field=info_dict["displayed_field"],
+            colormap=info_dict["colormap"],
         )
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
@@ -486,9 +479,8 @@ class Panel3D(VisualizationPanel):
         """
         u_plotter, v_plotter = self.plotter.get_uv()
 
-        if (
-            (u is None or np.isclose(u, u_plotter).all())
-            and (v is None or np.isclose(v, v_plotter).all())
+        if (u is None or np.isclose(u, u_plotter).all()) and (
+            v is None or np.isclose(v, v_plotter).all()
         ):
             return
 
@@ -499,10 +491,7 @@ class Panel3D(VisualizationPanel):
             self.u = u
             self.v = v
 
-        self.plotter.move_slice_to(
-            u, v, 
-            self.origin
-        )
+        self.plotter.move_slice_to(u, v, self.origin)
 
         for extension in self.extensions:
             extension.on_range_change(self.origin, 1.0, 1.0)

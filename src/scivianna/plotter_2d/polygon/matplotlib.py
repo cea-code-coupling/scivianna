@@ -1,23 +1,21 @@
 from typing import IO, Any, Dict, List, Tuple, Union
-from scivianna.data.data2d import Data2D
-from scivianna.utils.polygonize_tools import PolygonElement
-from scivianna.plotter_2d.generic_plotter import Plotter2D
 
+import geopandas as gpd
 import matplotlib
 import matplotlib.axes
 import matplotlib.pyplot as plt
+import numpy as np
+import panel as pn
 from matplotlib import cm
 from matplotlib import colors as plt_colors
 from matplotlib.colors import LinearSegmentedColormap
-
-from scivianna.constants import POLYGONS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS
-from scivianna.utils.color_tools import get_edges_colors, beautiful_color_maps
-
 from shapely import Polygon
-import geopandas as gpd
-import numpy as np
 
-import panel as pn
+from scivianna.constants import CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, POLYGONS
+from scivianna.data.data2d import Data2D
+from scivianna.plotter_2d.generic_plotter import Plotter2D
+from scivianna.utils.color_tools import beautiful_color_maps, get_edges_colors
+from scivianna.utils.polygonize_tools import PolygonElement
 
 
 class Matplotlib2DPolygonPlotter(Plotter2D):
@@ -134,17 +132,19 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
             facecolor=cell_colors.tolist(),
             edgecolor=cell_edge_colors.tolist(),
             ax=axes,
-            linewidth = self.line_width,
-            **plot_options
+            linewidth=self.line_width,
+            **plot_options,
         )
 
         if self.display_colorbar:
             plt.colorbar(
                 cm.ScalarMappable(
-                    norm=plt_colors.Normalize(
-                        self.colorbar_range[0], self.colorbar_range[1]
+                    norm=plt_colors.Normalize(self.colorbar_range[0], self.colorbar_range[1]),
+                    cmap=LinearSegmentedColormap.from_list(
+                        self.colormap_name,
+                        (np.array(beautiful_color_maps[self.colormap_name]) / 255).tolist(),
+                        N=len(beautiful_color_maps[self.colormap_name]),
                     ),
-                    cmap=LinearSegmentedColormap.from_list(self.colormap_name, (np.array(beautiful_color_maps[self.colormap_name])/255).tolist(), N=len(beautiful_color_maps[self.colormap_name]))
                 ),
                 ax=axes,
             )
@@ -172,7 +172,10 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
             data,
         )
 
-    def update_colors(self, data: Data2D,):
+    def update_colors(
+        self,
+        data: Data2D,
+    ):
         """Updates the colors of the displayed polygons
 
         Parameters
@@ -237,10 +240,10 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
         self.figure.savefig(file_name, dpi=1500)
 
     def set_axes(
-        self, 
-        u: Tuple[float, float, float], 
-        v: Tuple[float, float, float], 
-        origin: Tuple[float, float, float]
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
     ):
         """Stores the u v axes of the current plot
 

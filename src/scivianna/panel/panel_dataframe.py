@@ -1,15 +1,16 @@
 from typing import Callable, Dict, List, Tuple, Type, Union
-import panel as pn
+
 import pandas as pd
+import panel as pn
 
 from scivianna.extension.extension import Extension
-from scivianna.panel.visualisation_panel import VisualizationPanel
-from scivianna.slave import ComputeSlave
 from scivianna.extension.file_loader import FileLoader
+from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_dataframe.dataframe_plotter import DataframePlotter
-
+from scivianna.slave import ComputeSlave
 
 default_extensions = [FileLoader]
+
 
 class PanelDataFrame(VisualizationPanel):
     """DataFrame visualisation panel associated to a DataFrameInterface code."""
@@ -60,9 +61,11 @@ class PanelDataFrame(VisualizationPanel):
         """Recomputes the DataFrame by fetching data from the interface."""
         try:
             # Build options dynamically from extensions
-            options = {key: value for opt in [
-                e.provide_options() for e in self.extensions
-            ] for key, value in opt.items()}
+            options = {
+                key: value
+                for opt in [e.provide_options() for e in self.extensions]
+                for key, value in opt.items()
+            }
 
             df = self.slave.get_dataframe(
                 cell_id=self.cell_id,
@@ -72,9 +75,7 @@ class PanelDataFrame(VisualizationPanel):
             if df is not None:
                 self.plotter.update_data(df)
         except Exception as e:
-            pn.state.notifications.error(
-                f"Error building the dataframe, got {e}"
-            )
+            pn.state.notifications.error(f"Error building the dataframe, got {e}")
 
     def provide_field_change_callback(self, callback: Callable):
         """Stores a function to call everytime the displayed field is changed."""
@@ -110,7 +111,7 @@ class PanelDataFrame(VisualizationPanel):
         cls,
         info_dict: Dict,
         slave: ComputeSlave,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
+        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
     ) -> "PanelDataFrame":
         """Restores the visualization panel from its information dict."""
         panel = PanelDataFrame(
@@ -140,7 +141,7 @@ class PanelDataFrame(VisualizationPanel):
         panel = PanelDataFrame(
             self.slave.duplicate(),
             self.get_new_name(),
-            extensions=[e for e in self.extension_classes]
+            extensions=[e for e in self.extension_classes],
         )
         # Restore panel state
         panel.cell_id = self.cell_id

@@ -1,5 +1,7 @@
 import pytest
+
 from scivianna_example.med.single_med import get_panel
+
 
 @pytest.mark.medcoupling
 def test_press_z():

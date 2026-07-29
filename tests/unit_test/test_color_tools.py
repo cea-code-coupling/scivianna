@@ -1,16 +1,16 @@
-from typing import Any, Dict, List, Tuple, Union
-import numpy as np
 import multiprocessing as mp
+from typing import Any, Dict, List, Tuple, Union
+
+import numpy as np
 import pytest
 
-from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2DPolygon
-from scivianna.extension.field_selector import set_colors_list
-from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-from scivianna.enums import VisualizationMode
 from scivianna.constants import MESH
-
-from scivianna.utils.color_tools import interpolate_cmap_at_values, get_edges_colors
+from scivianna.data.data2d import Data2D
+from scivianna.enums import VisualizationMode
+from scivianna.extension.field_selector import set_colors_list
+from scivianna.interface.generic_interface import Geometry2DPolygon
+from scivianna.utils.color_tools import get_edges_colors, interpolate_cmap_at_values
+from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 
 class ColorTestInterface(Geometry2DPolygon):

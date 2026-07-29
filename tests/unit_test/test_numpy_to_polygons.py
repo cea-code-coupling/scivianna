@@ -1,9 +1,15 @@
 # tests/test_polygonize_tools.py
 
-import pytest
 import numpy as np
-from scivianna.utils.polygonize_tools import numpy_2D_array_to_polygons, PolygonCoords, PolygonElement
+import pytest
+
 from scivianna.constants import OUTSIDE
+from scivianna.utils.polygonize_tools import (
+    PolygonCoords,
+    PolygonElement,
+    numpy_2D_array_to_polygons,
+)
+
 
 @pytest.mark.grid
 def test_numpy_2D_array_to_polygons_basic():

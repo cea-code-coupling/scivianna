@@ -1,8 +1,9 @@
-from typing import List, Tuple, Union
-import param
 import os
 from pathlib import Path
+from typing import List, Tuple, Union
+
 import panel_material_ui as pmui
+import param
 from panel.viewable import Viewer
 
 
@@ -42,20 +43,16 @@ class ServerFileBrowser(Viewer):
             groups={
                 "Directories": ["-- Cancel --", ".", ".."]
                 + [e for e in os.listdir(self.current_folder) if os.path.isdir(e)],
-                "Files": [
-                    e for e in os.listdir(self.current_folder) if os.path.isfile(e)
-                ],
+                "Files": [e for e in os.listdir(self.current_folder) if os.path.isfile(e)],
             },
             value=".",
             size="small",
             margin=(0, 0, 0, 0),
-            width=width
+            width=width,
         )
         self.select.param.watch(self.on_value_change, "dropdown_open")
 
-        folder_list, file_list = self._get_folder_sorted_content(
-            self.current_folder
-        )
+        folder_list, file_list = self._get_folder_sorted_content(self.current_folder)
         self.select.disabled_options = []
         self.select.groups = {
             "Directories": ["-- Cancel --", ".", ".."] + folder_list,
@@ -90,13 +87,9 @@ class ServerFileBrowser(Viewer):
                 self.selected_file = str(self.current_folder / self.select.value)
 
             elif os.path.isdir(self.current_folder / self.select.value):
-                self.current_folder = (
-                    self.current_folder / self.select.value
-                ).resolve()
+                self.current_folder = (self.current_folder / self.select.value).resolve()
                 try:
-                    folder_list, file_list = self._get_folder_sorted_content(
-                        self.current_folder
-                    )
+                    folder_list, file_list = self._get_folder_sorted_content(self.current_folder)
                     self.select.disabled_options = []
                     self.select.groups = {
                         "Directories": ["-- Cancel --", ".", ".."] + folder_list,

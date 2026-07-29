@@ -1,10 +1,11 @@
-from typing import Tuple, Callable
+from typing import Callable, Tuple
 
 import numpy as np
-
 from scivianna_vtk.plotter import VTKPlotter
+
 from scivianna.data.data3d import Data3D
 from scivianna.plotter_3d.generic_plotter import Plotter3D
+
 
 class Plotter3D(Plotter3D):
     """Unfinished 3D plotter to get the coupling working"""
@@ -12,29 +13,17 @@ class Plotter3D(Plotter3D):
     def __init__(
         self,
     ):
-        self.plotter = VTKPlotter(
-            sizing_mode="stretch_both",
-            margin=0
-        )
+        self.plotter = VTKPlotter(sizing_mode="stretch_both", margin=0)
         self.plotter.set_clip_enabled(False)
 
-        self.plotter.param.watch(
-            self.compute_uv,
-            "clip_normal"
-        )
-        self.plotter.param.watch(
-            self.compute_uv,
-            "clip_origin"
-        )
+        self.plotter.param.watch(self.compute_uv, "clip_normal")
+        self.plotter.param.watch(self.compute_uv, "clip_origin")
         self.u = np.array([1, 0, 0])
         self.v = np.array([0, 1, 0])
 
         self.on_axes_change_callback = None
 
-    def plot(
-        self,
-        data: Data3D
-    ):
+    def plot(self, data: Data3D):
         """Adds a new plot to the figure from a set of polygons
 
         Parameters
@@ -46,10 +35,7 @@ class Plotter3D(Plotter3D):
             data.update_cell_data()
             self.plotter.update_polydata(data.polydata)
 
-    def update_plot(
-        self,
-        data: Data3D
-    ):
+    def update_plot(self, data: Data3D):
         """Updates plot to the figure
 
         Parameters
@@ -61,7 +47,9 @@ class Plotter3D(Plotter3D):
             data.update_cell_data()
             self.plotter.update_colors(data.polydata)
 
-    def make_panel(self,):
+    def make_panel(
+        self,
+    ):
         """Returns teh viewable displayed in the 3D panel
 
         Returns
@@ -104,10 +92,7 @@ class Plotter3D(Plotter3D):
         """
         self.on_mouse_move_callback = callback
 
-        self.plotter.param.watch(
-            lambda event: self.send_event(callback),
-            "hover_position"
-        )
+        self.plotter.param.watch(lambda event: self.send_event(callback), "hover_position")
 
     def provide_on_clic_callback(self, callback: Callable):
         """Stores a function to call everytime the user clics on the plot.
@@ -120,10 +105,7 @@ class Plotter3D(Plotter3D):
         """
         self.on_clic_callback = callback
 
-        self.plotter.param.watch(
-            lambda event: self.send_event(callback),
-            "clicks"
-        )
+        self.plotter.param.watch(lambda event: self.send_event(callback), "clicks")
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the user changes the axes.
@@ -166,23 +148,19 @@ class Plotter3D(Plotter3D):
         if w_vector is None:
             return
 
-        if origin is not None :
+        if origin is not None:
             new_origin = np.array(origin, dtype=float)
 
         self.plotter.set_clip_plane(new_origin, w_vector)
 
     def send_event(self, callback):
-        if (
-            self.plotter.hover_cell_id is not None 
-            and not any(np.isnan(self.plotter.hover_position))
+        if self.plotter.hover_cell_id is not None and not any(
+            np.isnan(self.plotter.hover_position)
         ):
             callback(
-                screen_location=(
-                    None,
-                    None
-                ),
-                space_location=self.plotter.hover_position, 
-                cell_id=self.plotter.hover_cell_id
+                screen_location=(None, None),
+                space_location=self.plotter.hover_position,
+                cell_id=self.plotter.hover_cell_id,
             )
 
     def get_slice_normal(self):
@@ -227,7 +205,7 @@ class Plotter3D(Plotter3D):
 
         if np.linalg.norm(normal) == 0:
             return
-        
+
         normal = normal / np.linalg.norm(normal)
 
         # Compute u and v axes
@@ -244,11 +222,11 @@ class Plotter3D(Plotter3D):
         if self.on_axes_change_callback is not None:
             # Compute the physical origin (center position) from clip_origin
             clip_origin = np.array(self.plotter.clip_origin)
-            
+
             self.on_axes_change_callback(
-                u, 
-                v, 
-                tuple(clip_origin), 
+                u,
+                v,
+                tuple(clip_origin),
                 None,  # size_u (not applicable for 3D)
                 None,  # size_v (not applicable for 3D)
             )

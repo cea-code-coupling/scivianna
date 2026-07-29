@@ -1,16 +1,12 @@
 import pytest
 
+import scivianna.utils
+from scivianna.constants import CELL_NAMES, XS, YS
+from scivianna.enums import UpdateEvent
 from scivianna.layout.split import SplitLayout
 from scivianna.panel.panel_1d import Panel1D
 from scivianna.panel.panel_2d import Panel2D
-
-from scivianna_example.europe_grid.europe_grid import (
-    make_europe_panel as europe_example,
-)
-
-from scivianna.constants import XS, YS, CELL_NAMES
-from scivianna.enums import UpdateEvent
-import scivianna.utils
+from scivianna_example.europe_grid.europe_grid import make_europe_panel as europe_example
 
 scivianna.utils._testing = True
 

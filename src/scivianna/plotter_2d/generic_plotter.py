@@ -1,4 +1,5 @@
 from typing import IO, Callable, Tuple
+
 import panel as pn
 
 from scivianna.data.data2d import Data2D
@@ -141,10 +142,10 @@ class Plotter2D:
         self.on_clic_callback = callback
 
     def set_axes(
-        self, 
-        u: Tuple[float, float, float], 
-        v: Tuple[float, float, float], 
-        origin: Tuple[float, float, float]
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
     ):
         """Stores the u v axes of the current plot
 

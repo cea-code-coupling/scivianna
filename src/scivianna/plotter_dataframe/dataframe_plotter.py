@@ -1,6 +1,7 @@
 from typing import Callable, Optional
-import panel as pn
+
 import pandas as pd
+import panel as pn
 
 
 class DataframePlotter:

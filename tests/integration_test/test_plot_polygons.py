@@ -1,12 +1,12 @@
 from pathlib import Path
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 import pytest
+
 import scivianna
 from scivianna.constants import GEOMETRY, X, Y
-from scivianna.slave import ComputeSlave
 from scivianna.plotter_2d.api import plot_frame_in_axes
-
+from scivianna.slave import ComputeSlave
 
 
 @pytest.mark.medcoupling

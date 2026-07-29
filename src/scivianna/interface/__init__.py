@@ -4,13 +4,12 @@ This module provides a registry of all available interfaces.
 """
 
 from typing import Dict, Type, Union
-from scivianna.interface.generic_interface import GenericInterface
-from scivianna.utils.interface_tools import GenericInterfaceEnum
 
 from scivianna.interface.csv_result import CSVInterface
+from scivianna.interface.generic_interface import GenericInterface
 from scivianna.interface.structured_mesh_interface import StructuredMeshInterface
 from scivianna.interface.time_dataframe import TimeDataFrame
-
+from scivianna.utils.interface_tools import GenericInterfaceEnum
 
 # Default dictionary of built-in interfaces
 # Users can add their own interfaces to this dictionary
@@ -22,29 +21,31 @@ INTERFACES: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {
 
 try:
     from scivianna.interface.med_interface import MEDInterface
+
     INTERFACES["MED"] = MEDInterface
 except ImportError:
     pass
 
 try:
     from scivianna.interface.vtk_interface import VTKInterface
+
     INTERFACES["VTK"] = VTKInterface
 except ImportError:
     pass
 
+
 def register_interface(
-    key: Union[str, GenericInterfaceEnum], 
-    interface_class: Type[GenericInterface]
+    key: Union[str, GenericInterfaceEnum], interface_class: Type[GenericInterface]
 ) -> None:
     """Register a new interface class.
-    
+
     Parameters
     ----------
     key : Union[str, GenericInterfaceEnum]
         Key to identify the interface
     interface_class : Type[GenericInterface]
         Interface class to register
-    
+
     Raises
     ------
     TypeError
@@ -59,17 +60,17 @@ def register_interface(
 
 def get_interface(key: Union[str, GenericInterfaceEnum]) -> Type[GenericInterface]:
     """Get an interface class by its key.
-    
+
     Parameters
     ----------
     key : Union[str, GenericInterfaceEnum]
         Key identifying the interface
-    
+
     Returns
     -------
     Type[GenericInterface]
         Interface class
-    
+
     Raises
     ------
     KeyError
@@ -80,7 +81,7 @@ def get_interface(key: Union[str, GenericInterfaceEnum]) -> Type[GenericInterfac
 
 def get_all_interfaces() -> Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]]:
     """Get all registered interfaces.
-    
+
     Returns
     -------
     Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]]

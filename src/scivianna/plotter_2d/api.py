@@ -1,20 +1,20 @@
-import matplotlib.pyplot as plt
+from typing import Any, Dict, Tuple, Union
+
 import matplotlib.axes
-from matplotlib.patches import Patch
-from matplotlib.colors import to_rgb
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import to_rgb
+from matplotlib.patches import Patch
 
-from typing import Dict, Tuple, Any, Union
-
-from scivianna.interface.generic_interface import Geometry2D
-from scivianna.slave import ComputeSlave
+from scivianna.constants import X, Y
+from scivianna.enums import VisualizationMode
 from scivianna.extension.field_selector import set_colors_list
-from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
+from scivianna.interface.generic_interface import Geometry2D
 from scivianna.plotter_2d.grid.matplotlib import Matplotlib2DGridPlotter
+from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
+from scivianna.slave import ComputeSlave
 from scivianna.utils.color_tools import get_edges_colors
 from scivianna.utils.polygon_sorter import PolygonSorter
-from scivianna.enums import VisualizationMode
-from scivianna.constants import X, Y
 
 
 def plot_frame_in_axes(
@@ -24,18 +24,18 @@ def plot_frame_in_axes(
     u: Tuple[float, float, float] = X,
     v: Tuple[float, float, float] = Y,
     origin: Tuple[float, float, float] = None,
-    size_u: float = 1.,
-    size_v: float = 1.,
+    size_u: float = 1.0,
+    size_v: float = 1.0,
     color_map: str = "BuRd",
     display_colorbar: bool = False,
-    edge_width: float = 1.,
+    edge_width: float = 1.0,
     options={},
     plot_options={},
     custom_colors: Dict[str, Dict[str, str]] = {},
     rename_values: Dict[str, Dict[str, str]] = {},
     legend_options: Dict[str, Any] = {},
     polygonize: bool = True,
-    caller: str = "MatplotlibAPI"
+    caller: str = "MatplotlibAPI",
 ):
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -117,9 +117,7 @@ def plot_frame_in_axes(
     )
 
     pw = PolygonSorter()
-    pw.sort_from_value(
-        data
-    )
+    pw.sort_from_value(data)
 
     if polygonize:
         plotter = Matplotlib2DPolygonPlotter()
@@ -141,19 +139,11 @@ def plot_frame_in_axes(
         for compo in compos:
             if compo in custom_colors[coloring_label]:
                 color_array = np.array(
-                    [
-                        [
-                            int(c * 255)
-                            for c in to_rgb(custom_colors[coloring_label][compo])
-                        ]
-                        + [255]
-                    ]
+                    [[int(c * 255) for c in to_rgb(custom_colors[coloring_label][compo])] + [255]]
                     * len(compo_list)
                 )
                 compo_array = np.repeat(np.expand_dims(compo_list, axis=1), 4, axis=1)
-                cell_color_list = np.where(
-                    compo_array == compo, color_array, cell_color_list
-                )
+                cell_color_list = np.where(compo_array == compo, color_array, cell_color_list)
 
         data.cell_values = compo_list
         data.cell_colors = cell_color_list
@@ -162,18 +152,13 @@ def plot_frame_in_axes(
     if display_colorbar:
         compo_list = data.cell_values
         cell_color_list = data.cell_colors
-        if (
-            slave.get_label_coloring_mode(coloring_label)
-            == VisualizationMode.FROM_VALUE
-        ):
+        if slave.get_label_coloring_mode(coloring_label) == VisualizationMode.FROM_VALUE:
 
             values = np.array(compo_list).astype(float)
 
             plotter.set_color_map(color_map)
             plotter.update_colorbar(True, (np.nanmin(values), np.nanmax(values)))
-        elif (
-            slave.get_label_coloring_mode(coloring_label) == VisualizationMode.FROM_STRING
-        ):
+        elif slave.get_label_coloring_mode(coloring_label) == VisualizationMode.FROM_STRING:
             compos = np.unique(compo_list)
             cell_color_list = np.array(cell_color_list).astype(float)
 
@@ -202,7 +187,7 @@ def plot_frame_in_axes(
                 if add_in_legend:
                     colors.append(cell_color_list[location])
                     edge_colors.append(edge_color_list[location])
-            
+
             legend_elements = [
                 Patch(facecolor=c, edgecolor=ce, label=label)
                 for c, ce, label in zip(colors, edge_colors, legend_compos)
@@ -223,18 +208,18 @@ def plot_frame(
     u: Tuple[float, float, float] = X,
     v: Tuple[float, float, float] = Y,
     origin: Tuple[float, float, float] = None,
-    size_u: float = 1.,
-    size_v: float = 1.,
+    size_u: float = 1.0,
+    size_v: float = 1.0,
     color_map: str = "BuRd",
     display_colorbar: bool = False,
-    edge_width: float = 1.,
+    edge_width: float = 1.0,
     options={},
     plot_options={},
     custom_colors: Dict[str, Dict[str, str]] = {},
     rename_values: Dict[str, Dict[str, str]] = {},
     legend_options: Dict[str, Any] = {},
     polygonize: bool = True,
-    caller: str = "MatplotlibAPI"
+    caller: str = "MatplotlibAPI",
 ) -> Tuple[plt.Figure, matplotlib.axes.Axes]:
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -307,6 +292,6 @@ def plot_frame(
         rename_values=rename_values,
         legend_options=legend_options,
         polygonize=polygonize,
-        caller=caller
+        caller=caller,
     )
     return fig, axes

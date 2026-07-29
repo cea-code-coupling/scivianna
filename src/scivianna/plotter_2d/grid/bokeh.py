@@ -1,35 +1,33 @@
 import functools
+import os
 from typing import IO, Callable, List, Tuple
-import bokeh.events
-import panel as pn
-from scivianna.data.data2d import Data2D
-from scivianna.utils.polygonize_tools import PolygonElement
-from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.plotter_2d.grid.grid_tools import get_grids
 
 import bokeh
-from bokeh.colors import RGB
-from bokeh.plotting import figure as Figure
-from bokeh.plotting import save, output_file
-from bokeh.models import (
-    HoverTool,
-    ColumnDataSource,
-    CustomJSHover,
-    LinearColorMapper,
-    ColorBar,
-)
-from bokeh.models import CustomJS
-from bokeh.events import MouseMove
+import bokeh.events
+import numpy as np
+import panel as pn
+
 # from bokeh.models import CustomJS
 from bokeh import events
-from scivianna.utils.color_tools import get_edges_colors
+from bokeh.colors import RGB
+from bokeh.events import MouseMove
+from bokeh.models import (
+    ColorBar,
+    ColumnDataSource,
+    CustomJS,
+    CustomJSHover,
+    HoverTool,
+    LinearColorMapper,
+)
+from bokeh.plotting import figure as Figure
+from bokeh.plotting import output_file, save
 
-import numpy as np
-
-from scivianna.constants import XS, YS, GRID, CELL_NAMES, CELL_VALUES, GEOMETRY
-from scivianna.utils.color_tools import beautiful_color_maps
-
-import os
+from scivianna.constants import CELL_NAMES, CELL_VALUES, GEOMETRY, GRID, XS, YS
+from scivianna.data.data2d import Data2D
+from scivianna.plotter_2d.generic_plotter import Plotter2D
+from scivianna.plotter_2d.grid.grid_tools import get_grids
+from scivianna.utils.color_tools import beautiful_color_maps, get_edges_colors
+from scivianna.utils.polygonize_tools import PolygonElement
 
 
 class Bokeh2DGridPlotter(Plotter2D):
@@ -52,8 +50,8 @@ class Bokeh2DGridPlotter(Plotter2D):
             }
         )
 
-        self.dw = 1.
-        self.dh = 1.
+        self.dw = 1.0
+        self.dh = 1.0
 
         self.source_coordinates = ColumnDataSource(
             {
@@ -156,21 +154,19 @@ class Bokeh2DGridPlotter(Plotter2D):
         # Manifestement, ca ne marche pas avec un nom a plusieurs caracteres pour x ???
         TOOLTIPS = [
             ("Coordinates", "$coords{custom}"),
-            ("Cell ID", "@"+CELL_NAMES),
-            ("Value", "@"+CELL_VALUES),
+            ("Cell ID", "@" + CELL_NAMES),
+            ("Value", "@" + CELL_VALUES),
         ]
 
         hover_tool = HoverTool(
             tooltips=TOOLTIPS,
             formatters={
                 "$coords": CustomJSHover(
-                    args=dict(
-                        full_data=self.source_coordinates, mouse=self.source_mouse
-                    ),
+                    args=dict(full_data=self.source_coordinates, mouse=self.source_mouse),
                     code=code_get_mouse_location,
                 )
             },
-            point_policy="follow_mouse"
+            point_policy="follow_mouse",
         )
 
         self.figure = Figure(
@@ -227,8 +223,8 @@ class Bokeh2DGridPlotter(Plotter2D):
 
                 mouse.data = new_data;
                 mouse.change.emit();
-                """
-            )
+                """,
+            ),
         )
 
         self.color_mapper = LinearColorMapper(
@@ -246,27 +242,22 @@ class Bokeh2DGridPlotter(Plotter2D):
 
         # This is a massive hack, too lazy to do it the right way !
         zoom_tool = [
-            t
-            for t in self.figure.toolbar.tools
-            if type(t).__name__.startswith("WheelZoom")
+            t for t in self.figure.toolbar.tools if type(t).__name__.startswith("WheelZoom")
         ][0]
-        pan_tool = [
-            t
-            for t in self.figure.toolbar.tools
-            if type(t).__name__.startswith("PanTool")
-        ][0]
+        pan_tool = [t for t in self.figure.toolbar.tools if type(t).__name__.startswith("PanTool")][
+            0
+        ]
         self.figure.toolbar.active_scroll = zoom_tool
         self.figure.toolbar.active_drag = pan_tool
-        
+
         if self.dim_hovered_cell:
+
             def on_mouse_enter(event):
                 self.active = True
-            self.figure.on_event(bokeh.events.MouseMove, 
-                                    self.on_mouse_move)
-            self.figure.on_event(bokeh.events.MouseEnter, 
-                                    on_mouse_enter)
-            self.figure.on_event(bokeh.events.MouseLeave, 
-                                    self.reset_hover)
+
+            self.figure.on_event(bokeh.events.MouseMove, self.on_mouse_move)
+            self.figure.on_event(bokeh.events.MouseEnter, on_mouse_enter)
+            self.figure.on_event(bokeh.events.MouseLeave, self.reset_hover)
 
             self.last_update_cell = None
             self.save_data = True
@@ -347,12 +338,12 @@ class Bokeh2DGridPlotter(Plotter2D):
         self.dh = data.v_values.max() - data.v_values.min()
 
         self.image = self.figure.image_rgba(
-            image = GRID,
-            x = data.u_values.min(),
-            y = data.v_values.min(),
-            dw = self.dw,
-            dh = self.dh,
-            source=self.source_grid
+            image=GRID,
+            x=data.u_values.min(),
+            y=data.v_values.min(),
+            dw=self.dw,
+            dh=self.dh,
+            source=self.source_grid,
         )
 
     def update_2d_frame(
@@ -373,24 +364,27 @@ class Bokeh2DGridPlotter(Plotter2D):
             self.cell_name_grid = np.array(grid)
 
         self.source_grid.update(
-            data = {
-                GRID : [img],
-                CELL_NAMES : [grid],
-                CELL_VALUES : [val_grid],
+            data={
+                GRID: [img],
+                CELL_NAMES: [grid],
+                CELL_VALUES: [val_grid],
             }
         )
-        
+
         self.dw = data.u_values.max() - data.u_values.min()
         self.dh = data.v_values.max() - data.v_values.min()
 
         self.image.glyph.update(
-            x = data.u_values.min(),
-            y = data.v_values.min(),
-            dw = self.dw,
-            dh = self.dh,
+            x=data.u_values.min(),
+            y=data.v_values.min(),
+            dw=self.dw,
+            dh=self.dh,
         )
 
-    def update_colors(self, data: Data2D,):
+    def update_colors(
+        self,
+        data: Data2D,
+    ):
         """Updates the colors of the displayed polygons
 
         Parameters
@@ -442,9 +436,7 @@ class Bokeh2DGridPlotter(Plotter2D):
             self.figure.toolbar.active_drag = None
         else:
             self.figure.toolbar.active_drag = [
-                t
-                for t in self.figure.toolbar.tools
-                if type(t).__name__.startswith("PanTool")
+                t for t in self.figure.toolbar.tools if type(t).__name__.startswith("PanTool")
             ][0]
 
     def __get_color_mapper_from_string(self, color_map_name: str) -> List[RGB]:
@@ -506,7 +498,9 @@ class Bokeh2DGridPlotter(Plotter2D):
         self.figure.width_policy = "max"
         self.figure.height_policy = "max"
 
-    def _polygons_to_coords(self, polygons: List[PolygonElement]) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
+    def _polygons_to_coords(
+        self, polygons: List[PolygonElement]
+    ) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
         xs_dict = [
             [
                 {
@@ -550,20 +544,21 @@ class Bokeh2DGridPlotter(Plotter2D):
         if "i" in self.source_mouse.data:
             i, j = int(self.source_mouse.data["i"][0]), int(self.source_mouse.data["j"][0])
 
-            if self.cell_name_grid is not None and j < len(self.cell_name_grid) and i < len(self.cell_name_grid[j]):
+            if (
+                self.cell_name_grid is not None
+                and j < len(self.cell_name_grid)
+                and i < len(self.cell_name_grid[j])
+            ):
                 hovered_cell = self.cell_name_grid[j, i]
 
         callback(
-            screen_location=(
-                self.source_mouse.data["sx"][0],
-                self.source_mouse.data["sy"][0]
-            ),
+            screen_location=(self.source_mouse.data["sx"][0], self.source_mouse.data["sy"][0]),
             space_location=(
-                self.source_mouse.data["x"][0], 
-                self.source_mouse.data["y"][0], 
-                self.source_mouse.data["z"][0]
-            ), 
-            cell_id=hovered_cell
+                self.source_mouse.data["x"][0],
+                self.source_mouse.data["y"][0],
+                self.source_mouse.data["z"][0],
+            ),
+            cell_id=hovered_cell,
         )
 
     def on_mouse_move(self, _):
@@ -578,9 +573,11 @@ class Bokeh2DGridPlotter(Plotter2D):
             i, j = int(self.source_mouse.data["i"][0]), int(self.source_mouse.data["j"][0])
 
             if pn.state.curdoc is not None:
-                pn.state.curdoc.add_timeout_callback(functools.partial(self.update_plot_after_mouse_move, i = i, j = j), 250)
+                pn.state.curdoc.add_timeout_callback(
+                    functools.partial(self.update_plot_after_mouse_move, i=i, j=j), 250
+                )
 
-    def update_plot_after_mouse_move(self, i:int, j:int):
+    def update_plot_after_mouse_move(self, i: int, j: int):
         """Updates the plot after changing the cell at location (i, j) to 0.6. The update is only done if the mouse is currently at (i, j)
 
         Parameters
@@ -595,27 +592,29 @@ class Bokeh2DGridPlotter(Plotter2D):
         if self.active and i == i_ and j == j_:
             if self.cell_name_grid is not None:
                 hovered_cell = self.cell_name_grid[j, i]
-                
+
                 if hovered_cell != self.last_update_cell:
                     self.save_data = False
                     data = self.data.copy()
 
-                    data.cell_colors[list(data.cell_ids).index(hovered_cell)][3] = 0.6*255
+                    data.cell_colors[list(data.cell_ids).index(hovered_cell)][3] = 0.6 * 255
 
                     self.update_2d_frame(data)
 
                     self.last_update_cell = hovered_cell
                     self.save_data = True
-                
-    def reset_hover(self,):
+
+    def reset_hover(
+        self,
+    ):
         self.active = False
         self.save_data = False
         self.update_2d_frame(self.data)
         self.last_update_cell = None
         self.save_data = True
 
-    def provide_on_mouse_move_callback(self, callback:Callable):
-        """Stores a function to call everytime the user moves the mouse on the plot. 
+    def provide_on_mouse_move_callback(self, callback: Callable):
+        """Stores a function to call everytime the user moves the mouse on the plot.
         Functions arguments are location, cell_id.
 
         Parameters
@@ -627,8 +626,8 @@ class Bokeh2DGridPlotter(Plotter2D):
 
         self.figure.on_event(bokeh.events.MouseMove, functools.partial(self.send_event, callback))
 
-    def provide_on_clic_callback(self, callback:Callable):
-        """Stores a function to call everytime the user clics on the plot. 
+    def provide_on_clic_callback(self, callback: Callable):
+        """Stores a function to call everytime the user clics on the plot.
         Functions arguments are location, cell_id.
 
         Parameters
@@ -642,10 +641,10 @@ class Bokeh2DGridPlotter(Plotter2D):
         # self.figure.add_tools(TapTool())
 
     def set_axes(
-        self, 
-        u: Tuple[float, float, float], 
-        v: Tuple[float, float, float], 
-        origin: Tuple[float, float, float]
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
     ):
         """Stores the u v axes of the current plot
 
@@ -659,7 +658,7 @@ class Bokeh2DGridPlotter(Plotter2D):
             Frame center
         """
         w_vector = np.cross(np.array(u), np.array(v))
-        
+
         new_data = self.source_coordinates.data.copy()
         new_data["u0"] = [u[0]]
         new_data["u1"] = [u[1]]
@@ -670,9 +669,9 @@ class Bokeh2DGridPlotter(Plotter2D):
         new_data["w0"] = [w_vector[0]]
         new_data["w1"] = [w_vector[1]]
         new_data["w2"] = [w_vector[2]]
-        
-        umin = np.dot(u, origin) - self.dw/2
-        vmin = np.dot(v, origin) - self.dh/2
+
+        umin = np.dot(u, origin) - self.dw / 2
+        vmin = np.dot(v, origin) - self.dh / 2
         w = np.dot(w_vector, origin)
 
         new_data["u_min"] = [umin]
@@ -681,7 +680,7 @@ class Bokeh2DGridPlotter(Plotter2D):
         new_data["dh"] = [self.dh]
         new_data["w"] = [w]
 
-        self.source_coordinates.update(data = new_data)
+        self.source_coordinates.update(data=new_data)
 
     def get_mouse_location(self) -> Tuple[float, float, float]:
         """Returns the current mouse location (returns the panel exit location if out)

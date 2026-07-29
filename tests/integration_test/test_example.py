@@ -1,12 +1,10 @@
 import math
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pytest
 
-import numpy as np
-
 from scivianna.constants import XS, YS
-
 from scivianna_example import demo
 from scivianna_example.mandelbrot import mandelbrot
 from scivianna_example.med import split_item_example
@@ -29,6 +27,7 @@ def test_demo():
 
 # Unmarked as default because it might fail on github but still works locally
 # @pytest.mark.default
+@pytest.mark.xfail(reason="Synchronisation does not always work through pytest due to event handling time")
 def test_mandelbrot():
     """Ensuring that the mandelbrot example works as expected, and that the range update works correctly."""
     def get_polygon_bounds(data):

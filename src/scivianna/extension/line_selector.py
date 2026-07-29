@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+
 import panel as pn
 import panel_material_ui as pmui
 
@@ -16,9 +17,7 @@ profile_time = False
 class LineSelector(Extension):
     """Extension used to select the displayed line in a Panel1D."""
 
-    def __init__(
-        self, slave: "ComputeSlave", plotter: Plotter1D, panel: "VisualizationPanel"
-    ):
+    def __init__(self, slave: "ComputeSlave", plotter: Plotter1D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
 
         Parameters
@@ -52,12 +51,8 @@ If a color bar is used, you can decide to center it on zero.
             label="Displayed plot", options=fields_list, value=[fields_list[0]], width=280
         )
 
-        self.x_scale = pmui.Select(
-            label="X scale", options=["lin", "log"], value="lin", width=280
-        )
-        self.y_scale = pmui.Select(
-            label="Y scale", options=["lin", "log"], value="lin", width=280
-        )
+        self.x_scale = pmui.Select(label="X scale", options=["lin", "log"], value="lin", width=280)
+        self.y_scale = pmui.Select(label="Y scale", options=["lin", "log"], value="lin", width=280)
 
         self.field_color_selector.param.watch(self.trigger_field_change, "value")
 
@@ -104,11 +99,7 @@ If a color bar is used, you can decide to center it on zero.
         pn.viewable.Viewable
             Viewable to display in the extension tab
         """
-        return pn.Column(
-            self.field_color_selector,
-            self.x_scale,
-            self.y_scale
-        )
+        return pn.Column(self.field_color_selector, self.x_scale, self.y_scale)
 
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
@@ -153,13 +144,10 @@ If a color bar is used, you can decide to center it on zero.
         return extension
 
     def on_coupling_update(self):
-        """Function called at the end of a coupling time step
-        """
+        """Function called at the end of a coupling time step"""
         labels = self.slave.get_labels()
         if set(labels) != set(self.field_color_selector.options):
-            self.field_color_selector.options = list(
-                self.slave.get_labels()
-            )
+            self.field_color_selector.options = list(self.slave.get_labels())
 
     def on_field_change(self, field_name: str):
         """Function called when the user requests a displayed field change
@@ -172,9 +160,7 @@ If a color bar is used, you can decide to center it on zero.
         if isinstance(field_name, list):
             self.field_color_selector.value = field_name
 
-    def on_scale_change(
-        self, axis_name: str, value: str
-    ):
+    def on_scale_change(self, axis_name: str, value: str):
         """Function called When the scale is changed
 
         Parameters

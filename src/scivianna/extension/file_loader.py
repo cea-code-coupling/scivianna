@@ -1,8 +1,10 @@
 import functools
 import os
 from pathlib import Path
-from typing import Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
+
 import panel as pn
+
 from scivianna.component.server_file_browser import ServerFileBrowser
 from scivianna.constants import GEOMETRY
 from scivianna.extension.extension import Extension
@@ -17,12 +19,7 @@ if TYPE_CHECKING:
 class FileLoader(Extension):
     """Extension to load files and send them to the slave."""
 
-    def __init__(
-        self,
-        slave: "ComputeSlave",
-        plotter: Plotter2D,
-        panel: "VisualizationPanel"
-    ):
+    def __init__(self, slave: "ComputeSlave", plotter: Plotter2D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
 
         Parameters
@@ -79,9 +76,7 @@ The file loader extension lets you browse files on the server file system to pro
 
         for name, _ in file_input_list:
             self.file_browsers[name] = ServerFileBrowser(
-                folder_path=folder_path,
-                name=str(name),
-                width=280
+                folder_path=folder_path, name=str(name), width=280
             )
             self.file_browsers[name].param.watch(
                 functools.partial(load_file, browser_name=name), "selected_file"
@@ -121,9 +116,7 @@ The file loader extension lets you browse files on the server file system to pro
         for name, browser in self.file_browsers.items():
             if browser.selected_file:
                 loaded_files[name] = browser.selected_file
-        return {
-            "loaded_files": loaded_files
-        }
+        return {"loaded_files": loaded_files}
 
     @classmethod
     def from_json(cls, extension: "FileLoader", info_dict: dict) -> "FileLoader":

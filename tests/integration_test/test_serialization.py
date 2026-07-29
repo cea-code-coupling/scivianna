@@ -1,33 +1,37 @@
-import pytest
 import tempfile
 from pathlib import Path
 
-import scivianna.utils
-from scivianna.constants import X, Y, Z, MESH
-from scivianna.utils.serialization import (
-    save_slave_to_file, 
-    load_slave_from_file, 
-    save_panel2d_to_file, 
-    load_panel2d_from_file,
-    save_panel1d_to_file,
-    load_panel1d_from_file,
-    save_panel3d_to_file,
-    load_panel3d_from_file,
-    save_paneldatframe_to_file,
-    load_paneldatframe_from_file,
-)
+import pytest
 
-from scivianna.layout.split import SplitLayout
+import scivianna.utils
+from scivianna.constants import MESH, X, Y, Z
 from scivianna.layout.gridstack import GridStackLayout
+from scivianna.layout.split import SplitLayout
 from scivianna.slave import ComputeSlave
-from scivianna_example.europe_grid.europe_grid import make_europe_panel, EuropeGridInterface, CountryTimeSeriesInterface
+from scivianna.utils.serialization import (
+    load_panel1d_from_file,
+    load_panel2d_from_file,
+    load_panel3d_from_file,
+    load_paneldatframe_from_file,
+    load_slave_from_file,
+    save_panel1d_to_file,
+    save_panel2d_to_file,
+    save_panel3d_to_file,
+    save_paneldatframe_to_file,
+    save_slave_to_file,
+)
+from scivianna_example.europe_grid.europe_grid import (
+    CountryTimeSeriesInterface,
+    EuropeGridInterface,
+    make_europe_panel,
+)
 
 scivianna.utils._testing = True
 
 @pytest.mark.medcoupling
 def test_serialize_slave():
     from scivianna.interface.med_interface import MEDInterface
-    from scivianna_example.med.split_item_example import get_panel, get_med_panel
+    from scivianna_example.med.split_item_example import get_med_panel, get_panel
     slave = None
     slave2 = None
     try:
@@ -66,7 +70,7 @@ def test_serialize_slave():
 
 @pytest.mark.medcoupling
 def test_serialize_panel_2d():
-    from scivianna_example.med.split_item_example import get_panel, get_med_panel
+    from scivianna_example.med.split_item_example import get_med_panel, get_panel
     slave = None
     slave2 = None
     try:
@@ -140,7 +144,7 @@ def test_serialize_panel_2d():
 
 @pytest.mark.medcoupling
 def test_serialize_split():
-    from scivianna_example.med.split_item_example import get_panel, get_med_panel
+    from scivianna_example.med.split_item_example import get_med_panel, get_panel
     panel, slaves = get_panel(None, True)
 
     panel.save_to_zip("test.zip")
@@ -238,8 +242,8 @@ def test_serialize_demo_3d():
 def test_serialize_panel1d_individual():
     """Serialize and restore a Panel1D individually, verify panel state survives."""
     from scivianna.panel.panel_1d import Panel1D
-    from scivianna_example.europe_grid.country_time_series import CountryTimeSeriesInterface
     from scivianna_example import europe_grid
+    from scivianna_example.europe_grid.country_time_series import CountryTimeSeriesInterface
 
     slave = None
     panel_loaded = None
@@ -312,8 +316,8 @@ def test_serialize_panel3d_individual():
     """Serialize and restore a Panel3D individually, verify displayed field and colormap survive."""
     import scivianna
     from scivianna.constants import GEOMETRY
-    from scivianna.panel.panel_3d import Panel3D
     from scivianna.interface.med_interface import MEDInterface
+    from scivianna.panel.panel_3d import Panel3D
 
     slave = None
     panel_loaded = None
@@ -386,8 +390,8 @@ def test_serialize_panel3d_in_layout():
 def test_serialize_paneldatframe_individual():
     """Serialize and restore a PanelDataFrame individually, verify dataframe content survives."""
     from scivianna.panel.panel_dataframe import PanelDataFrame
-    from scivianna_example.europe_grid.country_time_series import CountryTimeSeriesInterface
     from scivianna_example import europe_grid
+    from scivianna_example.europe_grid.country_time_series import CountryTimeSeriesInterface
 
     slave = None
     panel_loaded = None

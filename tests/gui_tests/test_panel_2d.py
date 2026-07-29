@@ -1,12 +1,11 @@
 import numpy as np
 import pytest
+from test_interface import get_cell_ids, get_colors, get_polygons, make_panel_2d, panel_fixture
 
-from scivianna.extension.field_selector import FieldSelector
-from scivianna.constants import MESH, MATERIAL, X, Y, XS, YS, COLORS, CELL_VALUES, CELL_NAMES
-from scivianna.utils.color_tools import interpolate_cmap_at_values
 import scivianna.utils
-
-from test_interface import make_panel_2d, get_polygons, get_colors, get_cell_ids, panel_fixture
+from scivianna.constants import CELL_NAMES, CELL_VALUES, COLORS, MATERIAL, MESH, XS, YS, X, Y
+from scivianna.extension.field_selector import FieldSelector
+from scivianna.utils.color_tools import interpolate_cmap_at_values
 
 scivianna.utils._testing = True
 

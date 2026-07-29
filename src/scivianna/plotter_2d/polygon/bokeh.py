@@ -1,33 +1,41 @@
 import functools
+import os
 from typing import IO, Callable, List, Tuple, Union
-import bokeh.events
-import panel as pn
-from scivianna.data.data2d import Data2D
-from scivianna.utils.polygonize_tools import PolygonElement
-from scivianna.plotter_2d.generic_plotter import Plotter2D
 
 import bokeh
+import bokeh.events
+import numpy as np
+import panel as pn
+from bokeh import events
 from bokeh.colors import RGB
-from bokeh.plotting import figure as Figure
-from bokeh.plotting import save, output_file
+from bokeh.events import MouseMove
 from bokeh.models import (
-    HoverTool,
-    ColumnDataSource,
-    CustomJSHover,
-    LinearColorMapper,
     ColorBar,
+    ColumnDataSource,
+    CustomJS,
+    CustomJSHover,
+    HoverTool,
+    LinearColorMapper,
     TapTool,
 )
-from bokeh.models import CustomJS
-from bokeh.events import MouseMove
-from bokeh import events
+from bokeh.plotting import figure as Figure
+from bokeh.plotting import output_file, save
 
-import numpy as np
-
-from scivianna.constants import XS, YS, CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, GEOMETRY, EDGE_ALPHA, FILL_ALPHA
+from scivianna.constants import (
+    CELL_NAMES,
+    CELL_VALUES,
+    COLORS,
+    EDGE_ALPHA,
+    EDGE_COLORS,
+    FILL_ALPHA,
+    GEOMETRY,
+    XS,
+    YS,
+)
+from scivianna.data.data2d import Data2D
+from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.utils.color_tools import beautiful_color_maps
-
-import os
+from scivianna.utils.polygonize_tools import PolygonElement
 
 
 class Bokeh2DPolygonPlotter(Plotter2D):
@@ -141,21 +149,19 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         # Note: Bokeh requires single-character variable names for custom formatters
         TOOLTIPS = [
             ("Coordinates", "$x{custom}"),
-            ("Cell ID", "@"+CELL_NAMES),
-            ("Value", "@"+CELL_VALUES),
+            ("Cell ID", "@" + CELL_NAMES),
+            ("Value", "@" + CELL_VALUES),
         ]
 
         self.hover_tool = HoverTool(
             tooltips=TOOLTIPS,
             formatters={
                 "$x": CustomJSHover(
-                    args=dict(
-                        full_data=self.source_coordinates, mouse=self.source_mouse
-                    ),
+                    args=dict(full_data=self.source_coordinates, mouse=self.source_mouse),
                     code=code_get_mouse_location,
                 )
             },
-            point_policy="follow_mouse"
+            point_policy="follow_mouse",
         )
 
         self.figure = Figure(
@@ -212,8 +218,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
                 mouse.data = new_data;
                 mouse.change.emit();
-                """
-            )
+                """,
+            ),
         )
         self.color_mapper = LinearColorMapper(
             palette=self.__get_color_mapper_from_string("BuRd"), low=0.0, high=1.0
@@ -230,15 +236,9 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
         # This is a massive hack, too lazy to do it the right way !
         zoom_tool = [
-            t
-            for t in self.figure.toolbar.tools
-            if type(t).__name__.startswith("WheelZoom")
+            t for t in self.figure.toolbar.tools if type(t).__name__.startswith("WheelZoom")
         ][0]
-        pan_tool = [
-            t
-            for t in self.figure.toolbar.tools
-            if type(t).__name__.startswith("PanTool")
-        ][0]
+        pan_tool = [t for t in self.figure.toolbar.tools if type(t).__name__.startswith("PanTool")][0]
         self.figure.toolbar.active_scroll = zoom_tool
         self.figure.toolbar.active_drag = pan_tool
 
@@ -313,9 +313,9 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 CELL_NAMES: data.cell_ids.tolist(),
                 CELL_VALUES: data.cell_values.tolist(),
                 COLORS: np.array(data.cell_colors)[:, :-1].tolist(),
-                FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
+                FILL_ALPHA: (np.array(data.cell_colors)[:, -1] / 255).tolist(),
                 EDGE_COLORS: np.array(data.cell_edge_colors)[:, :-1].tolist(),
-                EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1]/255).tolist(),
+                EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1] / 255).tolist(),
             }
         else:
             self.source_polygons.data = {
@@ -332,12 +332,12 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.hovered_glyph = self.figure.multi_polygons(
             xs=XS,
             ys=YS,
-            line_width = self.line_width,
+            line_width=self.line_width,
             source=self.source_polygons,
             color=COLORS,
             line_color=EDGE_COLORS,
-            fill_alpha = FILL_ALPHA,
-            line_alpha = EDGE_ALPHA,
+            fill_alpha=FILL_ALPHA,
+            line_alpha=EDGE_ALPHA,
             # hover_line_alpha=0.6,
             # hover_fill_alpha=0.6,
         )
@@ -364,8 +364,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                     CELL_VALUES: data.cell_values.tolist(),
                     COLORS: np.array(data.cell_colors).tolist(),
                     EDGE_COLORS: np.array(data.cell_edge_colors).tolist(),
-                    FILL_ALPHA: (np.array(data.cell_colors)[:, -1]/255).tolist(),
-                    EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1]/255).tolist(),
+                    FILL_ALPHA: (np.array(data.cell_colors)[:, -1] / 255).tolist(),
+                    EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1] / 255).tolist(),
                 }
             )
         else:
@@ -380,8 +380,10 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 EDGE_ALPHA: [],
             }
 
-
-    def update_colors(self, data: Data2D,):
+    def update_colors(
+        self,
+        data: Data2D,
+    ):
         """Updates the colors of the displayed polygons
 
         Parameters
@@ -397,14 +399,12 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             {
                 CELL_VALUES: [(slice(0, cell_count), data.cell_values.tolist())],
                 COLORS: [(slice(0, cell_count), np.array(data.cell_colors)[:, :-1].tolist())],
-                EDGE_COLORS: [
-                    (slice(0, cell_count), np.array(data.cell_edge_colors).tolist())
-                ],
+                EDGE_COLORS: [(slice(0, cell_count), np.array(data.cell_edge_colors).tolist())],
                 FILL_ALPHA: [
-                    (slice(0, cell_count), (np.array(data.cell_colors)[:, -1]/255).tolist())
+                    (slice(0, cell_count), (np.array(data.cell_colors)[:, -1] / 255).tolist())
                 ],
                 EDGE_ALPHA: [
-                    (slice(0, cell_count), (np.array(data.cell_edge_colors)[:, -1]/255).tolist())
+                    (slice(0, cell_count), (np.array(data.cell_edge_colors)[:, -1] / 255).tolist())
                 ],
             }
         )
@@ -450,9 +450,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             self.figure.toolbar.active_drag = None
         else:
             self.figure.toolbar.active_drag = [
-                t
-                for t in self.figure.toolbar.tools
-                if type(t).__name__.startswith("PanTool")
+                t for t in self.figure.toolbar.tools if type(t).__name__.startswith("PanTool")
             ][0]
 
     def __get_color_mapper_from_string(self, color_map_name: str) -> List[RGB]:
@@ -514,7 +512,9 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.figure.width_policy = "max"
         self.figure.height_policy = "max"
 
-    def _polygons_to_coords(self, polygons: List[PolygonElement]) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
+    def _polygons_to_coords(
+        self, polygons: List[PolygonElement]
+    ) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
         xs_dict = [
             [
                 {
@@ -547,24 +547,25 @@ class Bokeh2DPolygonPlotter(Plotter2D):
     def send_event(self, callback):
         # If the mouse is hovered while a range update triggered update is done, the self.source_polygons.data length is updated faster than the data coming from the mouse.
         #   The value of self.source_mouse.data["index"][0] will be greater than the polygon length. In this case, the callback is not called.
-        if "index" in self.source_mouse.data and CELL_NAMES in self.source_polygons.data and \
-            int(self.source_mouse.data["index"][0]) < len(self.source_polygons.data[CELL_NAMES]):
+        if (
+            "index" in self.source_mouse.data
+            and CELL_NAMES in self.source_polygons.data
+            and int(self.source_mouse.data["index"][0]) < len(self.source_polygons.data[CELL_NAMES])
+        ):
             callback(
-                screen_location=(
-                    self.source_mouse.data["sx"][0],
-                    self.source_mouse.data["sy"][0]
-                ),
+                screen_location=(self.source_mouse.data["sx"][0], self.source_mouse.data["sy"][0]),
                 space_location=(
-                    self.source_mouse.data["x"][0], 
-                    self.source_mouse.data["y"][0], 
-                    self.source_mouse.data["z"][0]
-                ), 
-                cell_id=self.source_polygons.data[CELL_NAMES][int(self.source_mouse.data["index"][0])]
+                    self.source_mouse.data["x"][0],
+                    self.source_mouse.data["y"][0],
+                    self.source_mouse.data["z"][0],
+                ),
+                cell_id=self.source_polygons.data[CELL_NAMES][
+                    int(self.source_mouse.data["index"][0])
+                ],
             )
 
-
-    def provide_on_mouse_move_callback(self, callback:Callable):
-        """Stores a function to call everytime the user moves the mouse on the plot. 
+    def provide_on_mouse_move_callback(self, callback: Callable):
+        """Stores a function to call everytime the user moves the mouse on the plot.
         Functions arguments are location, cell_id.
 
         Parameters
@@ -576,8 +577,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
         self.figure.on_event(bokeh.events.MouseMove, functools.partial(self.send_event, callback))
 
-    def provide_on_clic_callback(self, callback:Callable):
-        """Stores a function to call everytime the user clics on the plot. 
+    def provide_on_clic_callback(self, callback: Callable):
+        """Stores a function to call everytime the user clics on the plot.
         Functions arguments are location, cell_id.
 
         Parameters
@@ -591,10 +592,10 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         # self.figure.add_tools(TapTool())
 
     def set_axes(
-        self, 
-        u: Tuple[float, float, float], 
-        v: Tuple[float, float, float], 
-        origin: Tuple[float, float, float]
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
     ):
         """Stores the u v axes of the current plot
 
@@ -608,7 +609,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             Frame center
         """
         w_vector = np.cross(np.array(u), np.array(v))
-        
+
         new_data = self.source_coordinates.data.copy()
         new_data["u0"] = [u[0]]
         new_data["u1"] = [u[1]]
@@ -619,12 +620,12 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         new_data["w0"] = [w_vector[0]]
         new_data["w1"] = [w_vector[1]]
         new_data["w2"] = [w_vector[2]]
-        
+
         w = np.dot(w_vector, origin)
 
         new_data["w"] = [w]
 
-        self.source_coordinates.update(data = new_data)
+        self.source_coordinates.update(data=new_data)
 
     def get_mouse_location(self) -> Tuple[float, float, float]:
         """Returns the current mouse location (returns the panel exit location if out)

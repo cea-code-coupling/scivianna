@@ -1,96 +1,205 @@
+"""
+Enumeration types for Scivianna.
+
+This module defines all enumeration types used throughout Scivianna for
+type-safe configuration and state management.
+
+Enums are organized by category:
+- VisualizationMode: How colors are mapped to data
+- GeometryType: Dimensionality of geometry (2D or 3D)
+- DataType: Data representation format (grid or polygons)
+- UpdateEvent: Triggers for plot updates
+- UpdatePolicy: Data update strategies for coupling
+"""
+
 from enum import Enum, auto
 
 
 class VisualizationMode(Enum):
-    """How is the color mapped on an input value."""
+    """
+    Defines how colors are mapped to data in visualizations.
+
+    This enum determines whether cell colors are derived from numeric values
+    (using a colormap), string values (using random assignment), or not used
+    at all (mesh-only display).
+
+    Attributes
+    ----------
+    FROM_VALUE : int
+        Color is determined by a colormap based on float values.
+        Use this for continuous fields (temperature, pressure, etc.)
+    FROM_STRING : int
+        Color is randomly assigned based on unique string values.
+        Use this for categorical fields (material names, regions, etc.)
+    NONE : int
+        No coloring is applied; only mesh borders are displayed.
+        Use this for geometry-only visualization.
+    """
 
     FROM_VALUE = 0
-    """ The color is got from a colormap based on a float value.
-    """
+    """Color from colormap based on float value."""
+
     FROM_STRING = 1
-    """ The color is got randomly based on the string value.
-    """
+    """Color randomly assigned based on string value."""
+
     NONE = 2
-    """ Only the mesh is displayed
-    """
-
-
-class PlotType(Enum):
-    """Is the plot 1D or 2D."""
-
-    _1D = 0
-    """ 1D plot : expects some (x, y) line data
-    """
-    _2D = 1
-    """ 2D plot : expects a set of polygons and their associated colors
-    """
+    """Only mesh displayed, no coloring."""
 
 
 class GeometryType(Enum):
-    """Is the geometry 2D or 3D."""
+    """
+    Defines the dimensionality and display mode of geometry.
+
+    This enum specifies whether the geometry is 2D or 3D, and whether
+    the display shows a selected window or the entire geometry.
+
+    Attributes
+    ----------
+    _2D : int
+        2D geometry with selected window display (zoomable).
+    _2D_INFINITE : int
+        2D geometry with full display (no zoom, everything visible).
+    _3D : int
+        3D geometry requiring U, V axes and w_value for slicing,
+        with selected window display.
+    _3D_INFINITE : int
+        3D geometry requiring U, V axes and w_value for slicing,
+        with full display.
+    """
 
     _2D = 0
-    """ 2D geometry : A selected window of the geometry is displayed 
-    """
-    _2D_INFINITE = 0
-    """ 2D geometry : Everything is displayed 
-    """
-    _3D = 1
-    """ 3D geometry : U and V axis and w_value are required to slice the geometry, only a selected window is displayed
-    """
-    _3D_INFINITE = 1
-    """ 3D geometry : U and V axis and w_value are required to slice the geometry
-    """
+    """2D geometry: selected window display (zoomable)."""
+
+    _2D_INFINITE = 1
+    """2D geometry: full display (no zoom)."""
+
+    _3D = 2
+    """3D geometry: requires slicing, selected window display."""
+
+    _3D_INFINITE = 3
+    """3D geometry: requires slicing, full display."""
+
 
 class DataType(Enum):
-    """Are the data returned in a grid or polygons"""
+    """
+    Defines the data representation format.
+
+    This enum specifies whether spatial data is stored as a regular grid
+    (numpy array) or as an irregular polygon list. This affects which
+    plotter is used and how data is processed.
+
+    Attributes
+    ----------
+    GRID : int
+        Data stored in a numpy array (rasterized representation).
+        Efficient for regular grids, requires rasterization for polygons.
+    POLYGONS : int
+        Data stored as a list of PolygonElement objects.
+        Suitable for irregular meshes, preserves exact geometry.
+    """
+
     GRID = 0
-    """Data are contained in a numpy array"""
+    """Data in numpy array (rasterized)."""
+
     POLYGONS = 1
-    """Data are contained in a list of polygons"""
+    """Data as list of polygons."""
+
 
 class UpdateEvent(int, Enum):
-    """What triggers a plot update"""
+    """
+    Defines what triggers a plot update.
+
+    This enum specifies the events that cause visualization panels to
+    recompute and redraw. Different panels can be configured to respond
+    to different events, enabling sophisticated inter-panel interactions.
+
+    Attributes
+    ----------
+    RECOMPUTE : int
+        Manual update only (user presses recompute button).
+        Most efficient for expensive computations.
+    CLIC : int
+        Update when mouse clicks on a linked 2D/3D plot.
+        Updates use the click location and cell ID.
+    MOUSE_POSITION_CHANGE : int
+        Update when mouse moves over a linked 2D/3D plot.
+        Updates use the mouse location and cell ID.
+        Can be expensive if triggered frequently.
+    MOUSE_CELL_CHANGE : int
+        Update when mouse enters a new cell.
+        More efficient than MOUSE_POSITION_CHANGE.
+    PERIODIC : int
+        Update at regular time intervals.
+        Used for real-time coupling with simulations.
+    RANGE_CHANGE : int
+        Update when (u, v) ranges or origin change (zoom/pan).
+        Standard for interactive exploration.
+    AXES_CHANGE : int
+        Update when axes (u, v vectors) or origin change.
+        Used when changing slice orientation.
+
+    Note
+    ----
+    Multiple events can be specified as a list to trigger updates on
+    any of the events.
+    """
 
     RECOMPUTE = 0
-    """ The plot is only updated by pressing the mouse button
-    """
+    """Manual update via recompute button."""
+
     CLIC = 1
-    """ The plot is updated when the mouse is clics on a 2D plot, the applicable plots are updated requesting the mouse space location.
-    """
+    """Update on mouse click (sends location and cell ID)."""
+
     MOUSE_POSITION_CHANGE = 2
-    """ The plot is updated when the mouse is moved over a 2D plot, the applicable plots are updated requesting the mouse space location.
-    """
+    """Update on mouse movement (sends location and cell ID)."""
+
     MOUSE_CELL_CHANGE = 3
-    """ The plot is updated when the mouse is moved over a 2D plot and enters a new cell.
-    """
+    """Update when hovered cell changes."""
+
     PERIODIC = 4
-    """ The plot is preiodically updated, applicable in real-time code coupling simulations
-    """
+    """Periodic update for real-time coupling."""
+
     RANGE_CHANGE = 5
-    """ The plot is updated when the (u, v) ranges or origin change.
-    """
+    """Update on zoom/pan (range change)."""
+
     AXES_CHANGE = 6
-    """ The plot is updated when the axes or the origin are changed.
-    """
+    """Update on axes/orientation change."""
+
 
 class UpdatePolicy(Enum):
-    """This enum lets the user define how the code interface manages its fields update with time."""
+    """
+    Defines how code interfaces manage field updates during coupling.
+
+    This enum controls whether data is appended (time history) or updated
+    (replaced) during real-time simulation coupling. It also distinguishes
+    between mesh updates and data-only updates.
+
+    Attributes
+    ----------
+    APPEND_DATA : auto
+        Keep mesh constant, append data with time stamps.
+        Use when mesh is static but data evolves (e.g., temperature field).
+    UPDATE_DATA : auto
+        Keep mesh constant, replace data at each time step.
+        Use when only current state matters (e.g., steady-state).
+    APPEND_MESH : auto
+        Append both mesh and data with time stamps.
+        Use when mesh deforms over time (e.g., structural mechanics).
+        Falls back to APPEND_DATA if mesh doesn't change.
+    UPDATE_MESH : auto
+        Replace both mesh and data at each time step.
+        Use when only current deformed state matters.
+        Falls back to UPDATE_DATA if mesh doesn't change.
+    """
+
     APPEND_DATA = auto()
-    """If applicable, the supporting mesh is keep constant during the simulation. 
-    The data is stored and associated to the current time."""
+    """Append data to time history, mesh constant."""
+
     UPDATE_DATA = auto()
-    """If applicable, the supporting mesh is keep constant during the simulation. 
-    The data is stored and replaces the last data."""
+    """Replace data, mesh constant."""
 
     APPEND_MESH = auto()
-    """If applicable, the supporting mesh is changes during the simulation: 
-    The data and its mesh are stored and associated to the current time.
-    otherwise, the behavior is equivalent to APPEND_DATA.
-    """
+    """Append mesh and data to time history."""
+
     UPDATE_MESH = auto()
-    """If applicable, the supporting mesh is changes during the simulation: 
-    The data and its mesh are stored and replace the last data.
-    Without mesh, the behavior is equivalent to UPDATE_DATA.
-    """
-    
+    """Replace mesh and data."""

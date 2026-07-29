@@ -1,24 +1,22 @@
 import multiprocessing as mp
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
+
 import pandas as pd
-from typing import Any, List, Tuple, Dict, Union
 
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
-from scivianna.enums import VisualizationMode, GeometryType, DataType
-
-from typing import TYPE_CHECKING
+from scivianna.enums import DataType, GeometryType, VisualizationMode
 
 #   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
 if TYPE_CHECKING:
     import medcoupling
 
-from scivianna.constants import MESH, MATERIAL
+from scivianna.constants import MATERIAL, MESH
 
 
 class GenericInterface:
-    """ Generic interface class that implement basic functions. This class mutualises functions that are shared between its child classes.
-    """
+    """Generic interface class that implement basic functions. This class mutualises functions that are shared between its child classes."""
 
     extensions = []
     """Extensions associated to this interface."""
@@ -144,12 +142,13 @@ class GenericInterface:
     @classmethod
     def get_slave(cls):
         from scivianna.slave import ComputeSlave
+
         return ComputeSlave(cls)
 
 
 class Geometry2D(GenericInterface):
-    """ Interface parent class for classes that can compute geometry 2D slices.
-    """
+    """Interface parent class for classes that can compute geometry 2D slices."""
+
     geometry_type: GeometryType
     """Enum telling if the geometry is 2D or 3D (Displays the axis card and the w coordinate in the GUI)."""
     data_type: DataType
@@ -204,7 +203,11 @@ class Geometry2D(GenericInterface):
         raise NotImplementedError()
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -233,24 +236,20 @@ class Geometry2D(GenericInterface):
 
 
 class Geometry2DPolygon(Geometry2D):
-    """ Interface parent class for classes that can compute geometry 2D slices and provide a list of polygons.
-    """
+    """Interface parent class for classes that can compute geometry 2D slices and provide a list of polygons."""
 
 
 class Geometry2DGrid(Geometry2D):
-    """ Interface parent class for classes that can compute geometry 2D slices and provide a numpy array.
-    """
+    """Interface parent class for classes that can compute geometry 2D slices and provide a numpy array."""
+
     rasterized: bool = True
     """Boolean telling if the geometry is made by rasterizing a 2D grid (displays the line count in the GUI)."""
 
 
 class Geometry3D(GenericInterface):
-    """ Interface parent class for classes that can compute geometry 3D polygons.
-    """
-    def compute_3D_data(
-        self,
-        options: Dict[str, Any]
-    ) -> Tuple[Data3D, bool]:
+    """Interface parent class for classes that can compute geometry 3D polygons."""
+
+    def compute_3D_data(self, options: Dict[str, Any]) -> Tuple[Data3D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
         Parameters
@@ -268,7 +267,11 @@ class Geometry3D(GenericInterface):
         raise NotImplementedError()
 
     def get_3d_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -296,10 +299,9 @@ class Geometry3D(GenericInterface):
         raise NotImplementedError()
 
 
-
 class ValueAtLocation(GenericInterface):
-    """ Interface parent class to implement a function to get values at a specific location.
-    """
+    """Interface parent class to implement a function to get values at a specific location."""
+
     def get_value(
         self,
         position: Tuple[float, float, float],
@@ -362,8 +364,8 @@ class ValueAtLocation(GenericInterface):
 
 
 class Value1DAtLocation(GenericInterface):
-    """ Interface parent class to implement a function to get 1D data at a specific location.
-    """
+    """Interface parent class to implement a function to get 1D data at a specific location."""
+
     def get_1D_value(
         self,
         position: Tuple[float, float, float],
@@ -394,9 +396,10 @@ class Value1DAtLocation(GenericInterface):
         """
         raise NotImplementedError()
 
+
 class DataFrameInterface(GenericInterface):
-    """ Interface parent class for interfaces that provide data as a pandas DataFrame.
-    """
+    """Interface parent class for interfaces that provide data as a pandas DataFrame."""
+
     def get_dataframe(
         self,
         cell_id: str,
@@ -428,8 +431,8 @@ class DataFrameInterface(GenericInterface):
 
 
 class CouplingInterface(GenericInterface):
-    """ Interface parent class to implement the C3PO functions required for a code coupling visualization.
-    """
+    """Interface parent class to implement the C3PO functions required for a code coupling visualization."""
+
     def set_time(self, time: float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.
 
@@ -496,7 +499,9 @@ class CouplingInterface(GenericInterface):
         name : str
             Field name
         """
-        raise NotImplementedError(f"get_template function not implemented for class {__class__.__name__}")
+        raise NotImplementedError(
+            f"get_template function not implemented for class {__class__.__name__}"
+        )
 
     def set_template(self, name: str, template: Any):
         """Sets the template returned by C3PO getOutputxxxFieldTemplate functions
@@ -509,4 +514,3 @@ class CouplingInterface(GenericInterface):
             Object to set as template
         """
         pass
-        

@@ -1,11 +1,13 @@
-from typing import Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
+
 import numpy as np
 import panel as pn
 import panel_material_ui as pmui
+
+import scivianna.utils
 from scivianna.enums import GeometryType
 from scivianna.extension.extension import Extension
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-import scivianna.utils
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
@@ -34,15 +36,12 @@ icon_svg = """
 </svg>
 
 """
+
+
 class Axes(Extension):
     """Extension to load files and send them to the slave."""
 
-    def __init__(
-        self,
-        slave: "ComputeSlave",
-        plotter: Plotter2D,
-        panel: "VisualizationPanel"
-    ):
+    def __init__(self, slave: "ComputeSlave", plotter: Plotter2D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
 
         Parameters
@@ -83,21 +82,22 @@ The following keys are binded:
         self.__new_data = {}
 
         self.hide_show_button = pmui.Button(
-            label = "Toggle axes",
+            label="Toggle axes",
             description="Display plot tools and axis",
         )
         self.hide_show_button.on_click(self.toggle_axis_visibility)
 
-        # 
+        #
         #   Bounds widgets (now using origin/size_u/size_v)
-        #     
+        #
         self.origin_x_inp = pmui.FloatInput(
             label="origin_x",
             value=0,
             start=-1e6,
             end=1e6,
             step=0.1,
-            width=125, margin=5,
+            width=125,
+            margin=5,
             align="center",
         )
         self.origin_y_inp = pmui.FloatInput(
@@ -106,7 +106,8 @@ The following keys are binded:
             start=-1e6,
             end=1e6,
             step=0.1,
-            width=125, margin=5,
+            width=125,
+            margin=5,
             align="center",
         )
         self.origin_z_inp = pmui.FloatInput(
@@ -115,7 +116,8 @@ The following keys are binded:
             start=-1e6,
             end=1e6,
             step=0.1,
-            width=125, margin=5,
+            width=125,
+            margin=5,
             align="center",
         )
         self.size_u_inp = pmui.FloatInput(
@@ -124,7 +126,8 @@ The following keys are binded:
             start=0,
             end=1e6,
             step=0.1,
-            width=125, margin=5,
+            width=125,
+            margin=5,
             align="center",
         )
         self.size_v_inp = pmui.FloatInput(
@@ -133,11 +136,12 @@ The following keys are binded:
             start=0,
             end=1e6,
             step=0.1,
-            width=125, margin=5,
+            width=125,
+            margin=5,
             align="center",
         )
         self.recompute_button = pmui.Button(
-            label = "Update plot",
+            label="Update plot",
             description="Update plot using the current bounds",
         )
         self.recompute_button.on_click(self.trigger_update)
@@ -206,24 +210,12 @@ The following keys are binded:
         #
         #   Vectors widgets
         #
-        self.u0_inp = pmui.FloatInput(
-            label="u0", value=1, start=-1, end=1, width=125, margin=5
-        )
-        self.u1_inp = pmui.FloatInput(
-            label="u1", value=0, start=-1, end=1, width=125, margin=5
-        )
-        self.u2_inp = pmui.FloatInput(
-            label="u2", value=0, start=-1, end=1, width=125, margin=5
-        )
-        self.v0_inp = pmui.FloatInput(
-            label="v0", value=0, start=-1, end=1, width=125, margin=5
-        )
-        self.v1_inp = pmui.FloatInput(
-            label="v1", value=1, start=-1, end=1, width=125, margin=5
-        )
-        self.v2_inp = pmui.FloatInput(
-            label="v2", value=0, start=-1, end=1, width=125, margin=5
-        )
+        self.u0_inp = pmui.FloatInput(label="u0", value=1, start=-1, end=1, width=125, margin=5)
+        self.u1_inp = pmui.FloatInput(label="u1", value=0, start=-1, end=1, width=125, margin=5)
+        self.u2_inp = pmui.FloatInput(label="u2", value=0, start=-1, end=1, width=125, margin=5)
+        self.v0_inp = pmui.FloatInput(label="v0", value=0, start=-1, end=1, width=125, margin=5)
+        self.v1_inp = pmui.FloatInput(label="v1", value=1, start=-1, end=1, width=125, margin=5)
+        self.v2_inp = pmui.FloatInput(label="v2", value=0, start=-1, end=1, width=125, margin=5)
 
         def xplus_fn(event):
             """Defines the direction vectors to Y+ and Z+
@@ -299,16 +291,9 @@ The following keys are binded:
         self.bounds_card = pmui.Card(
             pmui.Typography("Slice center and size"),
             pmui.Column(
-                pmui.Row(
-                    self.origin_x_inp,
-                    self.origin_y_inp,
-                    self.origin_z_inp, margin=0
-                ),
-                pmui.Row(
-                    self.size_u_inp,
-                    self.size_v_inp, margin=0
-                ),
-                margin=0
+                pmui.Row(self.origin_x_inp, self.origin_y_inp, self.origin_z_inp, margin=0),
+                pmui.Row(self.size_u_inp, self.size_v_inp, margin=0),
+                margin=0,
             ),
             title="Slice bounds",
             width=300,
@@ -318,15 +303,16 @@ The following keys are binded:
 
         self.axes_card = pmui.Card(
             pmui.Column(
-            pmui.Typography("2D plot plane vectors"),
-            self.axis_buttons,
-            pn.Row(u, v, margin=0),
-            margin=0),
+                pmui.Typography("2D plot plane vectors"),
+                self.axis_buttons,
+                pn.Row(u, v, margin=0),
+                margin=0,
+            ),
             title="Axes vectors",
             width=300,
             margin=0,
             collapsed=True,
-            outlined=False
+            outlined=False,
         )
         self.update_widgets_visibility()
 
@@ -346,7 +332,9 @@ The following keys are binded:
             self.plotter.display_borders(False)
             self.borders_displayed = False
 
-    def make_gui(self,) -> pn.viewable.Viewable:
+    def make_gui(
+        self,
+    ) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
         Returns
@@ -360,12 +348,12 @@ The following keys are binded:
             self.hide_show_button,
             self.bounds_card,
             self.axes_card,
-            margin=0
+            margin=0,
         )
 
     def on_range_change(self, origin, size_u, size_v):
         """Called when the range/coordinates change.
-        
+
         Parameters
         ----------
         origin : tuple
@@ -377,21 +365,23 @@ The following keys are binded:
         """
         if origin is None or size_u is None or size_v is None:
             return
-            
+
         origin_tuple = tuple(origin) if not isinstance(origin, tuple) else origin
-        
-        if (origin_tuple[0] != self.origin_x_inp.value or 
-            origin_tuple[1] != self.origin_y_inp.value or 
-            origin_tuple[2] != self.origin_z_inp.value or
-            size_u != self.size_u_inp.value or
-            size_v != self.size_v_inp.value):
-            
+
+        if (
+            origin_tuple[0] != self.origin_x_inp.value
+            or origin_tuple[1] != self.origin_y_inp.value
+            or origin_tuple[2] != self.origin_z_inp.value
+            or size_u != self.size_u_inp.value
+            or size_v != self.size_v_inp.value
+        ):
+
             self.__new_data["origin_x"] = origin_tuple[0]
             self.__new_data["origin_y"] = origin_tuple[1]
             self.__new_data["origin_z"] = origin_tuple[2]
             self.__new_data["size_u"] = size_u
             self.__new_data["size_v"] = size_v
-            
+
             if pn.state.curdoc is not None:
                 pn.state.curdoc.add_next_tick_callback(self.async_update_data)
             elif scivianna.utils._testing:
@@ -400,11 +390,7 @@ The following keys are binded:
     def on_frame_change(self, u_vector, v_vector):
         u, v = self.get_uv()
         if [*list(u_vector), *list(v_vector)] != [*u.tolist(), *(v.tolist())]:
-            if not (all([
-                e == 0 for e in u
-            ]) or all([
-                e == 0 for e in v
-            ])):
+            if not (all([e == 0 for e in u]) or all([e == 0 for e in v])):
                 self.__new_data["u0"], self.__new_data["u1"], self.__new_data["u2"] = u_vector
                 self.__new_data["v0"], self.__new_data["v1"], self.__new_data["v2"] = v_vector
 
@@ -413,7 +399,9 @@ The following keys are binded:
                 elif scivianna.utils._testing:
                     self.update_data()
 
-    def update_data(self,):
+    def update_data(
+        self,
+    ):
         if self.__new_data != {}:
             if "u0" in self.__new_data:
                 self.u0_inp.value = self.__new_data["u0"]
@@ -446,10 +434,14 @@ The following keys are binded:
         if self.axes_updated or self.range_updated:
             self.trigger_update()
 
-    async def async_update_data(self,):
+    async def async_update_data(
+        self,
+    ):
         self.update_data()
 
-    def update_widgets_visibility(self, ):
+    def update_widgets_visibility(
+        self,
+    ):
         geom_type: GeometryType = self.slave.get_geometry_type()
 
         # Definition of U and V vectors
@@ -457,15 +449,15 @@ The following keys are binded:
 
         # Definition of U and V coords
         self.bounds_card.visible = geom_type in [GeometryType._2D, GeometryType._3D]
-        
+
         # Origin Z is only relevant for 3D (for 2D, origin is in u-v plane)
         self.origin_z_inp.visible = geom_type in [GeometryType._3D, GeometryType._3D_INFINITE]
-            
+
     def trigger_update(self, *args, **kwargs):
         if self._restoring:
             return
         u, v = self.get_uv()
-        
+
         # Get origin and size values from widgets
         origin = (
             self.origin_x_inp.value,
@@ -474,7 +466,7 @@ The following keys are binded:
         )
         size_u = self.size_u_inp.value
         size_v = self.size_v_inp.value
-        
+
         self.panel.set_coordinates(
             u,
             v,
@@ -537,7 +529,7 @@ The following keys are binded:
         extension._restoring = True
 
         extension.borders_displayed = info_dict.get("borders_displayed", False)
-        
+
         u_vector = info_dict.get("u_vector", [1, 0, 0])
         extension.u0_inp.value = u_vector[0]
         extension.u1_inp.value = u_vector[1]
@@ -547,13 +539,13 @@ The following keys are binded:
         extension.v0_inp.value = v_vector[0]
         extension.v1_inp.value = v_vector[1]
         extension.v2_inp.value = v_vector[2]
-        
+
         origin = info_dict.get("origin", [0.0, 0.0, 0.0])
         extension.origin_x_inp.value = origin[0]
         extension.origin_y_inp.value = origin[1]
         extension.origin_z_inp.value = origin[2]
         extension.size_u_inp.value = info_dict.get("size_u", 1.0)
         extension.size_v_inp.value = info_dict.get("size_v", 1.0)
-        
+
         extension._restoring = False
         return extension

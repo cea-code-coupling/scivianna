@@ -1,5 +1,7 @@
 from typing import Dict
+
 import pytest
+
 from scivianna.layout.gridstack import GridStackLayout
 from scivianna.notebook_tools import get_med_panel
 from scivianna.panel.visualisation_panel import VisualizationPanel

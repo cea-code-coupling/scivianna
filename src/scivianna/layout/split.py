@@ -1,33 +1,31 @@
 import functools
 import pickle
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Tuple, Type, Union
+
 import panel as pn
 import panel_material_ui as pmui
-from enum import Enum
-from dataclasses import dataclass
 
-from pathlib import Path
-
-from scivianna.interface.generic_interface import GenericInterface
-from scivianna.utils.interface_tools import GenericInterfaceEnum
+from scivianna.component.splitjs_component import SplitJSHorizontal, SplitJSVertical
 from scivianna.interface import INTERFACES, register_interface
+from scivianna.interface.generic_interface import GenericInterface
 from scivianna.layout.generic_layout import GenericLayout
-from scivianna.panel.visualisation_panel import ComputeSlave, VisualizationPanel
 from scivianna.panel.panel_1d import Panel1D
 from scivianna.panel.panel_2d import Panel2D
-from scivianna.component.splitjs_component import (
-    SplitJSVertical,
-    SplitJSHorizontal,
-)
+from scivianna.panel.visualisation_panel import ComputeSlave, VisualizationPanel
+from scivianna.utils.interface_tools import GenericInterfaceEnum
 from scivianna.utils.serialization import (
-    save_layout_to_zip,
-    load_layout_from_zip,
-    _serialize_split_item,
     _deserialize_split_item,
+    _serialize_split_item,
+    load_layout_from_zip,
     restore_extensions_state,
+    save_layout_to_zip,
 )
 
 card_style = {}
+
 
 class SplitDirection(Enum):
     """
@@ -49,7 +47,7 @@ class SplitItem:
 
     direction: SplitDirection
     """Direction of the split between the two panels"""
-    factor: float = .5
+    factor: float = 0.5
     """Initial location of the split (.5 = 50%)"""
 
 
@@ -71,9 +69,7 @@ class SplitLayout(GenericLayout):
     def __init__(
         self,
         split_item: SplitItem,
-        additional_interfaces: Dict[
-            Union[str, GenericInterfaceEnum], Type[GenericInterface]
-        ] = {},
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
     ):
         """VisualizationGridStack constructor
 
@@ -106,12 +102,13 @@ class SplitLayout(GenericLayout):
 
         self.change_current_frame()
 
-
     def change_code_interface(self, event):
         super().change_code_interface(event)
         current_frame = self.current_frame
 
-        self.update_interface_in_split_item(current_frame, self.visualisation_panels[current_frame], self.split_item)
+        self.update_interface_in_split_item(
+            current_frame, self.visualisation_panels[current_frame], self.split_item
+        )
 
         if self.code_interface_to_update:
             self.reset_interface()
@@ -156,15 +153,13 @@ class SplitLayout(GenericLayout):
             if item.panel_name == panel_name:
                 return item, None
         else:
-            raise TypeError(
-                f"SplitItem or VisualizationPanel expected, found {type(item)}"
-            )
+            raise TypeError(f"SplitItem or VisualizationPanel expected, found {type(item)}")
 
         return None, None
 
-
     def build_split_item(
-        self, split_item: Union[SplitItem, VisualizationPanel],
+        self,
+        split_item: Union[SplitItem, VisualizationPanel],
     ) -> Union[SplitJSVertical, SplitJSHorizontal]:
         """Converts a SplitItem object in its Viewable counterpart
 
@@ -189,7 +184,7 @@ class SplitLayout(GenericLayout):
                     self.build_split_item(split_item.panel_1),
                     self.build_split_item(split_item.panel_2),
                     sizing_mode="stretch_both",
-                    sizes=(int(split_item.factor * 100), int((1-split_item.factor) * 100)),
+                    sizes=(int(split_item.factor * 100), int((1 - split_item.factor) * 100)),
                     margin=0,
                 )
             else:
@@ -197,7 +192,7 @@ class SplitLayout(GenericLayout):
                     self.build_split_item(split_item.panel_1),
                     self.build_split_item(split_item.panel_2),
                     sizing_mode="stretch_both",
-                    sizes=(int(split_item.factor * 100), int((1-split_item.factor) * 100)),
+                    sizes=(int(split_item.factor * 100), int((1 - split_item.factor) * 100)),
                     margin=0,
                 )
 
@@ -205,12 +200,13 @@ class SplitLayout(GenericLayout):
             return split_item.figure
 
         else:
-            raise TypeError(
-                f"SplitItem or VisualizationPanel expected, found {type(split_item)}"
-            )
+            raise TypeError(f"SplitItem or VisualizationPanel expected, found {type(split_item)}")
 
     def update_interface_in_split_item(
-        self, panel_name:str, new_panel:VisualizationPanel, split_item:Union[SplitItem, VisualizationPanel]
+        self,
+        panel_name: str,
+        new_panel: VisualizationPanel,
+        split_item: Union[SplitItem, VisualizationPanel],
     ):
         """Replaces a panel in the split item object
 
@@ -229,9 +225,15 @@ class SplitLayout(GenericLayout):
             provided split_item is neither a SplitItem or a VisualizationPanel
         """
         if isinstance(split_item, SplitItem):
-            if isinstance(split_item.panel_1, VisualizationPanel) and split_item.panel_1.panel_name == panel_name:
+            if (
+                isinstance(split_item.panel_1, VisualizationPanel)
+                and split_item.panel_1.panel_name == panel_name
+            ):
                 split_item.panel_1 = new_panel
-            elif isinstance(split_item.panel_2, VisualizationPanel) and split_item.panel_2.panel_name == panel_name:
+            elif (
+                isinstance(split_item.panel_2, VisualizationPanel)
+                and split_item.panel_2.panel_name == panel_name
+            ):
                 split_item.panel_2 = new_panel
             else:
                 self.update_interface_in_split_item(panel_name, new_panel, split_item.panel_1)
@@ -241,9 +243,7 @@ class SplitLayout(GenericLayout):
             if split_item.panel_name == panel_name:
                 split_item = new_panel
         else:
-            raise TypeError(
-                f"SplitItem or VisualizationPanel expected, found {type(split_item)}"
-            )
+            raise TypeError(f"SplitItem or VisualizationPanel expected, found {type(split_item)}")
 
     def get_panels_dict(self, split_item: SplitItem) -> Dict[str, VisualizationPanel]:
         """Returns all provided VisualizationPanels in a dictionnary
@@ -258,34 +258,40 @@ class SplitLayout(GenericLayout):
         Dict[str, VisualizationPanel]
             VisualizationPanels dictionnary
         """
-        visualisation_panels : Dict[str, VisualizationPanel] = {}
+        visualisation_panels: Dict[str, VisualizationPanel] = {}
 
         if isinstance(split_item, VisualizationPanel):
             visualisation_panels[split_item.panel_name] = split_item
 
         elif isinstance(split_item, SplitItem):
             if isinstance(split_item.panel_1, SplitItem):
-                visualisation_panels = {**visualisation_panels, **self.get_panels_dict(split_item.panel_1)}
+                visualisation_panels = {
+                    **visualisation_panels,
+                    **self.get_panels_dict(split_item.panel_1),
+                }
             else:
                 visualisation_panels[split_item.panel_1.panel_name] = split_item.panel_1
             if isinstance(split_item.panel_2, SplitItem):
-                visualisation_panels = {**visualisation_panels, **self.get_panels_dict(split_item.panel_2)}
+                visualisation_panels = {
+                    **visualisation_panels,
+                    **self.get_panels_dict(split_item.panel_2),
+                }
             else:
                 visualisation_panels[split_item.panel_2.panel_name] = split_item.panel_2
 
         return visualisation_panels
 
-
     @pn.io.hold()
-    def reset_interface(self,):
-        """Rebuilds the interface based on up-to-date SplitItem
-        """
+    def reset_interface(
+        self,
+    ):
+        """Rebuilds the interface based on up-to-date SplitItem"""
 
         #   We hide the history of objects in self.main_frame and adds a new one
         #   This practice prevents the garbage collector to delete objects that are still to be used
         self.main_frame.objects = [
             self.main_frame.objects[0],
-            self.build_split_item(self.split_item)
+            self.build_split_item(self.split_item),
         ]
 
         self.set_to_frame(self.current_frame)
@@ -311,9 +317,7 @@ class SplitLayout(GenericLayout):
         self.visualisation_panels[new_frame.panel_name] = new_frame
         self.register_panel(new_frame)
 
-        parent_split, split_index = self.current_split_item(
-            current_frame, self.split_item
-        )
+        parent_split, split_index = self.current_split_item(current_frame, self.split_item)
 
         if horizontal:
             split_item = SplitItem(
@@ -372,7 +376,7 @@ class SplitLayout(GenericLayout):
         cls,
         file_path: Union[str, Path],
         include_files: bool = True,
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {}
+        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
     ) -> "SplitLayout":
         """Restores a SplitLayout from a zip file.
 
@@ -390,8 +394,4 @@ class SplitLayout(GenericLayout):
         SplitLayout
             Restored SplitLayout instance
         """
-        return load_layout_from_zip(
-            file_path,
-            include_files,
-            additional_interfaces
-        )
+        return load_layout_from_zip(file_path, include_files, additional_interfaces)

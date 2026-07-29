@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from scivianna.utils.polygonize_tools import PolygonCoords
 
 

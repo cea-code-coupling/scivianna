@@ -4,9 +4,9 @@ import numpy as np
 
 from scivianna.data.data2d import Data2D
 
+
 def get_grids(
-    data: Data2D,
-    display_edges: bool
+    data: Data2D, display_edges: bool
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Provides 2D grids and color 3D grid from a Data2D, darkens the edges if requested
 
@@ -28,7 +28,7 @@ def get_grids(
 
     value_map = dict(zip(data.cell_ids, data.cell_values))
     color_map = dict(zip(data.cell_ids, data.cell_colors))
-    
+
     value_array = np.array([value_map[val] for val in vals])
     color_array = np.array([color_map[val] for val in vals])
 
@@ -48,11 +48,14 @@ def get_grids(
         contour_2_0 = roll_2_0.reshape(grid.T.shape).T
         contour_2_1 = roll_2_1.reshape(grid.T.shape).T
 
-        borders = np.expand_dims(np.minimum(
+        borders = np.expand_dims(
+            np.minimum(
                 np.minimum(contour_1_0, contour_2_0),
                 np.minimum(contour_1_1, contour_2_1),
-            ).flatten(), axis=-1)
-        
+            ).flatten(),
+            axis=-1,
+        )
+
         borders = np.concatenate([borders, borders, borders, borders], axis=1)
 
         color_edge_map = dict(zip(data.cell_ids, data.cell_edge_colors))
@@ -65,10 +68,9 @@ def get_grids(
         colors = colors.reshape((*grid.shape, 4))
 
     val_grid = value_array[inv].reshape(grid.shape)
-    
+
     img = np.empty(grid.shape, dtype=np.uint32)
     view = img.view(dtype=np.uint8).reshape(colors.shape)
     view[:, :, :] = colors[:, :, :]
-    
+
     return img, view, grid, val_grid
-    

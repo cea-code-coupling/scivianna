@@ -4,17 +4,18 @@ The FileLoader extension allows browsing and loading files on the server.
 It provides file browsers for each file input type defined by the interface.
 """
 
-import pytest
 import panel as pn
+import pytest
 
 import scivianna.utils
+
 # Enable testing mode so button callbacks call async_update_data directly
 scivianna.utils._testing = True
 
-from scivianna.extension.file_loader import FileLoader
-from scivianna.constants import GEOMETRY
-
 from test_interface import make_panel_2d, panel_fixture
+
+from scivianna.constants import GEOMETRY
+from scivianna.extension.file_loader import FileLoader
 
 
 class TestFileLoaderInitialization:

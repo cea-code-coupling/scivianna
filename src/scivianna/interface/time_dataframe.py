@@ -1,18 +1,20 @@
 import os
-from pathlib import Path
 import pickle
-import numpy as np
-import pandas as pd
+from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
+import numpy as np
+import pandas as pd
+
 from scivianna.enums import UpdatePolicy
-from scivianna.interface.generic_interface import Value1DAtLocation, CouplingInterface
+from scivianna.interface.generic_interface import CouplingInterface, Value1DAtLocation
 
 
 class TimeDataFrame(Value1DAtLocation, CouplingInterface):
-    def __init__(self, ):
-        """Interface hosting a dataframe that is filled along a coupling
-        """
+    def __init__(
+        self,
+    ):
+        """Interface hosting a dataframe that is filled along a coupling"""
         self.df = pd.DataFrame()
         self.time = -1
         self.update_policy = UpdatePolicy.APPEND_DATA
@@ -65,16 +67,14 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
                     "Time"
                 )
             else:
-                return pd.Series([]).rename(
-                    "Time"
-                )
+                return pd.Series([]).rename("Time")
 
         if field in self.df.columns:
             return self.df[field]
 
         raise ValueError(f"Field {field} not found, dataframe contains {self.df.columns.tolist()}")
 
-    def set_time(self, time:float):
+    def set_time(self, time: float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.
 
         Parameters
@@ -85,12 +85,12 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         self.time = time
 
         if not time in self.df.index:
-            self.df = pd.concat([
-                self.df,
-                pd.DataFrame({
-                    col:[np.nan] for col in self.df.columns
-                }, index = [self.time])
-            ])
+            self.df = pd.concat(
+                [
+                    self.df,
+                    pd.DataFrame({col: [np.nan] for col in self.df.columns}, index=[self.time]),
+                ]
+            )
 
     def append_data(self, key: str, data: Any):
         """Stores the data and associates it to the current time.
@@ -103,7 +103,7 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
             New value
         """
         if not key in self.df.columns:
-            self.df.loc[:,key] = pd.Series([np.nan]*len(self.df), index=self.df.index)
+            self.df.loc[:, key] = pd.Series([np.nan] * len(self.df), index=self.df.index)
 
         self.df.loc[self.time, key] = data
 
@@ -211,4 +211,3 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
             data = pickle.load(f)
 
             self.df, self.time = data
-

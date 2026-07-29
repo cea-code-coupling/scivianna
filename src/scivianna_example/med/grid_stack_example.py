@@ -1,16 +1,15 @@
 from typing import Dict
-from scivianna.constants import X, Y, Z
-from scivianna.enums import UpdateEvent
-from scivianna.layout.gridstack import GridStackLayout
-from scivianna.panel.visualisation_panel import VisualizationPanel
-from scivianna.notebook_tools import (
-    get_med_panel
-)
 
 import panel as pn
 
+from scivianna.constants import X, Y, Z
+from scivianna.enums import UpdateEvent
+from scivianna.layout.gridstack import GridStackLayout
+from scivianna.notebook_tools import get_med_panel
+from scivianna.panel.visualisation_panel import VisualizationPanel
 
-def get_panel(_, return_slaves = False):
+
+def get_panel(_, return_slaves=False):
     visualisation_panels: Dict[str, VisualizationPanel] = {}
 
     med_1 = get_med_panel(geo=None, title="MEDCoupling visualizer XY")
@@ -45,10 +44,13 @@ def get_panel(_, return_slaves = False):
     }
 
     if return_slaves:
-        return GridStackLayout(visualisation_panels, bounds_y, bounds_x), [med_1.get_slave(), med_2.get_slave(), med_3.get_slave()]
-    else:   
+        return GridStackLayout(visualisation_panels, bounds_y, bounds_x), [
+            med_1.get_slave(),
+            med_2.get_slave(),
+            med_3.get_slave(),
+        ]
+    else:
         return GridStackLayout(visualisation_panels, bounds_y, bounds_x)
-
 
 
 def get_template():

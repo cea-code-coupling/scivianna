@@ -1,4 +1,5 @@
-from typing import Any, Dict, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Tuple, Union
+
 import panel as pn
 
 from scivianna.data.data2d import Data2D
@@ -10,8 +11,8 @@ if TYPE_CHECKING:
 
 
 class Extension:
-    """ Definition of a generic scivianna extension. An extension provides a range of tools to customize and interract with the plotting panel and slave.
-    """
+    """Definition of a generic scivianna extension. An extension provides a range of tools to customize and interract with the plotting panel and slave."""
+
     title: str
     """Extension title, displayed on top of the extension side bar"""
     description: str = ""
@@ -27,7 +28,6 @@ class Extension:
     iconsize: str = "1em"
     _restoring: bool = False
     """Flag to prevent feedback triggers during from_json restoration"""
-
 
     def __init__(
         self,
@@ -167,13 +167,10 @@ class Extension:
     def on_coupling_update(
         self,
     ):
-        """Function called at the end of a coupling time step
-        """
+        """Function called at the end of a coupling time step"""
         pass
 
-    def on_scale_change(
-        self, axis_name: str, value: str
-    ):
+    def on_scale_change(self, axis_name: str, value: str):
         """Function called when the scale is changed
 
         Parameters
@@ -185,9 +182,7 @@ class Extension:
         """
         pass
 
-    def on_key_pressed(
-        self, key: str
-    ):
+    def on_key_pressed(self, key: str):
         """Function called when a keyboard key is pressent and the mouse is hovering the panel
 
         Parameters
@@ -197,7 +192,9 @@ class Extension:
         """
         pass
 
-    def provide_options(self,) -> Dict[str, Any]:
+    def provide_options(
+        self,
+    ) -> Dict[str, Any]:
         """Provide a set of options to give to the slave for its update
 
         Returns
@@ -207,7 +204,9 @@ class Extension:
         """
         return {}
 
-    def make_gui(self,) -> pn.viewable.Viewable:
+    def make_gui(
+        self,
+    ) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
         Returns

@@ -1,11 +1,8 @@
 import pytest
+
 from scivianna.constants import X, Y, Z
 from scivianna.enums import UpdateEvent
-from scivianna.layout.split import (
-    SplitItem,
-    SplitDirection,
-    SplitLayout,
-)
+from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
 from scivianna.notebook_tools import get_med_panel
 
 

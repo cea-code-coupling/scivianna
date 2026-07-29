@@ -1,18 +1,18 @@
 from typing import IO, Any, Dict, List, Tuple, Union
-from scivianna.data.data2d import Data2D
-from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.plotter_2d.grid.grid_tools import get_grids
 
 import matplotlib
 import matplotlib.axes
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib import colors as plt_colors
-from scivianna.utils.color_tools import beautiful_color_maps
-
 import numpy as np
 import panel as pn
+from matplotlib import cm
+from matplotlib import colors as plt_colors
+from matplotlib.colors import LinearSegmentedColormap
+
+from scivianna.data.data2d import Data2D
+from scivianna.plotter_2d.generic_plotter import Plotter2D
+from scivianna.plotter_2d.grid.grid_tools import get_grids
+from scivianna.utils.color_tools import beautiful_color_maps
 
 
 class Matplotlib2DGridPlotter(Plotter2D):
@@ -108,18 +108,19 @@ class Matplotlib2DGridPlotter(Plotter2D):
         img, view, grid, val_grid = get_grids(data, self.display_edges)
 
         axes.pcolormesh(x_values, y_values, view)
-        
+
         if self.display_colorbar:
             plt.colorbar(
                 cm.ScalarMappable(
-                    norm=plt_colors.Normalize(
-                        self.colorbar_range[0], self.colorbar_range[1]
+                    norm=plt_colors.Normalize(self.colorbar_range[0], self.colorbar_range[1]),
+                    cmap=LinearSegmentedColormap.from_list(
+                        self.colormap_name,
+                        (np.array(beautiful_color_maps[self.colormap_name]) / 255).tolist(),
+                        N=len(beautiful_color_maps[self.colormap_name]),
                     ),
-                    cmap=LinearSegmentedColormap.from_list(self.colormap_name, (np.array(beautiful_color_maps[self.colormap_name])/255).tolist(), N=len(beautiful_color_maps[self.colormap_name])),
                 ),
                 ax=axes,
             )
-
 
     def update_2d_frame(
         self,
@@ -136,7 +137,10 @@ class Matplotlib2DGridPlotter(Plotter2D):
             data,
         )
 
-    def update_colors(self, data: Data2D,):
+    def update_colors(
+        self,
+        data: Data2D,
+    ):
         """Updates the colors of the displayed polygons
 
         Parameters
@@ -201,10 +205,10 @@ class Matplotlib2DGridPlotter(Plotter2D):
         self.figure.savefig(file_name, dpi=1500)
 
     def set_axes(
-        self, 
-        u: Tuple[float, float, float], 
-        v: Tuple[float, float, float], 
-        origin: Tuple[float, float, float]
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
     ):
         """Stores the u v axes of the current plot
 

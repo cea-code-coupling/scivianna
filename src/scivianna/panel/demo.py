@@ -1,14 +1,16 @@
 from pathlib import Path
 from typing import Dict, Union
-import panel_material_ui as pmui
-from panel.reactive import ReactiveHTML
-from panel.custom import Child
-import param
+
 import panel as pn
+import panel_material_ui as pmui
+import param
+from panel.custom import Child
+from panel.reactive import ReactiveHTML
 
 import scivianna
 from scivianna.layout.generic_layout import GenericLayout
 from scivianna.panel.visualisation_panel import VisualizationPanel
+
 
 class DemoOverlay(ReactiveHTML):
     """This component allow displaying a menu in front of a background."""
@@ -23,7 +25,7 @@ class DemoOverlay(ReactiveHTML):
     distance_from_bottom: param.String = param.String("10px")
     """Distance between the menu and the bottom of the background"""
 
-    _template ="""
+    _template = """
         
                     <div id="app-container" style="position: relative; width: 100%; height: 100%;">
                         <div id="app" style="width: 100%; height: 100%;">
@@ -49,9 +51,8 @@ class Demonstrator:
     main_frame: DemoOverlay
     """Object to display"""
 
-    def __init__(self, 
-        guis: Dict[str, Union[VisualizationPanel, GenericLayout]], 
-        icons:Dict[str, str]
+    def __init__(
+        self, guis: Dict[str, Union[VisualizationPanel, GenericLayout]], icons: Dict[str, str]
     ):
         """Constructor of a scivianna app demonstrator.
 
@@ -72,37 +73,34 @@ class Demonstrator:
                 icons[key] = None
 
         self.menu = pmui.SpeedDial(
-            direction = "left",
+            direction="left",
             items=[
                 {
                     "label": key,
                     "icon": icons[key],
                 }
                 for key in guis
-            ], 
-            label='Examples', 
+            ],
+            label="Examples",
             icon=(Path(scivianna.__file__).parent / "icon" / "apps.svg").read_text().strip(),
         )
 
         self.menu.param.watch(self.switch_app, "value")
 
-        self.apps = pmui.Row(*[g for g in guis.values()], sizing_mode = "stretch_both")
+        self.apps = pmui.Row(*[g for g in guis.values()], sizing_mode="stretch_both")
 
         self.main_frame = DemoOverlay(
-            app = self.apps,
-            menu = self.menu, 
-            sizing_mode="stretch_both",
-            margin=0
+            app=self.apps, menu=self.menu, sizing_mode="stretch_both", margin=0
         )
 
     @pn.io.hold()
     def switch_app(self, *args, **kwargs):
-        """Function triggered to edit GUIs visibility based on the menu value
-        """
+        """Function triggered to edit GUIs visibility based on the menu value"""
         for gui in self.guis:
             self.guis[gui].visible = gui == self.menu.value["label"]
 
-    def __panel__(self,):
-        """Returns the displayed object if doing demonstrator.show/serve
-        """
+    def __panel__(
+        self,
+    ):
+        """Returns the displayed object if doing demonstrator.show/serve"""
         return self.main_frame

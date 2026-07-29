@@ -1,16 +1,21 @@
 
 import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 from scivianna.constants import X, Y
-from scivianna.slave import ComputeSlave
 from scivianna.plotter_2d.api import plot_frame_in_axes
+from scivianna.slave import ComputeSlave
 
 try:
-    from scivianna.utils.structured_mesh import CarthesianStructuredMesh, CylindricalStructuredMesh, SphericalStructuredMesh
     from scivianna.interface.structured_mesh_interface import StructuredMeshInterface
+    from scivianna.utils.structured_mesh import (
+        CarthesianStructuredMesh,
+        CylindricalStructuredMesh,
+        SphericalStructuredMesh,
+    )
     
     class CarthesianInterface(StructuredMeshInterface):
         def read_file(self, file_path: str, file_label: str):

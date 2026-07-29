@@ -1,9 +1,10 @@
 """Tests for scivianna.interface.time_dataframe module."""
 
-import pytest
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch
+import pytest
 
 
 @pytest.mark.default

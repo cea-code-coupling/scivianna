@@ -11,8 +11,8 @@ Warning
 from multiprocessing.managers import BaseManager
 from typing import Type
 
-from icoco.utils import ICoCoMethods
 from icoco.problem import Problem
+from icoco.utils import ICoCoMethods
 
 
 class ServerManager(BaseManager):
@@ -79,6 +79,7 @@ def _method(self, method_name, *args, **kwargs):
         return getattr(self._problem, method_name)(*args, **kwargs)
     except Exception as error:
         import traceback
+
         tb_str = traceback.format_exc()
 
         # Construct a detailed error message
@@ -121,13 +122,16 @@ def redirect_icoco_to_server(cls):
     --------
     _method : The helper function that performs the actual method redirection.
     """
+
     def create_icoco_method(method_name):
         return lambda self, *args, **kwargs: _method(self, method_name, *args, **kwargs)
+
     for name in ICoCoMethods.ALL:
         setattr(cls, name, create_icoco_method(name))
     if not hasattr(cls, "__abstractmethods__"):
         raise AttributeError(
-            "Class is expected to have '__abstractmethods__' attribute.")  # pragma: no cover
+            "Class is expected to have '__abstractmethods__' attribute."
+        )  # pragma: no cover
     cls.__abstractmethods__ = frozenset()
     return cls
 

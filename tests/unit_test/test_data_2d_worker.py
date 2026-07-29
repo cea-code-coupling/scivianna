@@ -1,8 +1,8 @@
 
-import pytest
-import numpy as np
-
 from typing import TYPE_CHECKING
+
+import numpy as np
+import pytest
 
 if TYPE_CHECKING:
     from scivianna.agent.data_2d_worker import Data2DWorker

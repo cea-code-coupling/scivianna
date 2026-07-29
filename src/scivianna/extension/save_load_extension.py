@@ -17,9 +17,7 @@ if TYPE_CHECKING:
 
 
 class SaveLoadExtension(Extension):
-    def __init__(
-        self, slave: ComputeSlave, plotter: Plotter2D, panel: "VisualizationPanel"
-    ):
+    def __init__(self, slave: ComputeSlave, plotter: Plotter2D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
 
         Parameters
@@ -47,33 +45,35 @@ Else, only the view is saved.
             if os.path.isfile(str(path)):
                 self.folder_path = Path(path).parent
 
-        self.include_file_box = pmui.Checkbox(
-            label="Include files ", value=False, width=280
-        )
+        self.include_file_box = pmui.Checkbox(label="Include files ", value=False, width=280)
         self.save_path = pmui.TextInput(
             label="Absolute file path",
             value=str(self.folder_path / "save_file.pkl"),
             width=280,
         )
-        self.save_button = pmui.Button(label="Save", width=280, icon=(Path(scivianna.__file__).parent / "icon" / "save_alt.svg").read_text().strip())
+        self.save_button = pmui.Button(
+            label="Save",
+            width=280,
+            icon=(Path(scivianna.__file__).parent / "icon" / "save_alt.svg").read_text().strip(),
+        )
         self.save_button.on_click(self.save_file)
 
         self.load_path = ServerFileBrowser(folder_path=self.folder_path, width=280)
-        self.load_button = pmui.Button(label="Load", width=280, icon=(Path(scivianna.__file__).parent / "icon" / "file_upload.svg").read_text().strip())
+        self.load_button = pmui.Button(
+            label="Load",
+            width=280,
+            icon=(Path(scivianna.__file__).parent / "icon" / "file_upload.svg").read_text().strip(),
+        )
         self.load_button.on_click(self.load_file)
 
     def save_file(self, *args, **kwargs):
-        """Save frame in file
-        """
+        """Save frame in file"""
         self.slave.save(self.save_path.value, self.include_file_box.value)
 
     def load_file(self, *args, **kwargs):
-        """Load frame from file
-        """
+        """Load frame from file"""
         if not os.path.isfile(self.load_path.selected_file):
-            pn.state.notifications.error(
-                f"File {self.load_path.selected_file} does not exits."
-            )
+            pn.state.notifications.error(f"File {self.load_path.selected_file} does not exits.")
             return
         self.slave.load(self.load_path.selected_file, self.include_file_box.value)
         self.panel.trigger_on_file_load(self.load_path.selected_file, None)
@@ -97,5 +97,5 @@ Else, only the view is saved.
             pmui.Typography("Load from file"),
             self.load_path,
             self.load_button,
-            width=280
+            width=280,
         )

@@ -1,22 +1,21 @@
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple, Type, Union
+
 import panel as pn
 import panel_material_ui as pmui
 
 import scivianna
 from scivianna.component.overlay_component import Overlay
 from scivianna.data.data_container import DataContainer
-from scivianna.extension.extension import Extension
-
-from scivianna.interface.generic_interface import Geometry2D
-
 from scivianna.enums import UpdateEvent
-from scivianna.slave import ComputeSlave
-
+from scivianna.extension.extension import Extension
+from scivianna.interface.generic_interface import Geometry2D
 from scivianna.panel.gui import GUI
 from scivianna.plotter_2d.generic_plotter import Plotter2D
+from scivianna.slave import ComputeSlave
 
 pn.config.inline = True
+
 
 class VisualizationPanel(pn.viewable.Viewer):
     """Visualisation panel associated to a code."""
@@ -50,11 +49,11 @@ class VisualizationPanel(pn.viewable.Viewer):
     """
 
     def __init__(
-            self,
-            slave: ComputeSlave,
-            name="",
-            extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
-        ):
+        self,
+        slave: ComputeSlave,
+        name="",
+        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
+    ):
         """Visualization panel constructor
 
         Parameters
@@ -110,7 +109,9 @@ class VisualizationPanel(pn.viewable.Viewer):
         # Add interface extensions
         for extension in code_interface.extensions:
             if not issubclass(extension, Extension):
-                raise TypeError(f"Extension {extension} declared in {code_interface.extensions} extensions is not a subclass of {Extension}")
+                raise TypeError(
+                    f"Extension {extension} declared in {code_interface.extensions} extensions is not a subclass of {Extension}"
+                )
             if not extension in self.extension_classes:
                 self.extension_classes.append(extension)
 
@@ -125,25 +126,28 @@ class VisualizationPanel(pn.viewable.Viewer):
                 e.from_json(ext, extension_states[e.__name__])
             self.extensions.append(ext)
 
-        self.gui = GUI(
-            self.extensions
-        )
+        self.gui = GUI(self.extensions)
         self.gui_panel = self.gui.make_panel()
 
-        self.button = pmui.IconButton(icon=(Path(scivianna.__file__).parent / "icon" / "settings_applications.svg").read_text().strip(), icon_size = "1em", margin=0)
-        self.title_typo = pmui.Typography("**"+self.panel_name+"**", margin=0)
+        self.button = pmui.IconButton(
+            icon=(Path(scivianna.__file__).parent / "icon" / "settings_applications.svg")
+            .read_text()
+            .strip(),
+            icon_size="1em",
+            margin=0,
+        )
+        self.title_typo = pmui.Typography("**" + self.panel_name + "**", margin=0)
 
         self.figure = Overlay(
-            figure = self.plotter.make_panel(),
-            button = self.button,
-            title = self.title_typo,
+            figure=self.plotter.make_panel(),
+            button=self.button,
+            title=self.title_typo,
             sizing_mode="stretch_both",
-            styles={"border": "2px solid lightgray"}
+            styles={"border": "2px solid lightgray"},
         )
         self.figure.hide_buttons()
 
         pn.io.push_notebook(self.figure)
-
 
         self.periodic_recompute_added = False
         """Coupling periodic update"""
@@ -153,9 +157,9 @@ class VisualizationPanel(pn.viewable.Viewer):
         for extension in self.extensions:
             self.provide_on_clic_callback(extension.on_mouse_clic)
             self.provide_on_mouse_move_callback(extension.on_mouse_move)
-            
+
         self.figure.param.watch(self.key_pressed, "key")
-        
+
     def key_pressed(self, *events):
         """Callback function triggered when a key is pressed in the overlay component.
         It updates the `key` parameter of the panel with the last key pressed.
@@ -169,11 +173,10 @@ class VisualizationPanel(pn.viewable.Viewer):
         if self.figure.key:
             if self.figure.key == "i":
                 print(f"Current mouse location : {self.plotter.get_mouse_location()}")
-                
+
             for extension in self.extensions:
                 extension.on_key_pressed(self.figure.key)
             self.figure.key = ""  # Reset the key after processing
-
 
     def duplicate(self, keep_name: bool = False) -> "VisualizationPanel":
         """Get a copy of the panel. A panel of the same type is generated, the current display too, but a new slave process is created.
@@ -202,17 +205,13 @@ class VisualizationPanel(pn.viewable.Viewer):
         """
         return self.slave
 
-
     #
     # #
     # #     API to provide in the panels
     # #
     #
-    def recompute(
-        self, *args, **kwargs
-    ):
-        """Recomputes the figure based on the new bounds and parameters.
-        """
+    def recompute(self, *args, **kwargs):
+        """Recomputes the figure based on the new bounds and parameters."""
         raise NotImplementedError()
 
     def provide_on_mouse_move_callback(self, callback: Callable):
@@ -304,7 +303,9 @@ class VisualizationPanel(pn.viewable.Viewer):
         else:
             self.figure.styles = {"border": f"2px solid {color}"}
 
-    def __panel__(self,):
+    def __panel__(
+        self,
+    ):
         return pn.Row(self.gui_panel, self.figure, margin=0, sizing_mode="stretch_both")
 
     def rename(self, name: str):
@@ -327,9 +328,7 @@ class VisualizationPanel(pn.viewable.Viewer):
             Name different from current name
         """
         if self.panel_name.endswith(f" - {self.copy_index}"):
-            new_name = self.panel_name.replace(
-                f" - {self.copy_index}", f" - {self.copy_index + 1}"
-            )
+            new_name = self.panel_name.replace(f" - {self.copy_index}", f" - {self.copy_index + 1}")
         else:
             new_name = f"{self.panel_name} - {self.copy_index + 1}"
 

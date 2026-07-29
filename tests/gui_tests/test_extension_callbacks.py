@@ -6,14 +6,13 @@ that the Extension base class methods are called correctly by the Panel2D system
 
 import numpy as np
 import pytest
-
-from scivianna.extension.extension import Extension
-from scivianna.data.data2d import Data2D
-from scivianna.constants import MESH, X, Y
-
-from test_interface import make_panel_2d, DummyTestExtension, panel_fixture
+from test_interface import DummyTestExtension, make_panel_2d, panel_fixture
 
 import scivianna.utils
+from scivianna.constants import MESH, X, Y
+from scivianna.data.data2d import Data2D
+from scivianna.extension.extension import Extension
+
 scivianna.utils._testing = True
 
 
@@ -233,7 +232,7 @@ class TestExtensionTrackingMechanism:
 
     def test_tracking_dataclass_fields(self):
         """Test that tracking dataclasses have correct fields."""
-        from test_interface import FieldChangeEvent, RangeChangeEvent, FrameChangeEvent
+        from test_interface import FieldChangeEvent, FrameChangeEvent, RangeChangeEvent
 
         # Test FieldChangeEvent
         event = FieldChangeEvent(field_name="TEST")

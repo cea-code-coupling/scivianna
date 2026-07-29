@@ -1,31 +1,28 @@
 import atexit
-import panel as pn
-from pathlib import Path
+import multiprocessing as mp
 import os
 import queue
-import multiprocessing as mp
-import dill
 import traceback
+from pathlib import Path
 from threading import Lock
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Type, Union
 
+import dill
 import pandas as pd
-from typing import Any, List, Dict, Tuple, Type, Union
+import panel as pn
 
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
-
+from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.interface.generic_interface import (
+    CouplingInterface,
+    DataFrameInterface,
     GenericInterface,
     Geometry2D,
-    CouplingInterface,
     Geometry3D,
-    ValueAtLocation,
     Value1DAtLocation,
-    DataFrameInterface
+    ValueAtLocation,
 )
-from scivianna.enums import GeometryType, VisualizationMode
-
-from typing import TYPE_CHECKING
 
 #   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
 if TYPE_CHECKING:
@@ -262,7 +259,6 @@ def worker(
                 )
                 q_returns.put(set_return)
 
-
             #   ValueAtLocation functions
             elif task == SlaveCommand.GET_VALUE:
                 if not isinstance(interface, ValueAtLocation):
@@ -421,7 +417,6 @@ def worker(
 class ComputeSlave:
     """Class that creates a subprocess to interface with the code."""
 
-
     def __init__(self, code_interface: Type[GenericInterface], allow_errors: bool = False):
         """ComputeSlave constructor
 
@@ -466,8 +461,7 @@ class ComputeSlave:
         self.q_returns = mp.Queue()
         self.q_errors = mp.Queue()
         self.p = mp.Process(
-            target=worker,
-            args=(self.q_tasks, self.q_returns, self.q_errors, self.code_interface)
+            target=worker, args=(self.q_tasks, self.q_returns, self.q_errors, self.code_interface)
         )
         self.p.start()
         self.running = True
@@ -501,7 +495,9 @@ class ComputeSlave:
 
         if len(unpicklables) > 0:
             self.running = False
-            raise TypeError(f"Found unpicklable item to send to the interface : {unpicklables[0]}.\nPlease redefine the {self.code_interface.__name__} serialize function to handle this error.")
+            raise TypeError(
+                f"Found unpicklable item to send to the interface : {unpicklables[0]}.\nPlease redefine the {self.code_interface.__name__} serialize function to handle this error."
+            )
 
         self.file_read.append((file_path, file_label))
 
@@ -573,9 +569,7 @@ class ComputeSlave:
         coloring_label: str,
         options: Dict[str, Any],
         caller: str = "API",
-    ) -> Tuple[
-        Data2D, bool
-    ]:
+    ) -> Tuple[Data2D, bool]:
         """Get the geometry from the interface
 
         Parameters
@@ -622,7 +616,11 @@ class ComputeSlave:
         )
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -642,10 +640,13 @@ class ComputeSlave:
         Dict[Union[int,str], str]
             Field value for each requested cell names
         """
-        return self.__get_function([SlaveCommand.GET_VALUE_DICT, [value_label, cells, options, caller]])
+        return self.__get_function(
+            [SlaveCommand.GET_VALUE_DICT, [value_label, cells, options, caller]]
+        )
 
-
-    def get_geometry_type(self,) -> GeometryType:
+    def get_geometry_type(
+        self,
+    ) -> GeometryType:
         """Returns the interface geometry type
 
         Returns
@@ -656,11 +657,7 @@ class ComputeSlave:
         return self.__get_function([SlaveCommand.GET_GEOMETRY_TYPE, []])
 
     #   Geometry3D functions
-    def compute_3D_data(
-        self,
-        coloring_label: str,
-        options: Dict[str, Any]
-    ) -> Tuple[Data3D, bool]:
+    def compute_3D_data(self, coloring_label: str, options: Dict[str, Any]) -> Tuple[Data3D, bool]:
         """Returns a list of polygons that defines the geometry in a given frame
 
         Parameters
@@ -686,7 +683,11 @@ class ComputeSlave:
         )
 
     def get_3d_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -1032,13 +1033,14 @@ class ComputeSlave:
         elif not self.q_returns.empty():
             return self.q_returns.get()
         else:
-            warning_msg = "Worker process terminated unexpectedly without returning a result or error"
+            warning_msg = (
+                "Worker process terminated unexpectedly without returning a result or error"
+            )
             if self.allow_errors:
                 pn.state.notifications.warning(warning_msg)
             else:
                 raise RuntimeError(warning_msg)
             return None
-
 
     def call_custom_function(self, function_name: str, arguments: Dict[str, Any]):
         """Call an custom function meant to ease extension developments

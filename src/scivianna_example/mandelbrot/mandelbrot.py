@@ -1,34 +1,30 @@
+import multiprocessing as mp
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
-import multiprocessing as mp
+
 import numpy as np
 import panel as pn
 import panel_material_ui as pmui
 
+from scivianna.constants import MATERIAL, MESH
+from scivianna.data.data2d import Data2D
+from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.interface.generic_interface import Geometry2DGrid
-from scivianna.constants import MATERIAL, MESH
+from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
 from scivianna.panel.panel_2d import Panel2D
+from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.slave import ComputeSlave
-from scivianna.panel.visualisation_panel import VisualizationPanel
-from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
-from scivianna.data.data2d import Data2D
-from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
-
 
 with open(Path(__file__).parent / "mandelbrot.svg", "r") as f:
     icon_svg = f.read()
 
+
 class MandelbrotExtension(Extension):
     """Extension to load files and send them to the slave."""
 
-    def __init__(
-        self,
-        slave: "ComputeSlave",
-        plotter: "Plotter2D",
-        panel: "VisualizationPanel"
-    ):
+    def __init__(self, slave: "ComputeSlave", plotter: "Plotter2D", panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
 
         Parameters
@@ -55,24 +51,14 @@ This extension allows defining the medcoupling field display parameters.
         self.iconsize = "1.0em"
 
         self.u_step_input = pmui.IntInput(
-            label = "u_steps",
-            value=500,
-            description="Horizontal resolution.",
-            width=280
+            label="u_steps", value=500, description="Horizontal resolution.", width=280
         )
         self.v_step_input = pmui.IntInput(
-            label = "v_steps",
-            value=500,
-            description="Vertical resolution.",
-            width=280
+            label="v_steps", value=500, description="Vertical resolution.", width=280
         )
         self.max_iter_input = pmui.IntInput(
-            label = "Max iter",
-            value=10,
-            description="Maximum mandelbrot iterations.",
-            width=280
+            label="Max iter", value=10, description="Maximum mandelbrot iterations.", width=280
         )
-        
 
         self.u_step_input.param.watch(self._on_u_steps_change, "value")
         self.v_step_input.param.watch(self._on_v_steps_change, "value")
@@ -98,12 +84,14 @@ This extension allows defining the medcoupling field display parameters.
 
     def provide_options(self):
         return {
-            "u_steps":self.u_step_input.value,
-            "v_steps":self.v_step_input.value,
-            "Max iter":self.max_iter_input.value,
+            "u_steps": self.u_step_input.value,
+            "v_steps": self.v_step_input.value,
+            "Max iter": self.max_iter_input.value,
         }
-    
-    def make_gui(self,) -> pn.viewable.Viewable:
+
+    def make_gui(
+        self,
+    ) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
         Returns
@@ -111,12 +99,7 @@ This extension allows defining the medcoupling field display parameters.
         pn.viewable.Viewable
             Viewable to display in the extension tab
         """
-        return pmui.Column(
-            self.u_step_input,
-            self.v_step_input,
-            self.max_iter_input,
-            margin=0
-        )
+        return pmui.Column(self.u_step_input, self.v_step_input, self.max_iter_input, margin=0)
 
     def to_json(self) -> dict:
         """Returns a dictionary with the information required to rebuild the extension.
@@ -164,10 +147,10 @@ This extension allows defining the medcoupling field display parameters.
         return extension
 
 
-
 class MandelBrotInterface(Geometry2DGrid):
     geometry_type: GeometryType = GeometryType._2D
     extensions = [MandelbrotExtension]
+
     def __init__(
         self,
     ):
@@ -240,10 +223,22 @@ class MandelBrotInterface(Geometry2DGrid):
         u_max = center_u + size_u / 2
         v_max = center_v + size_v / 2
 
-        last_frame_key = (*u, *v, u_min, u_max, v_min, v_max, options.get("u_steps", 50), options.get("v_steps", 50), options.get("Max iter", 10))
-        if (caller in self.last_computed_frame) and (
-            self.last_computed_frame[caller] == last_frame_key
-        ) and (caller in self.data):
+        last_frame_key = (
+            *u,
+            *v,
+            u_min,
+            u_max,
+            v_min,
+            v_max,
+            options.get("u_steps", 50),
+            options.get("v_steps", 50),
+            options.get("Max iter", 10),
+        )
+        if (
+            (caller in self.last_computed_frame)
+            and (self.last_computed_frame[caller] == last_frame_key)
+            and (caller in self.data)
+        ):
             print("Skipping polygon computation.")
             return self.data[caller], False
 
@@ -276,13 +271,19 @@ class MandelBrotInterface(Geometry2DGrid):
         )
 
         self.data[caller] = Data2D.from_grid(
-            np.array(grid).reshape((options["v_steps"], options["u_steps"]), order="F"), xvalues, yvalues
+            np.array(grid).reshape((options["v_steps"], options["u_steps"]), order="F"),
+            xvalues,
+            yvalues,
         )
 
         return self.data[caller], True
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
     ) -> Dict[Union[int, str], str]:
         """Returns a cell name - field value map for a given field name
 
@@ -355,7 +356,9 @@ class MandelBrotInterface(Geometry2DGrid):
         return []
 
 
-def make_panel(_, return_slaves=False) -> Union[SplitLayout, Tuple[SplitLayout, List[ComputeSlave]]]:
+def make_panel(
+    _, return_slaves=False
+) -> Union[SplitLayout, Tuple[SplitLayout, List[ComputeSlave]]]:
     slave = ComputeSlave(MandelBrotInterface)
     panel = Panel2D(slave, name="Mandelbrot polygons")
     panel.update_event = UpdateEvent.RANGE_CHANGE

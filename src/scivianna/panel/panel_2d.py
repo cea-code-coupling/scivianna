@@ -1,30 +1,27 @@
+import os
 from logging import warning
 from typing import Callable, Dict, List, Tuple, Type, Union
+
 import numpy as np
 import panel as pn
 import param
-import os
 
+import scivianna.utils
+from scivianna.constants import DEFAULT_ORIGIN, DEFAULT_SIZE, MESH, X, Y, Z
+from scivianna.data.data2d import Data2D
+from scivianna.enums import UpdateEvent, VisualizationMode
+from scivianna.extension.ai_assistant import AIAssistant
+from scivianna.extension.axes import Axes
 from scivianna.extension.extension import Extension
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
-from scivianna.extension.axes import Axes
-from scivianna.panel.visualisation_panel import VisualizationPanel
-
-from scivianna.extension.ai_assistant import AIAssistant
-
-from scivianna.data.data2d import Data2D
 from scivianna.interface.generic_interface import Geometry2D
-
-from scivianna.enums import UpdateEvent, VisualizationMode
-from scivianna.slave import ComputeSlave
-
-from scivianna.utils.polygon_sorter import PolygonSorter
-from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
-from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
+from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.constants import MESH, X, Y, Z, DEFAULT_ORIGIN, DEFAULT_SIZE
-import scivianna.utils
+from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
+from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
+from scivianna.slave import ComputeSlave
+from scivianna.utils.polygon_sorter import PolygonSorter
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 if profile_time:
@@ -132,7 +129,7 @@ class Panel2D(VisualizationPanel):
         # Store coordinates in new style: origin, size_u, size_v
         # origin must be provided as a physical 3D position
         self.origin = origin if origin is not None else DEFAULT_ORIGIN.copy()
-        
+
         self.size_u = size_u if size_u is not None else DEFAULT_SIZE
         self.size_v = size_v if size_v is not None else DEFAULT_SIZE
 
@@ -143,29 +140,25 @@ class Panel2D(VisualizationPanel):
         for extension in self.extensions:
             extension.on_field_change(displayed_field)
             extension.on_frame_change(u, v)
-            extension.on_range_change(
-                self.origin,
-                self.size_u,
-                self.size_v
-            )
+            extension.on_range_change(self.origin, self.size_u, self.size_v)
 
         self.colormap = colormap
 
         if data is None:
             data_ = self.compute_fn(self.u, self.v, self.origin, self.size_u, self.size_v)
         else:
-            print(f"Panel2D {self.panel_name} initialized initial Data2D object, restoring {len(data.cell_ids)} cells.")
+            print(
+                f"Panel2D {self.panel_name} initialized initial Data2D object, restoring {len(data.cell_ids)} cells."
+            )
             data_ = data
             self.update_polygons = True
-        
+
         self.plotter.set_axes(self.u, self.v, self.origin)
         self.plotter.plot_2d_frame(data_)
 
         self.current_data = data_
 
-        if (
-            slave.get_label_coloring_mode(self.displayed_field) == VisualizationMode.FROM_VALUE
-        ):
+        if slave.get_label_coloring_mode(self.displayed_field) == VisualizationMode.FROM_VALUE:
             self.plotter.update_colorbar(
                 True,
                 (
@@ -241,7 +234,7 @@ class Panel2D(VisualizationPanel):
 
     @pn.io.hold()
     def _apply_update(self):
-        """Apply pending visual updates to the plotter. 
+        """Apply pending visual updates to the plotter.
         Called via add_next_tick_callback to ensure UI thread safety.
         """
         if profile_time:
@@ -255,7 +248,9 @@ class Panel2D(VisualizationPanel):
 
         # Update data visualization if needed
         if self._pending_updates.get("data"):
-            shapes_matching = self.current_data.cell_ids.shape == self._pending_updates["data"].cell_ids.shape
+            shapes_matching = (
+                self.current_data.cell_ids.shape == self._pending_updates["data"].cell_ids.shape
+            )
             self.current_data = self._pending_updates["data"]
             if self.update_polygons or not shapes_matching:
                 self.plotter.update_2d_frame(self.current_data)
@@ -291,7 +286,7 @@ class Panel2D(VisualizationPanel):
         """Perform the actual recompute and schedule visual update."""
         if not self.marked_to_recompute:
             return
-            
+
         if profile_time:
             st = time.time()
 
@@ -312,9 +307,8 @@ class Panel2D(VisualizationPanel):
             self._pending_updates = {"data": data}
 
             if (
-                self.slave.get_label_coloring_mode(
-                    self.displayed_field
-                ) == VisualizationMode.FROM_VALUE
+                self.slave.get_label_coloring_mode(self.displayed_field)
+                == VisualizationMode.FROM_VALUE
             ):
                 self._pending_updates["colorbar"] = {
                     "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
@@ -421,13 +415,13 @@ class Panel2D(VisualizationPanel):
         u_arr = np.array(self.u, dtype=float)
         v_arr = np.array(self.v, dtype=float)
         w_arr = np.cross(u_arr, v_arr)
-        
+
         center_u = (x1 + x0) * 0.5
         center_v = (y0 + y1) * 0.5
-        
-        new_size_u = (x1 - x0)
-        new_size_v = (y1 - y0)
-        
+
+        new_size_u = x1 - x0
+        new_size_v = y1 - y0
+
         # Compute origin from center coordinates
         if self.update_event == UpdateEvent.RANGE_CHANGE or (
             isinstance(self.update_event, list) and UpdateEvent.RANGE_CHANGE in self.update_event
@@ -437,7 +431,7 @@ class Panel2D(VisualizationPanel):
             if new_size_u != self.size_u or new_size_v != self.size_v:
                 self.size_u = new_size_u
                 self.size_v = new_size_v
-                
+
                 for extension in self.extensions:
                     extension.on_range_change(self.origin, self.size_u, self.size_v)
 
@@ -458,9 +452,7 @@ class Panel2D(VisualizationPanel):
 
         return u, v
 
-    def recompute(
-        self, *args, **kwargs
-    ):
+    def recompute(self, *args, **kwargs):
         """Recomputes the figure based on the new bounds and parameters.
         Public method that triggers the recompute pipeline.
         """
@@ -483,7 +475,7 @@ class Panel2D(VisualizationPanel):
             slave=self.slave.duplicate(),
             name=self.panel_name,
             display_polygons=self.display_polygons,
-            extensions=[e for e in self.extension_classes]
+            extensions=[e for e in self.extension_classes],
         )
         new_visualiser.copy_index = self.copy_index
 
@@ -554,7 +546,7 @@ class Panel2D(VisualizationPanel):
         """
         if not np.allclose(position, self.origin):
             self.origin = position
-            
+
             for extension in self.extensions:
                 extension.on_range_change(self.origin, self.size_u, self.size_v)
 
@@ -617,7 +609,9 @@ class Panel2D(VisualizationPanel):
         # Handle origin parameter (tuple of 3 floats representing the slice center)
         if origin is not None:
             if not type(origin) in [tuple, list, np.ndarray]:
-                raise TypeError(f"origin must be a tuple/list/ndarray of 3 floats, found type {type(origin)}")
+                raise TypeError(
+                    f"origin must be a tuple/list/ndarray of 3 floats, found type {type(origin)}"
+                )
             if len(origin) != 3:
                 raise ValueError(f"origin must be of length 3, found {len(origin)}")
             if not np.allclose(origin, self.origin):
@@ -631,7 +625,7 @@ class Panel2D(VisualizationPanel):
             if size_u != self.size_u:
                 self.size_u = size_u
                 update_range = True
-        
+
         if size_v is not None:
             if not type(size_v) in [float, int]:
                 raise TypeError(f"size_v must be a number, found type {type(size_v)}")
@@ -647,7 +641,9 @@ class Panel2D(VisualizationPanel):
             self.plotter.set_axes(self.u, self.v, self.origin)
             self._schedule_recompute()
 
-            if self.update_event == UpdateEvent.AXES_CHANGE or (isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event):
+            if self.update_event == UpdateEvent.AXES_CHANGE or (
+                isinstance(self.update_event, list) and UpdateEvent.AXES_CHANGE in self.update_event
+            ):
                 if self.on_axes_change_callback is not None:
                     self.on_axes_change_callback(
                         u=self.u,
@@ -669,7 +665,9 @@ class Panel2D(VisualizationPanel):
             self.displayed_field = field_name
 
             if field_name not in self.slave.get_labels():
-                warning(f"\n\nRequested field {field_name} : field unavailable, available values : {self.slave.get_labels()}.\n\n")
+                warning(
+                    f"\n\nRequested field {field_name} : field unavailable, available values : {self.slave.get_labels()}.\n\n"
+                )
 
             else:
                 # Reseting indexes to prevent weird edges
@@ -725,11 +723,11 @@ class Panel2D(VisualizationPanel):
 
     @classmethod
     def from_json(
-        cls, 
-        info_dict: Dict, 
+        cls,
+        info_dict: Dict,
         slave: ComputeSlave,
         data: Data2D,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = []
+        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
     ) -> "Panel2D":
         """Restores the visualization panel from its information dict
 
@@ -748,20 +746,20 @@ class Panel2D(VisualizationPanel):
         -------
         Panel2D
             Restored panel
-        """        
+        """
         panel = Panel2D(
-            slave = slave,
-            name = info_dict["name"],
-            display_polygons = info_dict["display_polygons"],
-            extensions = extensions,
-            data = data,
-            displayed_field = info_dict["displayed_field"],
-            colormap = info_dict["colormap"],
-            u = info_dict["u"],
-            v = info_dict["v"],
-            origin = info_dict.get("origin"),
-            size_u = info_dict.get("size_u", 1.0),
-            size_v = info_dict.get("size_v", 1.0),
+            slave=slave,
+            name=info_dict["name"],
+            display_polygons=info_dict["display_polygons"],
+            extensions=extensions,
+            data=data,
+            displayed_field=info_dict["displayed_field"],
+            colormap=info_dict["colormap"],
+            u=info_dict["u"],
+            v=info_dict["v"],
+            origin=info_dict.get("origin"),
+            size_u=info_dict.get("size_u", 1.0),
+            size_v=info_dict.get("size_v", 1.0),
         )
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]

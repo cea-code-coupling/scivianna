@@ -1,6 +1,6 @@
+from typing import List, Tuple
 
 import pandas as pd
-from typing import List, Tuple
 
 
 class Plotter1D:
@@ -11,11 +11,7 @@ class Plotter1D:
     ):
         pass
 
-    def plot(
-        self,
-        name:str,
-        serie: pd.Series
-    ):
+    def plot(self, name: str, serie: pd.Series):
         """Adds a new plot to the figure from a set of polygons
 
         Parameters
@@ -26,12 +22,8 @@ class Plotter1D:
             Sata to plot
         """
         raise NotImplementedError()
-    
-    def update_plot(
-        self,
-        name:str,
-        serie: pd.Series
-    ):
+
+    def update_plot(self, name: str, serie: pd.Series):
         """Updates plot to the figure
 
         Parameters
@@ -42,10 +34,10 @@ class Plotter1D:
             Sata to plot
         """
         raise NotImplementedError()
-    
+
     def set_visible(
         self,
-        names:List[str],
+        names: List[str],
     ):
         """Updates the visible plots in the figure
 
@@ -59,9 +51,11 @@ class Plotter1D:
     def _disable_interactions(self, val: bool):
         pass
 
-    def make_panel(self,):
+    def make_panel(
+        self,
+    ):
         raise NotImplementedError()
-    
+
     def set_x_scale(self, scale: str):
         """Sets the X axis scale to either log or lin
 
@@ -71,7 +65,7 @@ class Plotter1D:
             Scale to set
         """
         raise NotImplementedError()
-    
+
     def set_y_scale(self, scale: str):
         """Sets the Y axis scale to either log or lin
 

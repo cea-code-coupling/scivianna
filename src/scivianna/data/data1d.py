@@ -1,25 +1,26 @@
-from typing import Callable, Dict, List, Any, Literal, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Tuple, Union
+
 import numpy as np
 import pandas as pd
 
-from scivianna.enums import DataType
 from scivianna.data.data_container import DataContainer
+from scivianna.enums import DataType
+
 
 class Data1D(DataContainer):
     """Data class containing the 2D geometry data"""
 
-    line_ids:List[Union[int, str]]
+    line_ids: List[Union[int, str]]
     """List of contained line ids"""
-    line_values:List[pd.Series]
+    line_values: List[pd.Series]
     """List of contained line values"""
-    line_colors:List[Tuple[int, int, int]]
+    line_colors: List[Tuple[int, int, int]]
     """List of contained line colors"""
-    line_styles:List[str]
+    line_styles: List[str]
     """List of contained line edge colors"""
-    
+
     def __init__(self):
-        """ Empty constructor of the Data1D class.
-        """
+        """Empty constructor of the Data1D class."""
         self.line_ids = []
         self.line_values = []
         self.line_colors = []
@@ -45,7 +46,7 @@ class Data1D(DataContainer):
 
         data_.line_colors = [None] * len(df.columns)
         data_.line_styles = [None] * len(df.columns)
-        
+
         return data_
 
     @classmethod
@@ -62,7 +63,9 @@ class Data1D(DataContainer):
         Data1D
             Requested Data1D
         """
-        assert isinstance(series, dict), f"Provided series must be a dictionnary, found {type(series)}"
+        assert isinstance(
+            series, dict
+        ), f"Provided series must be a dictionnary, found {type(series)}"
         data_ = Data1D()
 
         data_.line_ids = list(series.keys())
@@ -72,8 +75,10 @@ class Data1D(DataContainer):
         data_.line_styles = [None] * len(data_.line_ids)
 
         return data_
-    
-    def copy(self,) -> "Data1D":
+
+    def copy(
+        self,
+    ) -> "Data1D":
         """Returns a copy of self
 
         Returns
@@ -89,10 +94,16 @@ class Data1D(DataContainer):
 
         return data1D
 
-    def check_valid(self,):
-        """Checks if this Data1D is valid, raises an AssertionError otherwise
-        """
-        assert len(self.line_ids) == len(self.line_colors), "The Data1D object must have the same number of line id and colors"
-        assert len(self.line_values) == len(self.line_colors), "The Data1D object must have the same number of line values and colors"
-        assert len(self.line_values) == len(self.line_styles), "The Data1D object must have the same number of line values and styles"
-        
+    def check_valid(
+        self,
+    ):
+        """Checks if this Data1D is valid, raises an AssertionError otherwise"""
+        assert len(self.line_ids) == len(
+            self.line_colors
+        ), "The Data1D object must have the same number of line id and colors"
+        assert len(self.line_values) == len(
+            self.line_colors
+        ), "The Data1D object must have the same number of line values and colors"
+        assert len(self.line_values) == len(
+            self.line_styles
+        ), "The Data1D object must have the same number of line values and styles"

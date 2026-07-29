@@ -1,4 +1,5 @@
-from typing import Any, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
+
 import panel as pn
 import panel_material_ui as pmui
 
@@ -6,25 +7,20 @@ from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
 
 if TYPE_CHECKING:
-    from scivianna.panel.visualisation_panel import VisualizationPanel
-    from scivianna.slave import ComputeSlave
-    from scivianna.plotter_3d.vtk_3d_plotter import Plotter3D
     from scivianna.panel.panel_3d import Panel3D
+    from scivianna.panel.visualisation_panel import VisualizationPanel
+    from scivianna.plotter_3d.vtk_3d_plotter import Plotter3D
+    from scivianna.slave import ComputeSlave
 
 
 class Slice3D(Extension):
     """Extension to control the 3D clip plane for slicing geometry.
-    
+
     This extension provides interactive controls to enable/disable clipping,
     select the clipping axis (X, Y, Z), and adjust the clip plane position.
     """
 
-    def __init__(
-        self,
-        slave: "ComputeSlave",
-        plotter: "Plotter3D",
-        panel: "Panel3D"
-    ):
+    def __init__(self, slave: "ComputeSlave", plotter: "Plotter3D", panel: "Panel3D"):
         """Constructor of the slice 3D extension.
 
         Parameters
@@ -56,26 +52,17 @@ Controls:
 
         # Clip enabled checkbox
         self.plane_enabled_checkbox = pmui.Checkbox(
-            label="Enable slice plane",
-            value=False,
-            width=280
+            label="Enable slice plane", value=False, width=280
         )
         self.plane_enabled_checkbox.param.watch(self._on_plane_enabled_change, "value")
 
         # Clip enabled checkbox
-        self.clip_enabled_checkbox = pmui.Checkbox(
-            label="Enable clipping",
-            value=False,
-            width=280
-        )
+        self.clip_enabled_checkbox = pmui.Checkbox(label="Enable clipping", value=False, width=280)
         self.clip_enabled_checkbox.param.watch(self._on_clip_enabled_change, "value")
 
         # Axis selector
         self.clip_axis_select = pmui.Select(
-            label="Clip axis",
-            options=["x", "y", "z"],
-            value="z",
-            width=280
+            label="Clip axis", options=["x", "y", "z"], value="z", width=280
         )
         self.clip_axis_select.param.watch(self._on_clip_axis_change, "value")
 
@@ -84,19 +71,19 @@ Controls:
 
     def _on_plane_enabled_change(self, event):
         """Handle clip enabled checkbox change."""
-        if hasattr(self.plotter, 'plotter'):
+        if hasattr(self.plotter, "plotter"):
             vtk_plotter = self.plotter.plotter
             vtk_plotter.set_plane_enabled(event.new)
 
     def _on_clip_enabled_change(self, event):
         """Handle clip enabled checkbox change."""
-        if hasattr(self.plotter, 'plotter'):
+        if hasattr(self.plotter, "plotter"):
             vtk_plotter = self.plotter.plotter
             vtk_plotter.set_clip_enabled(event.new)
 
     def _on_clip_axis_change(self, event):
         """Handle clip axis selector change."""
-        if hasattr(self.plotter, 'plotter'):
+        if hasattr(self.plotter, "plotter"):
             vtk_plotter = self.plotter.plotter
             vtk_plotter.set_clip_axis(event.new)
 
@@ -113,9 +100,7 @@ Controls:
             Viewable to display in the extension tab
         """
         return pn.Column(
-            self.plane_enabled_checkbox,
-            self.clip_enabled_checkbox,
-            self.clip_axis_select
+            self.plane_enabled_checkbox, self.clip_enabled_checkbox, self.clip_axis_select
         )
 
     def on_file_load(self, file_path: str, file_key: str):

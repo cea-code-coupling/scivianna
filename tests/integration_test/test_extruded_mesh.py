@@ -1,11 +1,12 @@
-import pytest
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 
-from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
 from scivianna.data.data2d import Data2D
-from scivianna.utils.color_tools import interpolate_cmap_at_values, get_edges_colors
+from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
+from scivianna.utils.color_tools import get_edges_colors, interpolate_cmap_at_values
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
+
 try:
     from scivianna.utils.extruded_mesh import ExtrudedStructuredMesh
     

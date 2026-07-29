@@ -1,11 +1,10 @@
 
 import matplotlib.pyplot as plt
-
 import pytest
-from scivianna.constants import MATERIAL, X, Y
-from scivianna.slave import ComputeSlave
-from scivianna.plotter_2d.api import plot_frame_in_axes
 
+from scivianna.constants import MATERIAL, X, Y
+from scivianna.plotter_2d.api import plot_frame_in_axes
+from scivianna.slave import ComputeSlave
 from scivianna_example.mandelbrot.mandelbrot import MandelBrotInterface
 
 

@@ -1,9 +1,6 @@
-
 from scivianna.layout.split import SplitLayout
-from scivianna.panel.visualisation_panel import (
-    VisualizationPanel
-)
-from scivianna.notebook_tools import get_med_panel, _serve_panel
+from scivianna.notebook_tools import _serve_panel, get_med_panel
+from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 def get_panel(*args, return_slaves=False, **kwargs) -> VisualizationPanel:

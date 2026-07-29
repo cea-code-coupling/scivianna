@@ -2,21 +2,17 @@ import os
 from typing import Tuple
 
 import medcoupling  # type: ignore
-from icoco.exception import WrongContext, WrongArgument
+from icoco.exception import WrongArgument, WrongContext
 from icoco.problem import Problem, ValueType
 
 
 class DecreasingFieldProblem(Problem):
-    def __init__(
-        self, file_path: str
-    ):
+    def __init__(self, file_path: str):
         if not os.path.isfile(file_path):
             raise ValueError(f"Provided file name does not exist {file_path}")
 
         self.meshnames = medcoupling.GetMeshNames(file_path)
-        self.fieldnames = medcoupling.GetAllFieldNamesOnMesh(
-            file_path, self.meshnames[0]
-        )
+        self.fieldnames = medcoupling.GetAllFieldNamesOnMesh(file_path, self.meshnames[0])
 
         self.fields_iterations = {}
 
@@ -33,9 +29,9 @@ class DecreasingFieldProblem(Problem):
         value_label = list(self.fields_iterations.keys())[0]
 
         options = {
-                    "Iteration": self.fields_iterations[value_label][0][0],
-                    "Order": self.fields_iterations[value_label][0][1],
-                }
+            "Iteration": self.fields_iterations[value_label][0][0],
+            "Order": self.fields_iterations[value_label][0][1],
+        }
 
         self.field: medcoupling.MEDCouplingFieldDouble = medcoupling.ReadField(
             medcoupling.ON_CELLS,
@@ -47,7 +43,7 @@ class DecreasingFieldProblem(Problem):
             options["Order"],
         )
 
-        self.time = 0.
+        self.time = 0.0
         self._dt = None
         self._up_rate = 1
         self._up_skipped = 0
@@ -312,10 +308,7 @@ class DecreasingFieldProblem(Problem):
 
         super().getValueType(name=name)
 
-
-    def getInputMEDDoubleFieldTemplate(
-        self, name: str
-    ) -> medcoupling.MEDCouplingFieldDouble:
+    def getInputMEDDoubleFieldTemplate(self, name: str) -> medcoupling.MEDCouplingFieldDouble:
         """(Optional) Retrieve an empty shell for an input field. This shell can be filled by the
         caller and then be given to the code via setInputField(). The field has the MEDDoubleField
         format.
@@ -349,9 +342,7 @@ class DecreasingFieldProblem(Problem):
         WrongArgument
             exception if the field name is invalid.
         """
-        mcfield = medcoupling.MEDCouplingFieldDouble(
-            medcoupling.ON_CELLS, medcoupling.ONE_TIME
-        )
+        mcfield = medcoupling.MEDCouplingFieldDouble(medcoupling.ON_CELLS, medcoupling.ONE_TIME)
         mcfield.setName(name)
         mcfield.setTime(0.0, 0, 0)
         mcfield.setMesh(self.mesh)
@@ -367,12 +358,14 @@ class DecreasingFieldProblem(Problem):
             return self.field.getMinValue()
         if name == "AVERAGE":
             return self.field.getAverageValue()
-        return 0.
+        return 0.0
 
     def getOutputMEDDoubleField(self, name):
         if name == "VALUE":
             return self.field
         raise ValueError(f"Requested field {name}, only VALUE is available.")
 
-    def getSolveStatus(self,):
+    def getSolveStatus(
+        self,
+    ):
         return True
