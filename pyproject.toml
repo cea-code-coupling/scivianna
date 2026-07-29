@@ -133,7 +133,7 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
 [tool.coverage.run]
-source = ["src/scivianna"]
+source = ["scivianna"]
 branch = true
 omit = [
     "*/tests/*",
