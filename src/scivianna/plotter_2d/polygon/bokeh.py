@@ -37,6 +37,9 @@ from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.utils.color_tools import beautiful_color_maps
 from scivianna.utils.polygonize_tools import PolygonElement
 
+from scivianna.logging_config import get_logger
+logger = get_logger(__name__)
+
 
 class Bokeh2DPolygonPlotter(Plotter2D):
     """2D geometry plotter based on the bokeh python module"""

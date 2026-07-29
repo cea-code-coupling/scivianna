@@ -29,6 +29,9 @@ from scivianna.plotter_2d.grid.grid_tools import get_grids
 from scivianna.utils.color_tools import beautiful_color_maps, get_edges_colors
 from scivianna.utils.polygonize_tools import PolygonElement
 
+from scivianna.logging_config import get_logger
+logger = get_logger(__name__)
+
 
 class Bokeh2DGridPlotter(Plotter2D):
     """2D geometry plotter based on the bokeh python module"""
