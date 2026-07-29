@@ -1,16 +1,55 @@
+"""
+VTK interface for Scivianna.
+
+This module provides a VTK/PyVista-based interface for reading and visualizing
+VTK file formats (.pvd, .vtu, .vtp, etc.) in Scivianna. It supports both 2D
+slice visualization and 3D geometry display, with time-dependent data handling.
+
+Features
+--------
+- Read VTK file formats using PyVista
+- Time-dependent data visualization
+- 2D slice extraction with polygon conversion
+- 3D geometry display
+- Interactive time slider via VTKExtension
+
+Classes
+-------
+VTKInterface
+    Main interface class for VTK file handling
+VTKExtension
+    Extension providing time slider GUI for VTK files
+
+Example
+-------
+>>> from scivianna import ComputeSlave
+>>> from scivianna.interface import VTKInterface
+>>> 
+>>> slave = ComputeSlave(VTKInterface)
+>>> slave.read_file("mesh.pvd", "Geometry")
+>>> panel = Panel2D(slave, name="VTK View")
+>>> panel.show()
+
+Dependencies
+------------
+Requires pyvista and vtk packages. Install with:
+    pip install scivianna[3d]
+"""
+
 from __future__ import annotations
 
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
-import numpy as np
 import multiprocessing as mp
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-import panel_material_ui as pmui
+import numpy as np
 import panel as pn
+import panel_material_ui as pmui
 
 try:
     import pyvista as pv
     import vtk
+
     _PYVISTA_AVAILABLE = True
 except ImportError:
     pv = None  # type: ignore[assignment]
@@ -22,222 +61,472 @@ from scivianna.data.data3d import Data3D
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
 from scivianna.interface.generic_interface import Geometry2DPolygon, Geometry3D
+from scivianna.logging_config import get_logger
 
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.slave import ComputeSlave
+    from scivianna.plotter_3d.generic_plotter import Plotter3D
 
+from scivianna.constants import (
+    CSV,
+    GEOMETRY,
+    MESH,
+)
+from scivianna.data.data2d import Data2D
+from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-from scivianna.enums import GeometryType, VisualizationMode
-from scivianna.constants import MESH, GEOMETRY, CSV
-from scivianna.data.data2d import Data2D
 
-try:
-    from scivianna.plotter_3d.generic_plotter import Plotter3D
-except (ImportError, ModuleNotFoundError):
-    class Plotter3D:
-        """Stub class for Plotter3D when pyvista is not available."""
-        pass
-
+# Module logger
+logger = get_logger(__name__)
 
 icon_svg = get_icon("vtk")
 
-def _require_pyvista():
-    """Raise an error if pyvista is not available."""
+
+def _require_pyvista() -> None:
+    """
+    Raise an error if pyvista is not available.
+
+    Raises
+    ------
+    ImportError
+        If pyvista package is not installed
+    """
     if not _PYVISTA_AVAILABLE:
-        raise ImportError("Pyvista could not be imported, please pip install pyvista to use the vtk interface")
+        raise ImportError(
+            "PyVista could not be imported. Please install with: "
+            "pip install scivianna[3d] or pip install pyvista"
+        )
+
+
+def extract_unstructured_grid(dataset: Any) -> Optional[pv.UnstructuredGrid]:
+    """
+    Extract an UnstructuredGrid from a pyvista dataset.
+
+    This function recursively searches through MultiBlock datasets to find
+    and extract unstructured grid data, which is required for VTK visualization.
+
+    Parameters
+    ----------
+    dataset : Any
+        PyVista dataset (UnstructuredGrid, MultiBlock, or other)
+
+    Returns
+    -------
+    Optional[pv.UnstructuredGrid]
+        UnstructuredGrid if found, None otherwise
+
+    Example
+    -------
+    >>> multiblock = pv.read("complex_mesh.vtm")
+    >>> unstructured = extract_unstructured_grid(multiblock)
+    >>> if unstructured is not None:
+    ...     print(f"Found {unstructured.number_of_cells} cells")
+    """
+    _require_pyvista()
+
+    if isinstance(dataset, pv.UnstructuredGrid):
+        return dataset
+
+    elif isinstance(dataset, pv.MultiBlock):
+        for block in dataset:
+            if block is not None:
+                result = extract_unstructured_grid(block)
+                if result is not None:
+                    return result
+        return None
+
+    else:
+        # Try to cast to unstructured grid
+        try:
+            return dataset.cast_to_unstructured_grid()
+        except Exception as e:
+            logger.debug("Could not cast dataset to UnstructuredGrid: %s", e)
+            return None
 
 
 class VTKExtension(Extension):
-    """Extension to load files and send them to the slave."""
+    """
+    Extension for VTK file visualization with time slider control.
+
+    This extension provides a GUI with a time slider for navigating through
+    time-dependent VTK data. It allows users to select specific time steps
+    and optionally recompute the mesh when time changes.
+
+    Attributes
+    ----------
+    time_slider : pmui.DiscreteSlider
+        Slider widget for time step selection
+    recompute_on_change : pmui.Checkbox
+        Checkbox to enable/disable mesh recomputation on time change
+    time_values : List[float]
+        Available time steps from the VTK file
+
+    Example
+    -------
+    >>> # Extension is automatically added to VTKInterface
+    >>> # Users can interact via the GUI time slider
+    >>> extension = VTKExtension(slave, plotter, panel)
+    >>> extension.time_slider.value = 5.0  # Set time to 5.0
+    """
 
     def __init__(
         self,
         slave: "ComputeSlave",
-        plotter: "Plotter2D",
-        panel: "VisualizationPanel"
+        plotter: Union[Plotter2D, "Plotter3D"],
+        panel: "VisualizationPanel",
     ):
-        _require_pyvista()
-        """Constructor of the extension, saves the slave and the panel
+        """
+        Initialize the VTK extension.
 
         Parameters
         ----------
         slave : ComputeSlave
-            Slave computing the displayed data
-        plotter : Plotter2D
-            Figure plotter
+            Compute slave for data queries
+        plotter : Plotter2D or Plotter3D
+            Plotter for visualization
         panel : VisualizationPanel
-            Panel to which the extension is attached
+            Parent visualization panel
+
+        Raises
+        ------
+        ImportError
+            If pyvista is not available
+        AssertionError
+            If plotter is not Plotter2D or Plotter3D
         """
+        _require_pyvista()
+
         super().__init__(
-            "VTK",
-            icon_svg,
-            slave,
-            plotter,
-            panel,
+            title="VTK",
+            icon=icon_svg,
+            slave=slave,
+            plotter=plotter,
+            panel=panel,
         )
 
-        self.time_values = self.slave.call_custom_function("get_time_values", {})
-        if self.time_values == []:
-            self.time_values = [0.]
+        # Get time values from interface
+        self.time_values: List[float] = self.slave.call_custom_function("get_time_values", {})
+        if not self.time_values:
+            self.time_values = [0.0]
 
-        self.time_slider = pmui.DiscreteSlider(name = "Time", options = self.time_values, width=260, )
-        self.recompute_on_change = pmui.Checkbox(name = "Recompute mesh on time change", value=False)
+        # Create GUI components
+        self.time_slider = pmui.DiscreteSlider(
+            name="Time",
+            options=self.time_values,
+            width=260,
+        )
+        self.recompute_on_change = pmui.Checkbox(name="Recompute mesh on time change", value=False)
 
-        assert isinstance(plotter, (Plotter2D, Plotter3D)), f"VTKExtension can only be used with a Plotter2D or a Plotter3D, found {plotter}"
+        # Validate plotter type
+        assert isinstance(
+            plotter, (Plotter2D, Plotter3D)
+        ), f"VTKExtension requires Plotter2D or Plotter3D, found {type(plotter)}"
 
         self.description = """
-This extension allows defining the VTK plot parameters.
-"""
+        This extension allows defining the VTK plot parameters including
+        time step selection for time-dependent simulations.
+        """
 
         self.iconsize = "1.0em"
 
-        self.time_slider.param.watch(self.recompute, "value_throttled")
+        # Register callback for time slider
+        self.time_slider.param.watch(self._on_time_change, "value_throttled")
 
-    def on_file_load(self, file_path, file_key):
-        if file_key == GEOMETRY:
-            self.time_values = self.slave.call_custom_function("get_time_values", {})
-            if self.time_values == []:
-                self.time_values = [0.]
+    def _on_time_change(self, event: Any) -> None:
+        """
+        Callback triggered when time slider value changes.
 
-            self.time_slider.options = self.time_values
-
-    def recompute(self, *args, **kwargs):
+        Parameters
+        ----------
+        event : Any
+            Panel event object containing old/new values
+        """
+        logger.debug("Time changed to %s", event.new)
         self.panel.recompute()
 
-    def provide_options(self):
+    def on_file_load(self, file_path: str, file_key: str) -> None:
+        """
+        Handle file load events to update time values.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the loaded file
+        file_key : str
+            File key/label (e.g., "Geometry")
+        """
+        if file_key == GEOMETRY:
+            logger.info("Updating time values for file: %s", file_path)
+            self.time_values = self.slave.call_custom_function("get_time_values", {})
+            if not self.time_values:
+                self.time_values = [0.0]
+            self.time_slider.options = self.time_values
+
+    def provide_options(self) -> Dict[str, Any]:
+        """
+        Provide computation options to the interface.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Dictionary with time and recompute options
+        """
         return {
             "time": self.time_slider.values[self.time_slider.value_throttled],
             "recompute": self.recompute_on_change.value,
         }
 
-    def make_gui(self,) -> pn.viewable.Viewable:
-        """Returns a panel viewable to display in the extension tab.
+    def make_gui(self) -> pn.viewable.Viewable:
+        """
+        Build the extension GUI panel.
 
         Returns
         -------
         pn.viewable.Viewable
-            Viewable to display in the extension tab
+            Panel layout with time slider and options
         """
         return pmui.Column(
-            self.time_slider,
-            self.recompute_on_change,
-            margin=0
+            self.time_slider, self.recompute_on_change, margin=0, sizing_mode="stretch_width"
         )
 
-def extract_unstructured(dataset):
-    """Extract an UnstructuredGrid from a pyvista dataset."""
-    if isinstance(dataset, pv.UnstructuredGrid):
-        return dataset
-    elif isinstance(dataset, pv.MultiBlock):
-        for block in dataset:
-            if block is not None:
-                result = extract_unstructured(block)
-                if result is not None:
-                    return result
-    else:
-        try:
-            return dataset.cast_to_unstructured_grid()
-        except Exception:
-            return None
-        
+
 class VTKInterface(Geometry2DPolygon, Geometry3D):
-    
+    """
+    VTK file interface for Scivianna visualization.
+
+    This interface reads VTK file formats (particularly .pvd files) using PyVista
+    and provides 2D slice and 3D geometry visualization capabilities. It supports
+    time-dependent data with interactive time step selection.
+
+    Features
+    --------
+    - Read .pvd, .vtu, .vtp, and other VTK formats
+    - Time-dependent data visualization
+    - 2D slice extraction with polygon conversion
+    - 3D unstructured grid display
+    - Automatic point-to-cell data conversion
+
+    Attributes
+    ----------
+    reader : pv.reader
+        PyVista reader object for the loaded file
+    mesh : pv.UnstructuredGrid
+        Current mesh data
+    times : List[float]
+        Available time steps
+    current_time : float
+        Currently selected time step
+    data : Dict[str, Data2D]
+        Cached 2D data per caller
+    last_computed_frame : Dict[str, List[float]]
+        Cache keys for computed frames per caller
+
+    Example
+    -------
+    >>> from scivianna import ComputeSlave
+    >>> from scivianna.interface import VTKInterface
+    >>>
+    >>> slave = ComputeSlave(VTKInterface)
+    >>> slave.read_file("simulation.pvd", "Geometry")
+    >>> labels = slave.get_labels()
+    >>> print(f"Available fields: {labels}")
+
+    See Also
+    --------
+    VTKExtension : Extension providing time slider GUI
+    """
+
     extensions = [VTKExtension]
     geometry_type = GeometryType._3D_INFINITE
 
-    def __init__(
-        self,
-    ):
-        """VTK interface constructor."""
+    def __init__(self) -> None:
+        """
+        Initialize the VTK interface.
+
+        Sets up data structures for mesh storage, time tracking, and caching.
+        """
         _require_pyvista()
+
         self.data: Dict[str, Data2D] = {}
-        """Dictionary with caller as key storing past computed data for each caller"""
-        self.reader: Any = None
-        self.mesh: Any = None
+        """Cache of computed 2D data per caller."""
+
+        self.reader: Optional[Any] = None
+        """PyVista reader object."""
+
+        self.mesh: Optional[pv.UnstructuredGrid] = None
+        """Current mesh data."""
+
         self.times: List[float] = []
+        """Available time steps from the file."""
+
         self.results: Dict[str, Any] = {}
+        """Additional result data (e.g., from CSV files)."""
+
         self.last_computed_frame: Dict[str, List[float]] = {}
-        """Dictionary with caller as key storing parameters of the last computed frame"""
-        self.current_time: float = -1.
+        """Cache keys for last computed frame per caller."""
 
-        self.last_3d_frame = None
+        self.current_time: float = 0.0
+        """Currently selected time step."""
 
-    def read_file(self, file_path: str, file_label: str):
-        """Read a file and store its content in the interface
+        self.last_3d_frame: Optional[Dict[str, Any]] = None
+        """Cache key for last 3D computation."""
+
+        logger.debug("VTKInterface initialized")
+
+    def read_file(self, file_path: Union[str, Path], file_label: str) -> None:
+        """
+        Read a VTK file and store its content.
+
+        Supports .pvd files for time-dependent data and multi-block datasets.
+        Automatically converts point data to cell data for visualization.
 
         Parameters
         ----------
-        file_path : str
-            File to read
+        file_path : str or Path
+            Path to the VTK file (.pvd, .vtu, .vtp, etc.)
         file_label : str
-            Label to define the file type
+            File type label ("Geometry" or "MULTI_BLOCK")
+
+        Raises
+        ------
+        ImportError
+            If pyvista is not available
+        NotImplementedError
+            If file_label is not supported
+        FileNotFoundError
+            If file does not exist
+
+        Example
+        -------
+        >>> interface = VTKInterface()
+        >>> interface.read_file("mesh.pvd", "Geometry")
+        >>> print(f"Loaded {len(interface.times)} time steps")
         """
         _require_pyvista()
+
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"VTK file not found: {file_path}")
+
+        logger.info("Reading VTK file: %s as %s", file_path, file_label)
+
         if file_label == GEOMETRY:
-            self.reader: Any = pv.get_reader(file_path)
-            self.times = self.reader.time_values
-            self.load_at_time(self.reader.time_values[-1])
+            try:
+                self.reader = pv.get_reader(str(file_path))
+                self.times = self.reader.time_values
+                logger.info("Loaded %d time steps from %s", len(self.times), file_path)
+
+                # Load last time step by default
+                if self.times:
+                    self.load_at_time(self.times[-1])
+                else:
+                    logger.warning("No time values found in file")
+                    self.times = [0.0]
+                    self.current_time = 0.0
+
+            except Exception as e:
+                logger.error("Failed to read VTK file %s: %s", file_path, e)
+                raise
 
         elif file_label == "MULTI_BLOCK":
-            self.reader = vtk.vtkXMLMultiBlockDataReader()
-            self.reader.SetFileName(file_path) 
-            self.reader.Update()
-
-            data = self.reader.GetOutput()
-
-            append = vtk.vtkAppendFilter()
-
-            def add_blocks(block):
-                if block is None:
-                    return
-
-                if block.IsA("vtkUnstructuredGrid"):
-                    append.AddInputData(block)
-
-                elif block.IsA("vtkMultiBlockDataSet"):
-                    for i in range(block.GetNumberOfBlocks()):
-                        add_blocks(block.GetBlock(i))
-
-                elif block.IsA("vtkMultiPieceDataSet"):
-                    for i in range(block.GetNumberOfPieces()):
-                        add_blocks(block.GetPiece(i))
-
-            # Traverse everything
-            add_blocks(data)
-
-            append.Update()
-
-            self.mesh = self.mesh.point_data_to_cell_data()
-            self.mesh.cell_data["cell_id"] = list(range(self.mesh.number_of_cells))
+            try:
+                self._read_multi_block(file_path)
+            except Exception as e:
+                logger.error("Failed to read multi-block file %s: %s", file_path, e)
+                raise
         else:
             raise NotImplementedError(
-                f"File label {file_label} not implemented in VTK interface."
+                f"File label '{file_label}' not supported by VTKInterface. "
+                f"Use '{GEOMETRY}' or 'MULTI_BLOCK'."
             )
 
-    def load_at_time(self, time: float):
-        """Loads the data at the provided time
+    def _read_multi_block(self, file_path: Path) -> None:
+        """
+        Read a multi-block VTK dataset.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the multi-block file
+        """
+        logger.debug("Reading multi-block file: %s", file_path)
+
+        reader = vtk.vtkXMLMultiBlockDataReader()
+        reader.SetFileName(str(file_path))
+        reader.Update()
+
+        data = reader.GetOutput()
+
+        # Append all unstructured grids
+        append_filter = vtk.vtkAppendFilter()
+
+        def add_blocks(block: Any) -> None:
+            """Recursively add blocks to append filter."""
+            if block is None:
+                return
+
+            if block.IsA("vtkUnstructuredGrid"):
+                append_filter.AddInputData(block)
+            elif block.IsA("vtkMultiBlockDataSet"):
+                for i in range(block.GetNumberOfBlocks()):
+                    add_blocks(block.GetBlock(i))
+            elif block.IsA("vtkMultiPieceDataSet"):
+                for i in range(block.GetNumberOfPieces()):
+                    add_blocks(block.GetPiece(i))
+
+        add_blocks(data)
+        append_filter.Update()
+
+        # Convert to pyvista and add cell IDs
+        self.mesh = pv.wrap(append_filter.GetOutput())
+        self.mesh = self.mesh.point_data_to_cell_data()
+        self.mesh.cell_data["cell_id"] = list(range(self.mesh.number_of_cells))
+
+        self.times = [0.0]
+        self.current_time = 0.0
+
+        logger.info("Loaded multi-block dataset with %d cells", self.mesh.number_of_cells)
+
+    def load_at_time(self, time: float) -> None:
+        """
+        Load data at a specific time step.
 
         Parameters
         ----------
         time : float
-            Time at which load the data
+            Time value to load
 
         Raises
         ------
         ValueError
-            Provided time not in data
+            If time is not in available time steps
+
+        Example
+        -------
+        >>> interface.load_at_time(5.0)  # Load data at t=5.0
         """
         _require_pyvista()
-        if not time in self.times:
-            raise ValueError(f"Provided time {time} does not exist, found : {self.times}.")
-        
+
+        if time not in self.times:
+            raise ValueError(f"Time {time} not available. Available times: {self.times}")
+
+        logger.debug("Loading data at time %s", time)
+
         self.reader.set_active_time_value(time)
-        self.mesh = extract_unstructured(self.reader.read()[0])
+        dataset = self.reader.read()[0]
+        self.mesh = extract_unstructured_grid(dataset)
+
+        if self.mesh is None:
+            raise ValueError("Could not extract unstructured grid from dataset")
+
+        # Convert point data to cell data for visualization
         self.mesh = self.mesh.point_data_to_cell_data()
-        self.current_time = self.reader.time_values[-1]
         self.mesh.cell_data["cell_id"] = list(range(self.mesh.number_of_cells))
+        self.current_time = time
+
+        logger.debug("Loaded mesh at time %s with %d cells", time, self.mesh.number_of_cells)
 
     def compute_2D_data(
         self,
@@ -249,172 +538,288 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
-    ) -> Tuple[List[PolygonElement], bool]:
-        _require_pyvista()
-        """Returns a list of polygons that defines the geometry in a given frame
+    ) -> Tuple[Data2D, bool]:
+        """
+        Compute a 2D slice of the VTK geometry.
+
+        Extracts a 2D cross-section from the 3D mesh using the specified
+        plane (defined by u, v axes and origin). Converts the slice to
+        polygons for visualization.
 
         Parameters
         ----------
         u : Tuple[float, float, float]
-            Horizontal coordinate director vector
+            Horizontal axis direction vector
         v : Tuple[float, float, float]
-            Vertical coordinate director vector
+            Vertical axis direction vector
         origin : Tuple[float, float, float]
-            Physical 3D position of the slice center
+            Physical 3D position of slice center
         size_u : float
-            Size of the slice along the u axis
+            Size of slice along u axis
         size_v : float
-            Size of the slice along the v axis
+            Size of slice along v axis
         q_tasks : mp.Queue
-            Queue from which get orders from the master.
+            Task queue for multiprocessing
         options : Dict[str, Any]
-            Additional options for frame computation.
+            Additional options (time, recompute)
+        caller : str
+            Identifier of the caller
+
+        Returns
+        -------
+        Tuple[Data2D, bool]
+            Data2D object with polygon geometry and whether polygons were updated
+
+        Raises
+        ------
+        ValueError
+            If u and v vectors are parallel or zero
+            If slice produces no cells
+        """
+        _require_pyvista()
+
+        # Set default options
+        if "recompute" not in options:
+            options["recompute"] = True
+        if "time" not in options:
+            options["time"] = self.current_time
+
+        # Load data at requested time
+        time_updated = False
+        if self.current_time != options["time"]:
+            logger.debug("Time changed from %s to %s", self.current_time, options["time"])
+            self.load_at_time(options["time"])
+            time_updated = True
+
+        # Check cache
+        cache_key = [*origin, size_u, size_v]
+        if (
+            caller in self.last_computed_frame
+            and self.last_computed_frame[caller] == cache_key
+            and caller in self.data
+            and not (options["recompute"] and time_updated)
+        ):
+            logger.debug("Using cached 2D data for caller %s", caller)
+            return self.data[caller], False
+
+        # Normalize axes
+        u_arr = np.array(u, dtype=float)
+        v_arr = np.array(v, dtype=float)
+        u_arr /= np.linalg.norm(u_arr)
+        v_arr /= np.linalg.norm(v_arr)
+
+        # Compute normal vector
+        w_arr = np.cross(u_arr, v_arr)
+        w_norm = np.linalg.norm(w_arr)
+
+        if w_norm == 0.0:
+            raise ValueError(
+                f"Vectors u={u} and v={v} are parallel or zero. "
+                "Cannot compute cross product for slice normal."
+            )
+
+        w_arr /= w_norm
+
+        # Ensure origin is numpy array
+        origin_arr = np.array(origin, dtype=float)
+
+        logger.debug("Computing 2D slice at origin %s with normal %s", origin_arr, w_arr)
+
+        # Extract slice
+        try:
+            mesh_slice: pv.PolyData = self.mesh.slice(
+                normal=w_arr, origin=origin_arr, generate_triangles=True
+            )
+        except Exception as e:
+            logger.error("Failed to slice mesh: %s", e)
+            raise
+
+        if mesh_slice.GetNumberOfCells() == 0:
+            bounds = self.mesh.bounds
+            raise ValueError(
+                f"Slice at origin {origin_arr} with normal {w_arr} produced no cells. "
+                f"Mesh bounds: {bounds}"
+            )
+
+        # Convert to polygons
+        polygon_elements = self._mesh_slice_to_polygons(mesh_slice, u_arr, v_arr)
+
+        # Create Data2D object
+        self.data[caller] = Data2D.from_polygon_list(polygon_elements)
+        self.last_computed_frame[caller] = cache_key
+
+        logger.debug(
+            "Computed 2D slice with %d polygons for caller %s", len(polygon_elements), caller
+        )
+
+        return self.data[caller], True
+
+    def _mesh_slice_to_polygons(
+        self, mesh_slice: pv.PolyData, u_arr: np.ndarray, v_arr: np.ndarray
+    ) -> List[PolygonElement]:
+        """
+        Convert a mesh slice to PolygonElement list.
+
+        Parameters
+        ----------
+        mesh_slice : pv.PolyData
+            Sliced mesh data
+        u_arr : np.ndarray
+            Horizontal axis unit vector
+        v_arr : np.ndarray
+            Vertical axis unit vector
 
         Returns
         -------
         List[PolygonElement]
-            List of polygons to display
-        bool
-            Were the polygons updated compared to the past call
+            List of polygons for visualization
         """
-        if not "recompute" in options:
-            options["recompute"] = True
-        if not "time" in options:
-            options["time"] = self.current_time
+        polygon_elements: List[PolygonElement] = []
 
-        time_updated = False
-        if self.current_time != options["time"]:
-            self.load_at_time(options["time"])
-            time_updated = True
+        cell_ids = mesh_slice.cell_data["cell_id"]
 
-        if (caller in self.last_computed_frame) and (
-            self.last_computed_frame.get(caller) == [*origin, size_u, size_v]
-        ) and (caller in self.data) and ( not (
-            options["recompute"] and time_updated
-        )):
-            print("Skipping polygon computation.")
-            return self.data[caller], False
+        for i in range(mesh_slice.GetNumberOfCells()):
+            cell = mesh_slice.GetCell(i)
+            point_ids = [cell.GetPointId(j) for j in range(cell.GetNumberOfPoints())]
 
-        u = np.array(u)/np.linalg.norm(u)
-        v = np.array(v)/np.linalg.norm(v)
-        w = np.cross(u, v)
+            # Project points to 2D coordinates
+            points_3d = np.array([mesh_slice.points[pid] for pid in point_ids])
+            x_coords = points_3d @ u_arr
+            y_coords = points_3d @ v_arr
 
-        if np.linalg.norm(w) == 0.:
-            raise ValueError(f"u and v must be both non zero and non parallel, found {u}, {v}")
-
-        w /= np.linalg.norm(w)
-
-        # origin is already provided as a physical 3D position
-        origin = np.array(origin, dtype=float)
-
-        mesh_slice: pv.PolyData = self.mesh.slice(
-            normal = w, 
-            origin = origin, 
-            generate_triangles = True
-        )
-
-        polygon_elements = []
-
-        if mesh_slice.GetNumberOfCells() == 0:
-            raise ValueError(f"Tried slicing at location {origin}, with normal {w}. Mesh has the bounds : {self.mesh.bounds}. No cell was found.")
-        
-        point_ids = [mesh_slice.get_cell(j).point_ids for j in range(len(mesh_slice.cell_data["cell_id"]))]
-
-        for i, pol in zip(mesh_slice.cell_data["cell_id"], point_ids):
-            ids = np.array(pol)
             polygon_elements.append(
-            PolygonElement(
-                PolygonCoords(
-                    np.array(mesh_slice.points[ids].dot(u)), 
-                    np.array(mesh_slice.points[ids].dot(v))
-                ),
-                [],
-                i,
-            ))
+                PolygonElement(
+                    exterior_polygon=PolygonCoords(
+                        x_coords=x_coords.tolist(), y_coords=y_coords.tolist()
+                    ),
+                    holes=[],
+                    cell_id=cell_ids[i] if i < len(cell_ids) else i,
+                )
+            )
 
-        self.data[caller] = Data2D.from_polygon_list(polygon_elements)
-        self.last_computed_frame[caller] = [*origin, size_u, size_v]
-        
-        return self.data[caller], True
-
+        return polygon_elements
 
     def get_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
-    ) -> Dict[Union[int, str], str]:
-        """Returns a cell name - field value map for a given field name
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Dict[Union[int, str], Any]:
+        """
+        Get field values for specified cells.
 
         Parameters
         ----------
         value_label : str
-            Field name to get values from
-        cells : List[Union[int,str]]
-            List of cells names
+            Field name to retrieve
+        cells : List[Union[int, str]]
+            List of cell identifiers
         options : Dict[str, Any]
-            Additional options for frame computation.
+            Additional options (time, recompute)
+        caller : str
+            Caller identifier
 
         Returns
         -------
-        Dict[Union[int,str], str]
-            Field value for each requested cell names
-        """        
-        if not "recompute" in options:
+        Dict[Union[int, str], Any]
+            Mapping of cell IDs to values
+
+        Raises
+        ------
+        NotImplementedError
+            If field is not available
+
+        Example
+        -------
+        >>> values = interface.get_value_dict("Temperature", [0, 1, 2], {})
+        >>> print(f"Cell 0 temperature: {values[0]}")
+        """
+        # Set default options
+        if "recompute" not in options:
             options["recompute"] = True
-        if not "time" in options:
+        if "time" not in options:
             options["time"] = self.current_time
 
+        # Load data at requested time
         if self.current_time != options["time"]:
-            print(f"Loading data at time {options['time']}")
+            logger.debug("Loading data at time %s for field query", options["time"])
             self.load_at_time(options["time"])
 
+        if self.mesh is None:
+            raise ValueError("No mesh loaded. Call read_file first.")
+
+        # Handle mesh-only visualization
         if value_label == MESH:
-            dict_compo = {v: np.nan for v in cells}
+            return {cell: np.nan for cell in cells}
 
-            return dict_compo
-
+        # Try to get from mesh cell data
         if value_label in self.mesh.array_names:
-            data = self.mesh.cell_data[value_label]
-            return dict(zip(cells, data[cells]))
+            try:
+                data = self.mesh.cell_data[value_label]
+                # Handle both integer and string cell IDs
+                if all(isinstance(c, (int, np.integer)) for c in cells):
+                    return {cell: data[int(cell)] for cell in cells}
+                else:
+                    # Map cell IDs to indices
+                    return {cell: data[int(cell)] for cell in cells if int(cell) < len(data)}
+            except (KeyError, IndexError) as e:
+                logger.warning("Failed to get cell data for %s: %s", value_label, e)
 
-        for res in self.results.values():
-            if value_label in res.get_fields():
-                results = res.get_values([], cells, [], value_label)
-                return {cells[i]: results[i] for i in range(len(cells))}
+        # Try results from CSV or other sources
+        for result in self.results.values():
+            if hasattr(result, "get_fields") and value_label in result.get_fields():
+                if hasattr(result, "get_values"):
+                    values = result.get_values([], cells, [], value_label)
+                    return {cells[i]: values[i] for i in range(len(cells))}
 
+        # Field not found
+        available_fields = self.get_labels()
         raise NotImplementedError(
-            f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
+            f"Field '{value_label}' not found. Available fields: {available_fields}"
         )
 
-    def get_labels(
-        self,
-    ) -> List[str]:
-        """Returns a list of fields names displayable with this interface
+    def get_labels(self) -> List[str]:
+        """
+        Get list of displayable field names.
 
         Returns
         -------
         List[str]
-            List of fields names
+            List of available field names
+
+        Example
+        -------
+        >>> labels = interface.get_labels()
+        >>> print(f"Available fields: {labels}")
         """
         labels = [MESH]
 
-        labels += [e for e in self.mesh.array_names if not e == "TIME"]
+        if self.mesh is not None:
+            # Add mesh array names, excluding TIME
+            labels.extend([name for name in self.mesh.array_names if name != "TIME"])
 
-        for res in self.results.values():
-            labels += res.get_fields()
+        # Add fields from results
+        for result in self.results.values():
+            if hasattr(result, "get_fields"):
+                labels.extend(result.get_fields())
 
+        logger.debug("Available fields: %s", labels)
         return labels
 
     def get_label_coloring_mode(self, label: str) -> VisualizationMode:
-        """Returns wheter the given field is colored based on a string value or a float.
+        """
+        Get coloring mode for a field.
 
         Parameters
         ----------
         label : str
-            Field to color name
+            Field name
 
         Returns
         -------
         VisualizationMode
-            Coloring mode
+            Coloring mode (FROM_VALUE, FROM_STRING, or NONE)
         """
         if label == MESH:
             return VisualizationMode.NONE
@@ -422,169 +827,150 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
             return VisualizationMode.FROM_VALUE
 
     def get_file_input_list(self) -> List[Tuple[str, str]]:
-        """Returns a list of file label and its description for the GUI
+        """
+        Get list of supported file types.
 
         Returns
         -------
         List[Tuple[str, str]]
-            List of (file label, description)
+            List of (file_label, description) tuples
         """
         return [
-            (GEOMETRY, "VTK .pvd file."),
-            (CSV, "CSV result file."),
+            (GEOMETRY, "VTK file (.pvd, .vtu, .vtp, etc.)"),
+            (CSV, "CSV result file for additional fields"),
         ]
 
-    def get_time_values(self, ) -> List[float]:
-        """Returns the loaded file time values
+    def get_time_values(self) -> List[float]:
+        """
+        Get available time values from the loaded file.
 
         Returns
         -------
         List[float]
-            Loaded file time values
+            List of time values
+
+        Example
+        -------
+        >>> times = interface.get_time_values()
+        >>> print(f"Time range: {min(times)} to {max(times)}")
         """
-        return self.times
-    
-    def compute_3D_data(
-        self,
-        options: Dict[str, Any]
-    ) -> Tuple[Data3D, bool]:
-        """Returns a list of polygons that defines the geometry in a given frame
+        return self.times.copy()
+
+    def compute_3D_data(self, options: Dict[str, Any]) -> Tuple[Data3D, bool]:
+        """
+        Compute 3D geometry data.
 
         Parameters
         ----------
         options : Dict[str, Any]
-            Additional options for frame computation.
+            Additional options (time, recompute)
 
         Returns
         -------
-        Data3D
-            Geometry to display
-        bool
-            Were the polygons updated compared to the past call
+        Tuple[Data3D, bool]
+            Data3D object and whether geometry was updated
+
+        Raises
+        ------
+        ImportError
+            If pyvista is not available
+        ValueError
+            If no mesh is loaded
         """
-        if self.last_3d_frame == options:
-            return Data3D.from_vtk(self.mesh), False
-        
-        if not "recompute" in options:
+        _require_pyvista()
+
+        if self.mesh is None:
+            raise ValueError("No mesh loaded. Call read_file first.")
+
+        # Set default options
+        if "recompute" not in options:
             options["recompute"] = True
-        if not "time" in options:
+        if "time" not in options:
             options["time"] = self.current_time
 
+        # Load data at requested time
         if self.current_time != options["time"]:
-            print(f"Loading data at time {options['time']}")
+            logger.debug("Loading 3D data at time %s", options["time"])
             self.load_at_time(options["time"])
 
+        # Check cache
+        if self.last_3d_frame == options:
+            logger.debug("Using cached 3D data")
+            try:
+                return Data3D.from_vtk(self.mesh), False
+            except (ImportError, AttributeError):
+                logger.warning("Data3D.from_vtk not available, returning None")
+                return None, False
+
+        # Update cache
         self.last_3d_frame = options.copy()
-            
-        return Data3D.from_vtk(self.mesh), True
+
+        try:
+            data_3d = Data3D.from_vtk(self.mesh)
+            logger.debug("Computed 3D data with %d cells", len(data_3d.cell_ids))
+            return data_3d, True
+        except (ImportError, AttributeError) as e:
+            logger.error("Failed to create Data3D from VTK: %s", e)
+            raise
 
     def get_3d_value_dict(
-        self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
-    ) -> Dict[Union[int, str], str]:
-        """Returns a cell name - field value map for a given field name
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Dict[Union[int, str], Any]:
+        """
+        Get field values for 3D cells.
 
         Parameters
         ----------
         value_label : str
-            Field name to get values from
-        cells : List[Union[int,str]]
-            List of cells names
+            Field name
+        cells : List[Union[int, str]]
+            Cell identifiers
         options : Dict[str, Any]
-            Additional options for frame computation.
+            Additional options
         caller : str
-            Identifier of the caller requesting the computation (default: "API")
+            Caller identifier
 
         Returns
         -------
-        Dict[Union[int,str], str]
-            Field value for each requested cell names
+        Dict[Union[int, str], Any]
+            Cell ID to value mapping
+
+        Note
+        ----
+        This is a wrapper around get_value_dict for 3D visualization.
         """
-        if not "recompute" in options:
-            options["recompute"] = True
-        if not "time" in options:
-            options["time"] = self.current_time
+        return self.get_value_dict(value_label, cells, options, caller)
 
-        if self.current_time != options["time"]:
-            print(f"Loading data at time {options['time']}")
-            self.load_at_time(options["time"])
+    def custom_function(self, function_name: str, arguments: Dict[str, Any]) -> Any:
+        """
+        Call a custom function by name.
 
-        if value_label == MESH:
-            dict_compo = {v: np.nan for v in cells}
+        This method allows extensions to call interface-specific functions
+        that are not part of the standard interface API.
 
-            return dict_compo
+        Parameters
+        ----------
+        function_name : str
+            Name of the function to call
+        arguments : Dict[str, Any]
+            Function arguments
 
-        if value_label in self.mesh.array_names:
-            data = self.mesh.cell_data[value_label]
-            return dict(zip(cells, data[cells]))
+        Returns
+        -------
+        Any
+            Function result
 
-        for res in self.results.values():
-            if value_label in res.get_fields():
-                results = res.get_values([], cells, [], value_label)
-                return {cells[i]: results[i] for i in range(len(cells))}
+        Raises
+        ------
+        AttributeError
+            If function does not exist
+        """
+        if not hasattr(self, function_name):
+            raise AttributeError(f"Function '{function_name}' not found in VTKInterface")
 
-        raise NotImplementedError(
-            f"The field {value_label} is not implemented, fields available : {self.get_labels()}"
-        )
-
-if __name__ == "__main__":
-    file_path = Path("/partage/spatial/Stages/2026_Manta_NTP/Results/Core/core.pvd")
-    if True:
-        import time 
-        st = time.time()
-
-        import matplotlib.pyplot as plt
-        from scivianna.plotter_2d.api import plot_frame_in_axes
-        from scivianna.constants import Z
-
-        file_path = Path("/partage/spatial/Stages/2026_Manta_NTP/Results/Core/core.pvd")
-        fig, axes = plt.subplots(1, 2, width_ratios=[3, 1])
-        interface = ComputeSlave(VTKInterface)
-        interface.read_file(file_path, GEOMETRY)
-
-        
-        axes[0].set_title("XY Temperature field (K)")
-        axes[0].set_xlabel("X coordinate (cm)")
-        axes[0].set_ylabel("Y coordinate (cm)")
-
-        plot_frame_in_axes(
-            interface,
-            "Temperature",
-            axes[0],
-            w_value = .5,
-            edge_width=0.1,
-            display_colorbar=True,
-            options={"time": 1000.}
-        )
-        print("First plot time", time.time() - st)
-        
-        axes[1].set_title("XZ Temperature field (K)")
-        axes[1].set_xlabel("X coordinate (cm)")
-        axes[1].set_ylabel("Z coordinate (cm)")
-
-        plot_frame_in_axes(
-            interface,
-            "Temperature",
-            axes[1],
-            w_value = 0.,
-            edge_width=0.1,
-            v=Z,
-            display_colorbar=True,
-            options={"time": 1000.},
-            plot_options={"aspect": None}
-        )
-        fig.tight_layout()
-        fig.savefig(
-            "plot_vtk.png",
-            dpi=500
-        )
-        print("Two plot time", time.time() - st)
-    # else:
-    #     from scivianna.panel.panel_2d import Panel2D
-    #     slave = ComputeSlave(VTKInterface)
-    #     slave.read_file(file_path, GEOMETRY)
-
-    #     panel = Panel2D(slave, name="VTK")
-    #     panel.set_coordinates(
-    #         w = .5
-    #     )
-    #     panel.show()
+        func = getattr(self, function_name)
+        return func(**arguments)

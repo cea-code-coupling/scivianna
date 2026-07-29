@@ -80,10 +80,10 @@ doc = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/cea/scivianna"
+Homepage = "https://github.com/cea-code-coupling/scivianna"
 Documentation = "https://scivianna.readthedocs.io"
-Repository = "https://github.com/cea/scivianna"
-"Bug Tracker" = "https://github.com/cea/scivianna/issues"
+Repository = "https://github.com/cea-code-coupling/scivianna"
+"Bug Tracker" = "https://github.com/cea-code-coupling/scivianna/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

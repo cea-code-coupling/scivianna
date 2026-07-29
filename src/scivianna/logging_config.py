@@ -16,10 +16,6 @@ import os
 import sys
 from typing import Optional
 
-# Module-level logger instance
-_logger: Optional[logging.Logger] = None
-
-
 def get_logger(name: str) -> logging.Logger:
     """
     Get or create a logger with the specified name.
@@ -45,8 +41,6 @@ def get_logger(name: str) -> logging.Logger:
     >>> logger.warning("Warning message")
     >>> logger.error("Error message")
     """
-    global _logger
-
     # Get the logger
     logger = logging.getLogger(name)
 
