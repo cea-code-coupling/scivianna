@@ -448,6 +448,9 @@ def worker(
         except queue.Empty:
             continue
 
+        except (KeyboardInterrupt, SystemExit):
+            return
+
         except Exception as e:
             logger.error("Worker error: %s", e, exc_info=True)
             q_errors.put(e)
@@ -491,8 +494,8 @@ class ComputeSlave:
         self,
     ):
         """Kills the worker and create a new one."""
-        logger.info("Resetting ComputeSlave worker process")
         if self.p is not None:
+            logger.info("Resetting ComputeSlave worker process")
             self.p.kill()
             self.p.join()
 

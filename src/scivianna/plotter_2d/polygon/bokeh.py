@@ -342,6 +342,63 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             # hover_fill_alpha=0.6,
         )
 
+    def _ensure_renderer_exists(self, data: Data2D):
+        """Ensures the figure has a renderer, creating one if necessary.
+        
+        Parameters
+        ----------
+        data : Data2D
+            Data2D object containing the geometry to plot
+        """
+        # Check if renderer exists by looking for multi_polygons glyph in figure renderers
+        has_renderer = any(
+            hasattr(renderer, 'glyph') and 
+            hasattr(renderer.glyph, '__class__') and 
+            renderer.glyph.__class__.__name__ == 'MultiPolygons'
+            for renderer in self.figure.renderers
+        )
+        
+        if not has_renderer:
+            # Renderer is missing, recreate it
+            logger.info("Replacing missing renderer")
+            xs, ys = self._polygons_to_coords(data.get_polygons())
+            
+            if len(data.cell_ids) > 0:
+                self.source_polygons.data = {
+                    XS: xs,
+                    YS: ys,
+                    CELL_NAMES: data.cell_ids.tolist(),
+                    CELL_VALUES: data.cell_values.tolist(),
+                    COLORS: np.array(data.cell_colors)[:, :-1].tolist(),
+                    FILL_ALPHA: (np.array(data.cell_colors)[:, -1] / 255).tolist(),
+                    EDGE_COLORS: np.array(data.cell_edge_colors)[:, :-1].tolist(),
+                    EDGE_ALPHA: (np.array(data.cell_edge_colors)[:, -1] / 255).tolist(),
+                }
+            else:
+                self.source_polygons.data = {
+                    XS: xs,
+                    YS: ys,
+                    CELL_NAMES: [],
+                    CELL_VALUES: [],
+                    COLORS: [],
+                    FILL_ALPHA: [],
+                    EDGE_COLORS: [],
+                    EDGE_ALPHA: [],
+                }
+            
+            self.hovered_glyph = self.figure.multi_polygons(
+                xs=XS,
+                ys=YS,
+                line_width=self.line_width,
+                source=self.source_polygons,
+                color=COLORS,
+                line_color=EDGE_COLORS,
+                fill_alpha=FILL_ALPHA,
+                line_alpha=EDGE_ALPHA,
+            )
+            return True  # Renderer was created
+        return False  # Renderer already existed
+
     def update_2d_frame(
         self,
         data: Data2D,
@@ -353,6 +410,13 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the data to update
         """
+        # First ensure the renderer exists (recover from edge cases where it's missing)
+        renderer_created = self._ensure_renderer_exists(data)
+        
+        # If we just created the renderer, we're done (data was already set)
+        if renderer_created:
+            return
+        
         xs, ys = self._polygons_to_coords(data.get_polygons())
 
         if len(data.cell_ids) > 0:
@@ -395,10 +459,12 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         colors = data.cell_colors
         cell_count = len(colors)
 
-        if len(self.source_polygons.data.keys()) == 0:
-            return self.plot_2d_frame(
-                data
-            )
+        # Check if renderer exists (recover from edge cases where it's missing)
+        renderer_created = self._ensure_renderer_exists(data)
+        
+        # If we just created the renderer, we're done
+        if renderer_created:
+            return
 
         self.source_polygons.patch(
             {

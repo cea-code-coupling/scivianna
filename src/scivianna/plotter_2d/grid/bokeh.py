@@ -346,6 +346,53 @@ class Bokeh2DGridPlotter(Plotter2D):
             source=self.source_grid,
         )
 
+    def _ensure_renderer_exists(self, data: Data2D):
+        """Ensures the figure has a renderer, creating one if necessary.
+        
+        Parameters
+        ----------
+        data : Data2D
+            Data2D object containing the geometry to plot
+        """
+        # Check if renderer exists by looking for image_rgba glyph in figure renderers
+        has_renderer = any(
+            hasattr(renderer, 'glyph') and 
+            hasattr(renderer.glyph, '__class__') and 
+            renderer.glyph.__class__.__name__ == 'ImageRGBA'
+            for renderer in self.figure.renderers
+        )
+        
+        if not has_renderer:
+            # Renderer is missing, recreate it
+            logger.info("Replacing missing renderer")
+            img, view, grid, val_grid = get_grids(data, self.display_edges)
+
+            if self.save_data:
+                self.data = data
+                self.cell_name_grid = np.array(grid)
+
+            self.source_grid = ColumnDataSource(
+                {
+                    GRID: [img],
+                    CELL_NAMES: [grid],
+                    CELL_VALUES: [val_grid],
+                }
+            )
+
+            self.dw = data.u_values.max() - data.u_values.min()
+            self.dh = data.v_values.max() - data.v_values.min()
+
+            self.image = self.figure.image_rgba(
+                image=GRID,
+                x=data.u_values.min(),
+                y=data.v_values.min(),
+                dw=self.dw,
+                dh=self.dh,
+                source=self.source_grid,
+            )
+            return True  # Renderer was created
+        return False  # Renderer already existed
+
     def update_2d_frame(
         self,
         data: Data2D,
@@ -357,6 +404,13 @@ class Bokeh2DGridPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the data to update
         """
+        # First ensure the renderer exists (recover from edge cases where it's missing)
+        renderer_created = self._ensure_renderer_exists(data)
+        
+        # If we just created the renderer, we're done
+        if renderer_created:
+            return
+        
         img, view, grid, val_grid = get_grids(data, self.display_edges)
 
         if self.save_data:
@@ -392,6 +446,13 @@ class Bokeh2DGridPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the data to update
         """
+        # Check if renderer exists (recover from edge cases where it's missing)
+        renderer_created = self._ensure_renderer_exists(data)
+        
+        # If we just created the renderer, we're done
+        if renderer_created:
+            return
+        
         self.update_2d_frame(data)
 
     def update_range(self, event: events.RangesUpdate):

@@ -1,6 +1,10 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import pyvista as pv
 
 import scivianna
 from scivianna.constants import GEOMETRY, X, Y
