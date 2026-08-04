@@ -92,7 +92,7 @@ def _get_extension_class(
             if ext.__name__ == ext_name:
                 return ext
     elif panel_type == "Panel2D":
-        from scivianna.panel.panel_2d import default_extensions as panel2d_default_extensions
+        from scivianna.panel.panel_2d import default_extensions_bokeh as panel2d_default_extensions
 
         for ext in panel2d_default_extensions:
             if ext.__name__ == ext_name:
