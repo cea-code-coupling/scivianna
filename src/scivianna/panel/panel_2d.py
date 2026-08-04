@@ -30,9 +30,15 @@ from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
-from scivianna.plotter_2d.polygon.vtk_2d import VTK2DPolygonPlotter
 from scivianna.slave import ComputeSlave
 from scivianna.utils.polygon_sorter import PolygonSorter
+
+try:
+    from scivianna.plotter_2d.polygon.vtk_2d import VTK2DPolygonPlotter
+    has_vtk = True
+except (ImportError, ModuleNotFoundError) as e:
+    has_vtk = False
+    vtk_error = e
 
 
 class PlotterBackend(Enum):
@@ -150,6 +156,8 @@ class Panel2D(VisualizationPanel):
         if self.plotter_backend == PlotterBackend.VTK:
             if not self.display_polygons:
                 raise ValueError("VTK plotter can't be used for grid plots.")
+            if not has_vtk:
+                raise vtk_error
             self.plotter = VTK2DPolygonPlotter()
         elif self.display_polygons:
             self.plotter = Bokeh2DPolygonPlotter()
