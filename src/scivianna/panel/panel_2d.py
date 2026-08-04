@@ -536,7 +536,7 @@ class Panel2D(VisualizationPanel):
             name=self.panel_name,
             display_polygons=self.display_polygons,
             plotter_backend=self.plotter_backend,
-            extensions=[type(e) for e in self.extension_classes],
+            extensions=[e for e in self.extension_classes],
         )
         new_visualiser.copy_index = self.copy_index
 

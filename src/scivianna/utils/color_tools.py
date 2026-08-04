@@ -623,9 +623,8 @@ def interpolate_cmap_at_values(cmap_name: str, values: np.ndarray) -> np.ndarray
     np.ndarray
         RGBA 255 colors per value in values
     """
-    if not len(values.shape) == 1:
+    if not len(np.array(values).shape) == 1:
         raise ValueError(f"interpolate_cmap_at_values can only be called on values array of shape (x,), found {values.shape}")
-
 
     cmap = color_maps[cmap_name]
     colors = (
