@@ -177,24 +177,6 @@ class VTK2DPolygonPlotter(Plotter2D):
         
         return polydata
 
-    def _get_colormap_colors(self, colormap_name: str, n_colors: int = 64) -> np.ndarray:
-        """
-        Get colors from a matplotlib colormap.
-        
-        Parameters
-        ----------
-        colormap_name : str
-            Name of the matplotlib colormap.
-        n_colors : int
-            Number of colors to sample.
-        
-        Returns
-        -------
-        np.ndarray
-            Array of RGB colors (n_colors x 3).
-        """
-        return beautiful_color_maps[colormap_name]
-
     def display_borders(self, display: bool):
         """
         Display or hide the figure borders and axis.
@@ -242,7 +224,8 @@ class VTK2DPolygonPlotter(Plotter2D):
             Color map name (stored for reference).
         """
         self._colormap_name = color_map_name
-        # Colors are pre-computed in Data2D, no update needed here
+        self.plotter.set_colorbar_colors(np.array(beautiful_color_maps[color_map_name]) / 255.)
+        
 
     def plot_2d_frame(self, data: Data2D):
         """
