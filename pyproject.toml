@@ -56,7 +56,7 @@ grid = [
 ]
 "3d" = [
     "pyvista",
-    "scivianna_vtk>=0.1.3"
+    "scivianna_vtk>=0.1.7"
 ]
 test = [
     "pytest-xdist",

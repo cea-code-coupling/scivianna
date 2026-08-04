@@ -7,6 +7,7 @@ representations, with interactive zoom/pan capabilities.
 """
 
 import os
+from enum import Enum
 from typing import Callable, Dict, List, Tuple, Type, Union
 
 import numpy as np
@@ -22,14 +23,26 @@ from scivianna.extension.axes import Axes
 from scivianna.extension.extension import Extension
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
+from scivianna.extension.slice_3d import Slice3D
 from scivianna.interface.generic_interface import Geometry2D
 from scivianna.logging_config import get_logger
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_2d.generic_plotter import Plotter2D
 from scivianna.plotter_2d.grid.bokeh import Bokeh2DGridPlotter
 from scivianna.plotter_2d.polygon.bokeh import Bokeh2DPolygonPlotter
+from scivianna.plotter_2d.polygon.vtk_2d import VTK2DPolygonPlotter
 from scivianna.slave import ComputeSlave
 from scivianna.utils.polygon_sorter import PolygonSorter
+
+
+class PlotterBackend(Enum):
+    """Enumeration of available 2D plotter backends."""
+    
+    BOKEH = "bokeh"
+    """Bokeh-based 2D polygon renderer (default)."""
+    
+    VTK = "vtk"
+    """VTK/vtk.js-based 2D polygon renderer with 2D top-down view mode."""
 
 logger = get_logger(__name__)
 
@@ -39,7 +52,11 @@ if profile_time:
 
 pn.config.inline = True
 
-default_extensions = [FileLoader, FieldSelector, Axes, AIAssistant]
+# Base default extensions for Bokeh backend
+default_extensions_bokeh = [FileLoader, FieldSelector, Axes, AIAssistant]
+
+# Default extensions for VTK backend (includes Slice3D for clipping features)
+default_extensions_vtk = [FileLoader, FieldSelector, Slice3D, Axes, AIAssistant]
 
 
 class Panel2D(VisualizationPanel):
@@ -58,7 +75,8 @@ class Panel2D(VisualizationPanel):
         slave: ComputeSlave,
         name="",
         display_polygons: bool = True,
-        extensions: List[Extension] = default_extensions,
+        plotter_backend: PlotterBackend = PlotterBackend.BOKEH,
+        extensions: List[Extension] = None,
         data: Data2D = None,
         displayed_field: str = MESH,
         colormap: str = "BuRd",
@@ -77,7 +95,9 @@ class Panel2D(VisualizationPanel):
         name : str
             Name of the panel.
         display_polygons : bool
-            Display as polygons or as a 2D grid.
+            Display as polygons or as a 2D grid. Deprecated: use plotter_backend instead.
+        plotter_backend : PlotterBackend
+            Backend to use for rendering. BOKEH for Bokeh-based renderer, VTK for VTK/vtk.js-based renderer.
         extensions : List[Extension]
             List of extensions to add to the gui.
         data : Data2D
@@ -111,6 +131,7 @@ class Panel2D(VisualizationPanel):
         self.update_polygons = False
         """Need to update the polygons geometry (vs just colors)"""
         self.display_polygons = display_polygons
+        self.plotter_backend = plotter_backend
 
         self.polygon_sorter = PolygonSorter()
 
@@ -126,10 +147,21 @@ class Panel2D(VisualizationPanel):
         #
         #   Plotter creation
         #
-        if self.display_polygons:
+        if self.plotter_backend == PlotterBackend.VTK:
+            if not self.display_polygons:
+                raise ValueError("VTK plotter can't be used for grid plots.")
+            self.plotter = VTK2DPolygonPlotter()
+        elif self.display_polygons:
             self.plotter = Bokeh2DPolygonPlotter()
         else:
             self.plotter = Bokeh2DGridPlotter()
+
+        # Use appropriate default extensions based on backend if none provided
+        if extensions is None:
+            if self.plotter_backend == PlotterBackend.VTK:
+                extensions = default_extensions_vtk
+            else:
+                extensions = default_extensions_bokeh
 
         super().__init__(slave, name, extensions.copy())
 
@@ -495,7 +527,8 @@ class Panel2D(VisualizationPanel):
             slave=self.slave.duplicate(),
             name=self.panel_name,
             display_polygons=self.display_polygons,
-            extensions=[e for e in self.extension_classes],
+            plotter_backend=self.plotter_backend,
+            extensions=[type(e) for e in self.extension_classes],
         )
         new_visualiser.copy_index = self.copy_index
 
@@ -736,6 +769,7 @@ class Panel2D(VisualizationPanel):
             "size_v": self.size_v,
             "displayed_field": self.displayed_field,
             "display_polygons": self.display_polygons,
+            "plotter_backend": self.plotter_backend.value,
             "colormap": self.colormap,
             "sync_field": self.sync_field,
             "update_event": self.update_event,
@@ -767,10 +801,15 @@ class Panel2D(VisualizationPanel):
         Panel2D
             Restored panel
         """
+        # Get plotter_backend from info_dict, default to BOKEH for backward compatibility
+        backend_value = info_dict.get("plotter_backend", "bokeh")
+        plotter_backend = PlotterBackend(backend_value)
+        
         panel = Panel2D(
             slave=slave,
             name=info_dict["name"],
             display_polygons=info_dict["display_polygons"],
+            plotter_backend=plotter_backend,
             extensions=extensions,
             data=data,
             displayed_field=info_dict["displayed_field"],

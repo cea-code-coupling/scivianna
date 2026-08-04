@@ -22,6 +22,7 @@ class Plotter3D(Plotter3D):
         self.v = np.array([0, 1, 0])
 
         self.on_axes_change_callback = None
+        self._info_disabled_high_cell_count = False
 
     def plot(self, data: Data3D):
         """Adds a new plot to the figure from a set of polygons
@@ -250,3 +251,68 @@ class Plotter3D(Plotter3D):
             Mouse location
         """
         return tuple(self.plotter.hover_position)
+
+    def set_plane_enabled(self, enabled: bool):
+        """Enable or disable the plane visualization overlay.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether to show the plane visualization.
+        """
+        self.plotter.set_plane_enabled(enabled)
+
+    def set_clip_enabled(self, enabled: bool):
+        """Enable or disable the clip plane visualization.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether to enable clipping of the rendered geometry.
+        """
+        self.plotter.set_clip_enabled(enabled)
+
+    def set_clip_axis(self, axis: str, sign: int = 1):
+        """Set clip plane normal to a cardinal direction.
+
+        Parameters
+        ----------
+        axis : {'x', 'y', 'z'}
+            Axis for the normal direction.
+        sign : {1, -1}, optional
+            Direction sign. Default is 1 (positive direction).
+        """
+        self.plotter.set_clip_axis(axis, sign)
+
+    def set_edges_visible(self, visible: bool):
+        """Enable or disable feature edges visualization.
+
+        Parameters
+        ----------
+        visible : bool
+            Whether to show feature edges.
+        """
+        self.plotter.set_edges_visible(visible)
+
+    def set_info(self, enabled: bool):
+        """Enable or disable the info panel.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether to show the info panel.
+        """
+        self.plotter.set_info(enabled)
+
+    @property
+    def n_cells(self) -> int:
+        """Returns the number of cells in the current polydata.
+
+        Returns
+        -------
+        int
+            Number of cells, or 0 if no data loaded.
+        """
+        if self.plotter._source_mesh is not None:
+            return self.plotter._source_mesh.n_cells
+        return 0

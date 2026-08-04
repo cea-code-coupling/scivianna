@@ -79,7 +79,7 @@ def set_colors_list(
     coloring_mode = slave.get_label_coloring_mode(coloring_label)
 
     cell_values = data.cell_values
-
+    
     min_val = None
     minmax = None
 
