@@ -174,7 +174,8 @@ class VTK2DPolygonPlotter(Plotter2D):
 
             polydata.cell_data["rgb"] = colors_array  # Send full RGBA array
             polydata.cell_data["edge_rgb"] = edge_colors_array[:, :3]  # RGB only
-        
+
+        polydata.clean(inplace=True, tolerance=1e-6)
         return polydata
 
     def display_borders(self, display: bool):

@@ -10,7 +10,7 @@ import scivianna
 from scivianna.constants import GEOMETRY, X, Y
 from scivianna.enums import UpdateEvent
 from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
-from scivianna.panel.panel_2d import Panel2D
+from scivianna.panel.panel_2d import Panel2D, PlotterBackend
 from scivianna.panel.panel_3d import Panel3D
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.slave import ComputeSlave
@@ -94,28 +94,6 @@ def create_uniform_structured_grid(
     # Convert to unstructured grid and apply colormap
     unstructured = grid.cast_to_unstructured_grid()
 
-    # Apply colormap to cell data
-    try:
-        colormap = pv.LookupTable(cmap=cmap)
-        # Normalize cell values to [0, 1]
-        min_val, max_val = cell_value.min(), cell_value.max()
-        if max_val > min_val:
-            normalized = (cell_value - min_val) / (max_val - min_val)
-        else:
-            normalized = np.zeros_like(cell_value)
-
-        # Get RGB colors from colormap
-        colors = np.zeros((len(normalized), 4), dtype=np.uint8)
-        for i, val in enumerate(normalized):
-            rgb = colormap.GetColor(val)
-            colors[i, :3] = [int(c * 255) for c in rgb[:3]]
-            colors[i, 3] = 255  # Alpha
-
-        unstructured.cell_data["rgb"] = colors
-    except Exception as e:
-        # Fallback to white color if colormap fails
-        unstructured.cell_data["rgb"] = np.ones((n_cells, 4), dtype=np.uint8) * 255
-
     return unstructured
 
 
@@ -176,7 +154,7 @@ def get_panel(
             raise ImportError("PyVista is required for VTK examples. Install with: pip install scivianna[3d]")
 
     elif isinstance(geo, (str, Path)):
-        slave.read_file(geo, GEOMETRY)
+        slave.read_file(geo, "MULTI_BLOCK")
     else:
         raise TypeError(f"Provided type {type(geo)} not implemented")
 
@@ -186,7 +164,7 @@ def get_panel(
         displayed_field = labels[0] if labels else None
 
     # Create 2D panel
-    vtk_2d = Panel2D(slave, name="VTK slice", u=X, v=Y, displayed_field=displayed_field)
+    vtk_2d = Panel2D(slave, name="VTK slice", u=X, v=Y, displayed_field=displayed_field, plotter_backend = PlotterBackend.VTK)
     vtk_2d.update_event = [UpdateEvent.CLIC, UpdateEvent.AXES_CHANGE]
 
     # Create 3D panel
@@ -204,4 +182,8 @@ def get_panel(
 
 if __name__ == "__main__":
     # Run the demo
-    get_panel(None).show()
+    from scivianna import set_file
+    set_file("log_scivianna.log")
+    get_panel(
+        None
+    ).show()

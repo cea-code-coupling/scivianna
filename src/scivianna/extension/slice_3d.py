@@ -48,6 +48,7 @@ class Slice3D(Extension):
         panel : Panel3D or Panel2D
             Panel to which the extension is attached
         """
+        from scivianna.panel.panel_2d import Panel2D
         super().__init__(
             "Slice Plane",
             get_icon("view_in_ar"),
@@ -55,6 +56,8 @@ class Slice3D(Extension):
             plotter,
             panel,
         )
+
+        self.is_2d = isinstance(panel, Panel2D)
 
         self.description = """
 The slice plane extension lets you clip the geometry to see inside.
@@ -68,12 +71,12 @@ Controls:
 
         # Clip enabled checkbox
         self.plane_enabled_checkbox = pmui.Checkbox(
-            label="Enable slice plane", value=False, width=280
+            label="Enable slice plane", value=False, width=280, visible = not self.is_2d
         )
         self.plane_enabled_checkbox.param.watch(self._on_plane_enabled_change, "value")
 
         # Clip enabled checkbox
-        self.clip_enabled_checkbox = pmui.Checkbox(label="Enable clipping", value=False, width=280)
+        self.clip_enabled_checkbox = pmui.Checkbox(label="Enable clipping", value=False, width=280, visible = not self.is_2d)
         self.clip_enabled_checkbox.param.watch(self._on_clip_enabled_change, "value")
 
         # Edges visible checkbox
@@ -90,13 +93,22 @@ Controls:
 
         # Axis selector
         self.clip_axis_select = pmui.Select(
-            label="Clip axis", options=["x", "y", "z"], value="z", width=280
+            label="Clip axis", options=["x", "y", "z"], value="z", width=280, visible = not self.is_2d
         )
         self.clip_axis_select.param.watch(self._on_clip_axis_change, "value")
+
+        # Force 2D view
+        self.view_2d_checkbox = pmui.Checkbox(
+            label="Force 2D view", value = self.is_2d, width=280
+        )
+        self.view_2d_checkbox.param.watch(self._on_2d_change, "value")
 
         # Watch for clip plane changes on the underlying VTK plotter
         self._get_vtk_plotter().param.watch(self._on_plane_change, "clip_origin")
         self._get_vtk_plotter().param.watch(self._on_plane_change, "clip_normal")
+
+    def _on_2d_change(self, event):
+        self.plotter.plotter.set_view_2d_mode(self.view_2d_checkbox.value)
 
     def _get_vtk_plotter(self):
         """Returns the underlying VTK plotter instance.
@@ -150,6 +162,7 @@ Controls:
             self.plane_enabled_checkbox,
             self.clip_enabled_checkbox,
             self.clip_axis_select,
+            self.view_2d_checkbox
         )
 
     def on_file_load(self, file_path: str, file_key: str):
@@ -181,6 +194,7 @@ Controls:
             "edges_visible": self.edges_visible_checkbox.value,
             "info_enabled": self.info_enabled_checkbox.value,
             "axis": self.clip_axis_select.value,
+            "2d": self.view_2d_checkbox.value
         }
 
     @classmethod
@@ -215,6 +229,9 @@ Controls:
 
         if "axis" in info_dict:
             extension.clip_axis_select.value = info_dict["axis"]
+
+        if "2d" in info_dict:
+            extension.view_2d_checkbox.value = info_dict["2d"]
 
         extension._restoring = False
 
