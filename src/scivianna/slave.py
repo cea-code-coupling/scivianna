@@ -488,7 +488,12 @@ class ComputeSlave:
         self._lock = Lock()
 
         self.running = False
-        self.reset()
+        self._start()
+
+        def terminate_process():
+            self.terminate()
+
+        atexit.register(terminate_process)
 
     def reset(
         self,
@@ -499,20 +504,33 @@ class ComputeSlave:
             self.p.kill()
             self.p.join()
 
+        self._start()
+
+    def _start(self):
+        if self.p is not None:
+            raise RuntimeError("Slave starting a process before the past was closed.")
+
         self.q_tasks = mp.Queue()
         self.q_returns = mp.Queue()
         self.q_errors = mp.Queue()
         self.p = mp.Process(
-            target=worker, args=(self.q_tasks, self.q_returns, self.q_errors, self.code_interface)
+            target=worker,
+            args=(self.q_tasks, self.q_returns, self.q_errors, self.code_interface)
         )
-        self.p.start()
+        try:
+            self.p.start()
+        except RuntimeError as e:
+            error_msg = f"""
+{e}
+\033[91m
+The preceeding message error was caught. It can occur when the visualizer is launched on windows from a script main body.
+Please move your code in a "if __name__ == "__main__":" bloc
+See https://docs.python.org/3/library/__main__.html for more information.
+"""
+            raise RuntimeError(error_msg)
+
         self.running = True
         self.ongoing_request = False
-
-        def terminate_process():
-            self.terminate()
-
-        atexit.register(terminate_process)
 
     #
     #   GenericInterface functions
