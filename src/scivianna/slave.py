@@ -507,7 +507,7 @@ class ComputeSlave:
         self._start()
 
     def _start(self):
-        if self.p is not None:
+        if self.p is not None and self.p.is_alive():
             raise RuntimeError("Slave starting a process before the past was closed.")
 
         self.q_tasks = mp.Queue()
