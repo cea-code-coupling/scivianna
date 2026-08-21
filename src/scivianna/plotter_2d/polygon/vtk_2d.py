@@ -33,29 +33,29 @@ class VTK2DPolygonPlotter(Plotter2D):
         self.plotter.set_clip_enabled(False)
         self.plotter.set_edges_visible(True)
         self.plotter.set_info(True)
-        
+
         # Store reference to current polydata for updates
         self._current_polydata = None
-        
+
         # Color mapper state
         self._colorbar_visible = False
         self._colorbar_min = 0.0
         self._colorbar_max = 1.0
         self._colormap_name = "BuRd"
-        
+
         # Callbacks
         self.on_mouse_move_callback = None
         self.on_clic_callback = None
-        
+
         # Watch for hover and click events
         self.plotter.param.watch(self._on_hover, "hover_position")
         self.plotter.param.watch(self._on_click, "clicks")
-        
+
         # Store axes information
         self._u = np.array([1.0, 0.0, 0.0])
         self._v = np.array([0.0, 1.0, 0.0])
         self._origin = np.array([0.0, 0.0, 0.0])
-        
+
         # Flag to track if info was disabled due to high cell count
         self._info_disabled_high_cell_count = False
 
@@ -88,7 +88,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     ) -> pv.PolyData:
         """
         Convert a list of polygons to a pyvista PolyData object.
-        
+
         Parameters
         ----------
         polygons : List[PolygonElement]
@@ -97,7 +97,7 @@ class VTK2DPolygonPlotter(Plotter2D):
             List of cell values (one per polygon).
         cell_colors : List
             List of cell colors (RGBA, 0-255).
-        
+
         Returns
         -------
         pv.PolyData
@@ -107,66 +107,66 @@ class VTK2DPolygonPlotter(Plotter2D):
         all_points = []
         all_faces = []
         point_offset = 0
-        
+
         # Build cell data arrays that account for holes (each hole becomes a separate cell)
         cell_ids_data = []
         cell_values_data = []
         cell_colors_data = []
         cell_edge_colors_data = []
-        
+
         for i, polygon in enumerate(polygons):
             # Get exterior polygon points
             ext_x = polygon.exterior_polygon.x_coords
             ext_y = polygon.exterior_polygon.y_coords
-            
+
             # Create points in 2D (z=0)
             for x, y in zip(ext_x, ext_y):
                 all_points.append([x, y, 0.0])
-            
+
             # Create face for exterior (VTK polygon format: n_points, p0, p1, ..., pn)
             n_ext = len(ext_x)
             all_faces.append(n_ext)
             all_faces.extend(range(point_offset, point_offset + n_ext))
             point_offset += n_ext
-            
+
             # Add cell data for exterior
             cell_ids_data.append(polygon.cell_id)
             cell_values_data.append(cell_values[i])
             cell_colors_data.append(cell_colors[i])
             cell_edge_colors_data.append(cell_edge_colors[i])
-            
+
             # Handle holes by creating separate polygons (each hole is a separate cell)
             for hole in polygon.holes:
                 hole_x = hole.x_coords
                 hole_y = hole.y_coords
-                
+
                 for x, y in zip(hole_x, hole_y):
                     all_points.append([x, y, 0.0])
-                
+
                 n_hole = len(hole_x)
                 all_faces.append(n_hole)
                 all_faces.extend(range(point_offset, point_offset + n_hole))
                 point_offset += n_hole
-                
+
                 # Holes share the same cell data as their parent polygon
                 cell_ids_data.append(polygon.cell_id)
                 cell_values_data.append(cell_values[i])
                 cell_colors_data.append(cell_colors[i])
                 cell_edge_colors_data.append(cell_edge_colors[i])
-        
+
         # Create PolyData
         polydata = pv.PolyData()
         polydata.points = np.array(all_points)
         polydata.faces = np.array(all_faces)
-        
+
         # Add cell data - now matches the actual number of cells (exteriors + holes)
         if len(cell_ids_data) > 0:
             # Cell IDs - use 'cell_id' to match JS side expectations
             polydata.cell_data["cell_id"] = cell_ids_data
-            
+
             # Cell values - use 'cell_value' to match JS side expectations
             polydata.cell_data["cell_value"] = np.array(cell_values_data, dtype=float)
-            
+
             # Cell colors (convert from 0-255 RGBA to 0-1 RGB for VTK)
             # Use 'rgba' name to match JS side expectations (even though we only send RGB)
             colors_array = np.array(cell_colors_data, dtype=float) / 255.0
@@ -181,7 +181,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def display_borders(self, display: bool):
         """
         Display or hide the figure borders and axis.
-        
+
         Parameters
         ----------
         display : bool
@@ -194,7 +194,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
         """
         Display or hide the color bar, update its range if provided.
-        
+
         Parameters
         ----------
         display : bool
@@ -203,7 +203,7 @@ class VTK2DPolygonPlotter(Plotter2D):
             New colormap range (min, max).
         """
         self._colorbar_visible = display
-        
+
         if display and value_range is not None and value_range[0] is not None and value_range[1] is not None:
             self._colorbar_min = value_range[0]
             self._colorbar_max = value_range[1]
@@ -215,10 +215,10 @@ class VTK2DPolygonPlotter(Plotter2D):
     def set_color_map(self, color_map_name: str):
         """
         Set the colorbar color map name.
-        
+
         Note: Colors are fetched from the Data2D object, not computed by the plotter.
         Changing the colormap requires recomputing the Data2D with the new colormap.
-        
+
         Parameters
         ----------
         color_map_name : str
@@ -226,12 +226,12 @@ class VTK2DPolygonPlotter(Plotter2D):
         """
         self._colormap_name = color_map_name
         self.plotter.set_colorbar_colors(np.array(beautiful_color_maps[color_map_name]) / 255.)
-        
+
 
     def plot_2d_frame(self, data: Data2D):
         """
         Add a new plot to the figure from a set of polygons.
-        
+
         Parameters
         ----------
         data : Data2D
@@ -240,7 +240,7 @@ class VTK2DPolygonPlotter(Plotter2D):
         if len(data.cell_ids) == 0:
             logger.warning("No polygons to plot")
             return
-        
+
         # Convert polygons to PolyData (colors are taken from data.cell_colors)
         polydata = self._polygons_to_polydata(
             data.get_polygons(),
@@ -248,10 +248,10 @@ class VTK2DPolygonPlotter(Plotter2D):
             data.cell_colors,
             data.cell_edge_colors
         )
-        
+
         # Store reference
         self._current_polydata = polydata
-        
+
         # Update plotter
         self.plotter.update_polydata(polydata)
         self.plotter.set_view_2d_mode(True)
@@ -259,7 +259,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def update_2d_frame(self, data: Data2D):
         """
         Update the plot with new geometry and data.
-        
+
         Parameters
         ----------
         data : Data2D
@@ -271,7 +271,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def update_colors(self, data: Data2D):
         """
         Update only the colors of the displayed polygons.
-        
+
         Parameters
         ----------
         data : Data2D
@@ -281,18 +281,18 @@ class VTK2DPolygonPlotter(Plotter2D):
             # No existing data, do full plot
             self.plot_2d_frame(data)
             return
-        
+
         # Update cell values and colors in existing polydata
         if "cell_value" in self._current_polydata.cell_data:
             self._current_polydata.cell_data["cell_value"] = np.array(data.cell_values, dtype=float)
-        
+
         # Update colors from Data2D
         colors_array = np.array(data.cell_colors, dtype=float) / 255.0
         self._current_polydata.cell_data["rgb"] = colors_array  # Send full RGBA array
-        
+
         colors_edge_array = np.array(data.cell_edge_colors, dtype=float) / 255.0
         self._current_polydata.cell_data["edge_rgb"] = colors_edge_array[:, :3]  # RGB only
-        
+
         # Update plotter
         self.plotter.update_colors(self._current_polydata)
         self.plotter.set_view_2d_mode(True)
@@ -300,7 +300,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def _set_callback_on_range_update(self, callback):
         """
         Set a callback to update the x and y ranges in the GUI.
-        
+
         Parameters
         ----------
         callback : Callable
@@ -313,7 +313,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def make_panel(self) -> pn.viewable.Viewable:
         """
         Make the Panel viewable displayed in the web app.
-        
+
         Returns
         -------
         pn.viewable.Viewable
@@ -324,7 +324,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def _disable_interactions(self, disable: bool):
         """
         Disable the plot interactions for multi-panel web-app resizing.
-        
+
         Parameters
         ----------
         disable : bool
@@ -342,7 +342,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     ):
         """
         Store the u, v axes of the current plot.
-        
+
         Parameters
         ----------
         u : Tuple[float, float, float]
@@ -355,15 +355,17 @@ class VTK2DPolygonPlotter(Plotter2D):
         self._u = np.array(u)
         self._v = np.array(v)
         self._origin = np.array(origin)
-        
+
         # In 2D mode, the view is top-down (XY plane)
         # The u, v, origin define the coordinate transformation for the data
-        # This is already handled when creating the polydata
+        self.plotter.hover_u_vector = list(u)
+        self.plotter.hover_v_vector = list(v)
+        self.plotter.hover_origin = list(origin)
 
     def enable_highlight(self, enable: bool = True):
         """
         Enable hover highlight.
-        
+
         Parameters
         ----------
         enable : bool, optional
@@ -375,7 +377,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def get_mouse_location(self) -> Tuple[float, float, float]:
         """
         Return the current mouse location.
-        
+
         Returns
         -------
         Tuple[float, float, float]
@@ -386,7 +388,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def provide_on_mouse_move_callback(self, callback: Callable):
         """
         Store a function to call every time the user moves the mouse on the plot.
-        
+
         Parameters
         ----------
         callback : Callable
@@ -397,7 +399,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def provide_on_clic_callback(self, callback: Callable):
         """
         Store a function to call every time the user clicks on the plot.
-        
+
         Parameters
         ----------
         callback : Callable
@@ -408,7 +410,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def get_resolution(self) -> Tuple[int, int]:
         """
         Return the current plot resolution.
-        
+
         Returns
         -------
         Tuple[int, int]
@@ -420,7 +422,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     @property
     def n_cells(self) -> int:
         """Returns the number of cells in the current polydata.
-        
+
         Returns
         -------
         int
@@ -433,7 +435,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def set_plane_enabled(self, enabled: bool):
         """
         Enable or disable the slice plane.
-        
+
         Parameters
         ----------
         enabled : bool
@@ -444,7 +446,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def set_clip_enabled(self, enabled: bool):
         """
         Enable or disable clipping.
-        
+
         Parameters
         ----------
         enabled : bool
@@ -455,7 +457,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def set_clip_axis(self, axis: str, sign: int = 1):
         """
         Set the clip plane axis.
-        
+
         Parameters
         ----------
         axis : str
@@ -468,7 +470,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def set_edges_visible(self, visible: bool):
         """
         Set edges visibility.
-        
+
         Parameters
         ----------
         visible : bool
@@ -479,7 +481,7 @@ class VTK2DPolygonPlotter(Plotter2D):
     def set_info(self, enabled: bool):
         """
         Enable or disable info display.
-        
+
         Parameters
         ----------
         enabled : bool
