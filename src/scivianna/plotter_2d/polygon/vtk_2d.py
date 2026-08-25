@@ -4,13 +4,14 @@ VTK-based 2D polygon plotter for Scivianna.
 This module provides a 2D polygon renderer using VTK/vtk.js via the scivianna_vtk
 plotter component with 2D mode enabled.
 """
-
+import string
 from typing import Callable, List, Tuple
 
 import numpy as np
 import panel as pn
 import pyvista as pv
 
+import shapely
 
 from scivianna.data.data2d import Data2D
 from scivianna.logging_config import get_logger
@@ -21,6 +22,26 @@ from scivianna.utils.color_tools import beautiful_color_maps
 
 logger = get_logger(__name__)
 
+
+def cas_to_ascii_arr(arr):
+    """Convert an array of strings to ASCII-printable characters.
+    
+    Filters each string in the input array to keep only printable ASCII characters.
+    This is used to handle cell data that may contain non-printable characters
+    which VTK cannot process.
+    
+    Parameters
+    ----------
+    arr : array-like
+        Array of strings to filter.
+    
+    Returns
+    -------
+    numpy.ndarray
+        Array containing only the printable ASCII characters from each string.
+    """
+    printable = set(string.printable)
+    return np.array([filter(lambda x: x in printable, s) for s in arr])
 
 class VTK2DPolygonPlotter(Plotter2D):
     """2D geometry plotter based on VTK/vtk.js with 2D top-down view mode."""
@@ -64,11 +85,11 @@ class VTK2DPolygonPlotter(Plotter2D):
         if self.on_mouse_move_callback is not None:
             pos = self.plotter.hover_position
             cell_id = self.plotter.hover_cell_id
-            if cell_id >= 0 and not any(np.isnan(pos)):
+            if not (any(np.isnan(pos)) or cell_id is None):
                 self.on_mouse_move_callback(
                     screen_location=(None, None),  # VTK doesn't provide screen coords
                     space_location=tuple(pos),
-                    cell_id=int(cell_id),
+                    cell_id=cell_id,
                 )
 
     def _on_click(self, event):
@@ -76,11 +97,11 @@ class VTK2DPolygonPlotter(Plotter2D):
         if self.on_clic_callback is not None:
             pos = self.plotter.hover_position
             cell_id = self.plotter.hover_cell_id
-            if cell_id >= 0 and not any(np.isnan(pos)):
+            if not (any(np.isnan(pos)) or cell_id is None):
                 self.on_clic_callback(
                     screen_location=(None, None),
                     space_location=tuple(pos),
-                    cell_id=int(cell_id),
+                    cell_id=cell_id,
                 )
 
     def _polygons_to_polydata(
@@ -115,44 +136,25 @@ class VTK2DPolygonPlotter(Plotter2D):
         cell_edge_colors_data = []
 
         for i, polygon in enumerate(polygons):
-            # Get exterior polygon points
-            ext_x = polygon.exterior_polygon.x_coords
-            ext_y = polygon.exterior_polygon.y_coords
+            pol = polygon.to_shapely(z_coord=0)
 
-            # Create points in 2D (z=0)
-            for x, y in zip(ext_x, ext_y):
-                all_points.append([x, y, 0.0])
+            triangulated = shapely.constrained_delaunay_triangles(pol)
 
-            # Create face for exterior (VTK polygon format: n_points, p0, p1, ..., pn)
-            n_ext = len(ext_x)
-            all_faces.append(n_ext)
-            all_faces.extend(range(point_offset, point_offset + n_ext))
-            point_offset += n_ext
-
-            # Add cell data for exterior
-            cell_ids_data.append(polygon.cell_id)
-            cell_values_data.append(cell_values[i])
-            cell_colors_data.append(cell_colors[i])
-            cell_edge_colors_data.append(cell_edge_colors[i])
-
-            # Handle holes by creating separate polygons (each hole is a separate cell)
-            for hole in polygon.holes:
-                hole_x = hole.x_coords
-                hole_y = hole.y_coords
-
-                for x, y in zip(hole_x, hole_y):
-                    all_points.append([x, y, 0.0])
-
-                n_hole = len(hole_x)
-                all_faces.append(n_hole)
-                all_faces.extend(range(point_offset, point_offset + n_hole))
-                point_offset += n_hole
-
-                # Holes share the same cell data as their parent polygon
+            for triangle in triangulated.geoms:
                 cell_ids_data.append(polygon.cell_id)
                 cell_values_data.append(cell_values[i])
                 cell_colors_data.append(cell_colors[i])
                 cell_edge_colors_data.append(cell_edge_colors[i])
+
+                ext_x, ext_y = triangle.exterior.xy
+
+                for x, y in zip(ext_x, ext_y):
+                    all_points.append([x, y, 0.0])
+
+                n_ext = len(ext_x)
+                all_faces.append(n_ext)
+                all_faces.extend(range(point_offset, point_offset + n_ext))
+                point_offset += n_ext
 
         # Create PolyData
         polydata = pv.PolyData()
@@ -162,10 +164,22 @@ class VTK2DPolygonPlotter(Plotter2D):
         # Add cell data - now matches the actual number of cells (exteriors + holes)
         if len(cell_ids_data) > 0:
             # Cell IDs - use 'cell_id' to match JS side expectations
-            polydata.cell_data["cell_id"] = cell_ids_data
+            try:
+                polydata.cell_data["cell_id"] = np.array(cell_ids_data)
+            except ValueError as e:
+                if isinstance(cell_ids_data[0], str):
+                    polydata.cell_data["cell_id"] = cas_to_ascii_arr(cell_ids_data)
+                else:
+                    raise e
 
             # Cell values - use 'cell_value' to match JS side expectations
-            polydata.cell_data["cell_value"] = np.array(cell_values_data, dtype=float)
+            try:
+                polydata.cell_data["cell_value"] = np.array(cell_values_data)
+            except ValueError as e:
+                if isinstance(cell_values_data[0], str):
+                    polydata.cell_data["cell_value"] = cas_to_ascii_arr(cell_values_data)
+                else:
+                    raise e
 
             # Cell colors (convert from 0-255 RGBA to 0-1 RGB for VTK)
             # Use 'rgba' name to match JS side expectations (even though we only send RGB)
@@ -282,16 +296,31 @@ class VTK2DPolygonPlotter(Plotter2D):
             self.plot_2d_frame(data)
             return
 
+        colors_array = np.array(data.cell_colors, dtype=float) / 255.0
+        colors_edge_array = np.array(data.cell_edge_colors, dtype=float) / 255.0
+
         # Update cell values and colors in existing polydata
         if "cell_value" in self._current_polydata.cell_data:
-            self._current_polydata.cell_data["cell_value"] = np.array(data.cell_values, dtype=float)
+            if self._current_polydata.cell_data["cell_value"].shape == data.cell_values.shape:
+                self._current_polydata.cell_data["cell_value"] = np.array(data.cell_values, dtype=float)
+            else:
+                self._current_polydata.cell_data["cell_value"] = np.array(
+                    map(zip(data.cell_ids, data.cell_values), self._current_polydata.cell_data["cell_id"])
+                )
 
-        # Update colors from Data2D
-        colors_array = np.array(data.cell_colors, dtype=float) / 255.0
-        self._current_polydata.cell_data["rgb"] = colors_array  # Send full RGBA array
+        if self._current_polydata.cell_data["rgb"].shape == colors_array.shape:
+            self._current_polydata.cell_data["rgb"] = colors_array  # Send full RGBA array
+            self._current_polydata.cell_data["edge_rgb"] = colors_edge_array[:, :3]  # RGB only
 
-        colors_edge_array = np.array(data.cell_edge_colors, dtype=float) / 255.0
-        self._current_polydata.cell_data["edge_rgb"] = colors_edge_array[:, :3]  # RGB only
+        else:
+            self._current_polydata.cell_data["rgb"] = np.array(
+                map(zip(data.cell_ids, colors_array), self._current_polydata.cell_data["cell_id"])
+            )
+            self._current_polydata.cell_data["edge_rgb"] = np.array(
+                map(zip(data.cell_ids, colors_edge_array[:, :3]), self._current_polydata.cell_data["cell_id"])
+            )
+
+        self._current_polydata.cell_data["cell_value"]
 
         # Update plotter
         self.plotter.update_colors(self._current_polydata)

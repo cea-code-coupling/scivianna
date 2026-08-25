@@ -43,10 +43,10 @@ except (ImportError, ModuleNotFoundError) as e:
 
 class PlotterBackend(Enum):
     """Enumeration of available 2D plotter backends."""
-    
+
     BOKEH = "bokeh"
     """Bokeh-based 2D polygon renderer (default)."""
-    
+
     VTK = "vtk"
     """VTK/vtk.js-based 2D polygon renderer with 2D top-down view mode."""
 
@@ -294,10 +294,15 @@ class Panel2D(VisualizationPanel):
             st = time.time()
 
         # Update colorbar if needed
-        if self._pending_updates.get("colorbar"):
-            cb = self._pending_updates["colorbar"]
-            self.plotter.update_colorbar(True, (cb["new_low"], cb["new_high"]))
-            self.plotter.set_color_map(self.colormap)
+        if "display_colorbar" in self._pending_updates:
+            if self._pending_updates["display_colorbar"]:
+                if not "colorbar" in self._pending_updates:
+                    raise ValueError("colorbar must be in self._pending_updates if display_colorbar is.")
+                cb = self._pending_updates["colorbar"]
+                self.plotter.update_colorbar(True, (cb["new_low"], cb["new_high"]))
+                self.plotter.set_color_map(self.colormap)
+            else:
+                self.plotter.update_colorbar(False, (None, None))
 
         # Update data visualization if needed
         if self._pending_updates.get("data"):
@@ -374,6 +379,9 @@ class Panel2D(VisualizationPanel):
                     "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
                     "new_high": np.nanmax(np.array(data.cell_values).astype(float)),
                 }
+                self._pending_updates["display_colorbar"] = True
+            else:
+                self._pending_updates["display_colorbar"] = False
 
             if profile_time:
                 logger.debug("Plot panel preparing data: %.3fs", time.time() - st)
@@ -812,7 +820,7 @@ class Panel2D(VisualizationPanel):
         # Get plotter_backend from info_dict, default to BOKEH for backward compatibility
         backend_value = info_dict.get("plotter_backend", "bokeh")
         plotter_backend = PlotterBackend(backend_value)
-        
+
         panel = Panel2D(
             slave=slave,
             name=info_dict["name"],
