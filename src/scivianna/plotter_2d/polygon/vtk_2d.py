@@ -25,16 +25,16 @@ logger = get_logger(__name__)
 
 def cas_to_ascii_arr(arr):
     """Convert an array of strings to ASCII-printable characters.
-    
+
     Filters each string in the input array to keep only printable ASCII characters.
     This is used to handle cell data that may contain non-printable characters
     which VTK cannot process.
-    
+
     Parameters
     ----------
     arr : array-like
         Array of strings to filter.
-    
+
     Returns
     -------
     numpy.ndarray
@@ -137,6 +137,9 @@ class VTK2DPolygonPlotter(Plotter2D):
 
         for i, polygon in enumerate(polygons):
             pol = polygon.to_shapely(z_coord=0)
+
+            if not pol.is_valid:
+                pol = shapely.make_valid(pol)
 
             triangulated = shapely.constrained_delaunay_triangles(pol)
 
@@ -279,7 +282,7 @@ class VTK2DPolygonPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the updated geometry and data.
         """
-        # Full update - recreate polydata
+        print("updating frame")
         self.plot_2d_frame(data)
 
     def update_colors(self, data: Data2D):
@@ -291,6 +294,7 @@ class VTK2DPolygonPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the updated color data.
         """
+        print("updating colors", self._current_polydata is None)
         if self._current_polydata is None:
             # No existing data, do full plot
             self.plot_2d_frame(data)
