@@ -303,28 +303,16 @@ class VTK2DPolygonPlotter(Plotter2D):
         colors_array = np.array(data.cell_colors, dtype=float) / 255.0
         colors_edge_array = np.array(data.cell_edge_colors, dtype=float) / 255.0
 
-        # Update cell values and colors in existing polydata
-        if "cell_value" in self._current_polydata.cell_data:
-            if self._current_polydata.cell_data["cell_value"].shape == data.cell_values.shape:
-                self._current_polydata.cell_data["cell_value"] = np.array(data.cell_values, dtype=float)
-            else:
-                self._current_polydata.cell_data["cell_value"] = np.array(
-                    map(zip(data.cell_ids, data.cell_values), self._current_polydata.cell_data["cell_id"])
-                )
+        if (
+            self._current_polydata.cell_data["rgb"].shape != colors_array.shape
+            or self._current_polydata.cell_data["cell_value"].shape != np.asarray(data.cell_values).shape
+        ):
+            self.plot_2d_frame(data)
+            return
 
-        if self._current_polydata.cell_data["rgb"].shape == colors_array.shape:
-            self._current_polydata.cell_data["rgb"] = colors_array  # Send full RGBA array
-            self._current_polydata.cell_data["edge_rgb"] = colors_edge_array[:, :3]  # RGB only
-
-        else:
-            self._current_polydata.cell_data["rgb"] = np.array(
-                map(zip(data.cell_ids, colors_array), self._current_polydata.cell_data["cell_id"])
-            )
-            self._current_polydata.cell_data["edge_rgb"] = np.array(
-                map(zip(data.cell_ids, colors_edge_array[:, :3]), self._current_polydata.cell_data["cell_id"])
-            )
-
-        self._current_polydata.cell_data["cell_value"]
+        self._current_polydata.cell_data["cell_value"] = np.array(data.cell_values, dtype=float)
+        self._current_polydata.cell_data["rgb"] = colors_array
+        self._current_polydata.cell_data["edge_rgb"] = colors_edge_array[:, :3]
 
         # Update plotter
         self.plotter.update_colors(self._current_polydata)
