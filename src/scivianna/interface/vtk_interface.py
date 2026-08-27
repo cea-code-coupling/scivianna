@@ -24,7 +24,7 @@ Example
 -------
 >>> from scivianna import ComputeSlave
 >>> from scivianna.interface import VTKInterface
->>> 
+>>>
 >>> slave = ComputeSlave(VTKInterface)
 >>> slave.read_file("mesh.pvd", "Geometry")
 >>> panel = Panel2D(slave, name="VTK View")
@@ -39,6 +39,8 @@ Requires pyvista and vtk packages. Install with:
 from __future__ import annotations
 
 import multiprocessing as mp
+import pickle
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
@@ -221,7 +223,7 @@ class VTKExtension(Extension):
             width=260,
         )
         self.recompute_on_change = pmui.Checkbox(
-            label="Recompute mesh on time change", 
+            label="Recompute mesh on time change",
             value=False,
             width=260,
         )
@@ -295,9 +297,9 @@ class VTKExtension(Extension):
             Panel layout with time slider and options
         """
         return pmui.Column(
-            self.time_slider, 
+            self.time_slider,
             self.recompute_on_change,
-            margin=0, 
+            margin=0,
         )
 
 
@@ -382,6 +384,9 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         self.last_3d_frame: Optional[Dict[str, Any]] = None
         """Cache key for last 3D computation."""
 
+        self.file_infos: List[Tuple[str, str]] = []
+        """List of (file_path, file_label) tuples for files loaded by this interface."""
+
         logger.debug("VTKInterface initialized")
 
     def read_file(self, file_path: Union[str, Path], file_label: str) -> None:
@@ -434,6 +439,9 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
                     self.times = [-1.]
                 logger.info("Loaded %d time steps from %s", len(self.times), file_path)
 
+                # Store file info for rebuild on load
+                self.file_infos.append((str(file_path), file_label))
+
                 # Load last time step by default
                 if self.times:
                     self.load_at_time(self.times[-1])
@@ -449,6 +457,8 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         elif file_label == "MULTI_BLOCK":
             try:
                 self._read_multi_block(file_path)
+                # Store file info for rebuild on load
+                self.file_infos.append((str(file_path), file_label))
             except Exception as e:
                 logger.error("Failed to read multi-block file %s: %s", file_path, e)
                 raise
@@ -536,7 +546,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         else:
             logger.debug("No time present in file")
             dataset = self.reader.read()
-            
+
         self.mesh = extract_unstructured_grid(dataset)
 
         if self.mesh is None:
@@ -965,6 +975,155 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         This is a wrapper around get_value_dict for 3D visualization.
         """
         return self.get_value_dict(value_label, cells, options, caller)
+
+    def _rebuild_reader(self) -> None:
+        """
+        Re-read all files from saved paths to restore the reader and mesh.
+
+        This is called after loading a pickled state to reconstruct the PyVista
+        readers so that time-based data can be reloaded via load_at_time().
+        """
+        if not self.file_infos:
+            logger.warning("No file information available to rebuild reader")
+            return
+
+        # Clear current state before re-reading files (read_file appends to file_infos)
+        self.reader = None
+        self.mesh = None
+        self.times = []
+        self.current_time = 0.0
+        self.file_infos.clear()
+
+        for file_path, file_label in self.file_infos:
+            try:
+                logger.info("Re-reading saved file: %s as %s", file_path, file_label)
+                self.read_file(file_path, file_label)
+            except Exception as e:
+                logger.error("Failed to re-read saved file %s: %s", file_path, e)
+
+        # Restore current_time if possible
+        if self.times and self.current_time not in self.times:
+            if 0.0 in self.times:
+                self.current_time = 0.0
+            elif self.times:
+                self.current_time = self.times[-1]
+
+    def save(self, file_path: Path, include_files: bool):
+        """Pickle saves the slave content to a file, allows slave state reload.
+
+        Two modes are available:
+            -   If **include_files** is at True, all loaded data are saved, the pickled file can be loaded on its own to recover last session.
+            -   If **include_files** is at False, only the computed data are loaded, enabling faster first computation allowing a smaller pickle file size.
+
+        Parameters
+        ----------
+        file_path : Path
+            File to which save the slave
+        include_files : bool
+            Included loaded file
+        """
+        _require_pyvista()
+
+        with open(file_path, "wb") as f:
+            data = (
+                scivianna.__version__,
+                pv.__version__ if pv is not None else "unknown",
+                sys.version,
+                include_files,
+                "VTKInterface",
+            )
+
+            if include_files:
+                full_data = (
+                    self.times,
+                    self.current_time,
+                    self.file_infos,
+                    self.last_computed_frame,
+                    self.data,
+                    self.last_3d_frame,
+                    self.results,
+                    self.mesh,
+                )
+                pickle.dump((*data, *full_data), f)
+            else:
+                minimal_data = (
+                    self.last_computed_frame,
+                    self.data,
+                    self.last_3d_frame,
+                    self.results,
+                    self.mesh,
+                )
+                pickle.dump((*data, *minimal_data), f)
+
+    def load(self, file_path: Path, include_files: bool):
+        """Pickle loads the slave content to a file, allows slave state reload.
+
+        Two modes are available:
+            -   If **include_files** is at True, all loaded data are saved, the pickled file can be loaded on its own to recover last session.
+            -   If **include_files** is at False, only the computed data are loaded, enabling faster first computation allowing a smaller pickle file size.
+
+        Parameters
+        ----------
+        file_path : Path
+            File from which load the slave
+        include_files : bool
+            Included loaded file
+        """
+        if not Path(file_path).is_file():
+            raise ValueError(f"Provided path {file_path} does not exist")
+
+        _require_pyvista()
+
+        with open(file_path, "rb") as f:
+            data = pickle.load(f)
+
+            assert len(data) > 5, "Loaded data is not meant for VTKInterface"
+            version, pv_version, python_version, inc_files, interface_name = data[:5]
+            if version != scivianna.__version__:
+                logger.warning(
+                    f"Loading file built with scivianna {version}, current version: {scivianna.__version__}."
+                )
+            if pv is not None and pv_version != pv.__version__:
+                logger.warning(
+                    f"Loading file built with pyvista {pv_version}, current version: {pv.__version__}."
+                )
+            if python_version != sys.version:
+                logger.warning(
+                    f"Loading file built with Python {python_version}, current version: {sys.version}."
+                )
+
+            assert (
+                inc_files == include_files
+            ), f"Loaded file has include_files at {inc_files}, currently calling with include_files at {include_files}."
+
+            assert (
+                interface_name == "VTKInterface"
+            ), f"Loaded file is built by interface {interface_name}, trying to load with VTKInterface."
+
+            if include_files:
+                (
+                    self.times,
+                    self.current_time,
+                    self.file_infos,
+                    self.last_computed_frame,
+                    self.data,
+                    self.last_3d_frame,
+                    self.results,
+                    self.mesh,
+                ) = data[5:]
+
+                print(self.mesh)
+                # Rebuild the reader from saved file paths
+                self._rebuild_reader()
+
+            else:
+                (
+                    self.last_computed_frame,
+                    self.data,
+                    self.last_3d_frame,
+                    self.results,
+                    self.mesh,
+                ) = data[5:]
 
     def custom_function(self, function_name: str, arguments: Dict[str, Any]) -> Any:
         """

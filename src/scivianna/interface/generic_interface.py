@@ -36,7 +36,7 @@ class GenericInterface:
         NotImplementedError
             Function to override in the code interfaces
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function read_file not implemented for class {self.__class__.__name__}")
 
     def get_labels(self) -> List[str]:
         """Returns a list of fields names displayable with this interface
@@ -66,7 +66,7 @@ class GenericInterface:
         NotImplementedError
             Function to override in the code interfaces
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_label_coloring_mode not implemented for class {self.__class__.__name__}.")
 
     def get_file_input_list(self) -> List[Tuple[str, str]]:
         """Returns a list of file label and its description for the GUI
@@ -81,7 +81,7 @@ class GenericInterface:
         NotImplementedError
             The function was not implemented in the code interface.
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_file_input_list not implemented for class {self.__class__.__name__}.")
 
     @classmethod
     def serialize(self, obj: Any, key: str) -> Any:
@@ -121,7 +121,7 @@ class GenericInterface:
         include_files : bool
             Included loaded file
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function save not implemented for class {self.__class__.__name__}.")
 
     def load(self, file_path: Path, include_files: bool):
         """Pickle loads the slave content to a file, allows slave state reload
@@ -137,7 +137,7 @@ class GenericInterface:
         include_files : bool
             Included loaded file
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function load not implemented for class {self.__class__.__name__}.")
 
     @classmethod
     def get_slave(cls):
@@ -200,7 +200,7 @@ class Geometry2D(GenericInterface):
         NotImplementedError
             Function to override in the code interfaces
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function compute_2D_data not implemented for class {self.__class__.__name__}.")
 
     def get_value_dict(
         self,
@@ -232,7 +232,7 @@ class Geometry2D(GenericInterface):
         NotImplementedError
             Function to override in the code interfaces
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_value_dict not implemented for class {self.__class__.__name__}.")
 
 
 class Geometry2DPolygon(Geometry2D):
@@ -264,7 +264,7 @@ class Geometry3D(GenericInterface):
         bool
             Were the polygons updated compared to the past call
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function compute_3D_data not implemented for class {self.__class__.__name__}.")
 
     def get_3d_value_dict(
         self,
@@ -296,7 +296,7 @@ class Geometry3D(GenericInterface):
         NotImplementedError
             Function to override in the code interfaces
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_3d_value_dict not implemented for class {self.__class__.__name__}.")
 
 
 class ValueAtLocation(GenericInterface):
@@ -330,7 +330,7 @@ class ValueAtLocation(GenericInterface):
         Union[str, float]
             Field value
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_value not implemented for class {self.__class__.__name__}.")
 
     def get_values(
         self,
@@ -360,7 +360,7 @@ class ValueAtLocation(GenericInterface):
         List[Union[str, float]]
             Field values
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_values not implemented for class {self.__class__.__name__}.")
 
 
 class Value1DAtLocation(GenericInterface):
@@ -394,7 +394,7 @@ class Value1DAtLocation(GenericInterface):
         Union[pd.Series, List[pd.Series]]
             Field value
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_1D_value not implemented for class {self.__class__.__name__}.")
 
 
 class DataFrameInterface(GenericInterface):
@@ -427,7 +427,7 @@ class DataFrameInterface(GenericInterface):
         NotImplementedError
             Function to override in the code interfaces
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function get_dataframe not implemented for class {self.__class__.__name__}.")
 
 
 class CouplingInterface(GenericInterface):
@@ -441,7 +441,7 @@ class CouplingInterface(GenericInterface):
         time : float
             Current time
         """
-        raise NotImplementedError
+        raise NotImplementedError(f"Function set_time not implemented for class {self.__class__.__name__}.")
 
     def update_data(self, key: str, data: Any):
         """Replaces the interface data by the current value
@@ -453,7 +453,7 @@ class CouplingInterface(GenericInterface):
         data : Any
             New value
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function update_data not implemented for class {self.__class__.__name__}.")
 
     def append_data(self, key: str, data: Any):
         """Stores the data and associates it to the current time.
@@ -465,7 +465,7 @@ class CouplingInterface(GenericInterface):
         data : Any
             New value
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function append_data not implemented for class {self.__class__.__name__}.")
 
     def update_mesh(self, key: str, data: Any):
         """Replaces the interface data and mesh by the current value
@@ -477,7 +477,7 @@ class CouplingInterface(GenericInterface):
         data : Any
             New value
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function update_mesh not implemented for class {self.__class__.__name__}.")
 
     def append_mesh(self, key: str, data: Any):
         """Stores the data and mesh and associate them to the current time.
@@ -489,7 +489,7 @@ class CouplingInterface(GenericInterface):
         data : Any
             New value
         """
-        raise NotImplementedError()
+        raise NotImplementedError(f"Function append_mesh not implemented for class {self.__class__.__name__}.")
 
     def get_template(self, name: str):
         """Returns the template for the C3PO getOutputxxxFieldTemplate functions
@@ -500,7 +500,7 @@ class CouplingInterface(GenericInterface):
             Field name
         """
         raise NotImplementedError(
-            f"get_template function not implemented for class {__class__.__name__}"
+            f"Function get_template not implemented for class {__class__.__name__}"
         )
 
     def set_template(self, name: str, template: Any):

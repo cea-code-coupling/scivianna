@@ -42,13 +42,13 @@ def test_mandelbrot():
     grid_panel: Panel2D = layout.visualisation_panels["Mandelbrot grid"]
 
     np.testing.assert_almost_equal(
-        get_polygon_bounds(polygon_panel.plotter.source_polygons.data),
-        [[-0.491, 0.509], [-0.491, 0.509]]
+        np.array(get_polygon_bounds(polygon_panel.plotter.source_polygons.data)),
+        np.array([[-0.491, 0.509], [-0.491, 0.509]])
     )
     polygon_panel.plotter.update_range(RangesUpdate(model = None, x0 = 1., y0 = 1., x1 = 2.5, y1 = 2.5))
     np.testing.assert_almost_equal(
-        get_polygon_bounds(polygon_panel.plotter.source_polygons.data),
-        [[0.9985, 2.4985], [0.9985, 2.4985]]
+        np.array(get_polygon_bounds(polygon_panel.plotter.source_polygons.data)),
+        np.array([[0.9985, 2.4985], [0.9985, 2.4985]])
     )
 
     assert grid_panel.plotter.image.glyph.x == -.49

@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 import scivianna.utils
+from scivianna.utils.file_cleaner import mark_for_deletion
 from scivianna.constants import MESH, X, Y, Z
 from scivianna.layout.gridstack import GridStackLayout
 from scivianna.layout.split import SplitLayout
@@ -25,6 +26,9 @@ from scivianna_example.europe_grid.europe_grid import (
     EuropeGridInterface,
     make_europe_panel,
 )
+from scivianna_example.vtk_example.demo_3d import (
+    get_panel as get_vtk_panel
+)
 
 scivianna.utils._testing = True
 
@@ -38,19 +42,20 @@ def test_serialize_slave():
         med_panel = get_med_panel(None)
 
         slave = med_panel.get_slave()
-        
+
         # First compute with caller="Test" to populate cache
         import numpy as np
         origin = np.array(X) * 0.5 + np.array(Y) * 0.5 + 0.5 * np.cross(X, Y)
         slave.compute_2D_data(
             X, Y, tuple(origin), 1.0, 1.0, None, MESH, {}, caller="Test"
         )
-        
+
         save_slave_to_file(
             slave,
             "slave.pkl",
             True
         )
+        mark_for_deletion(Path("slave.pkl"))
         slave.terminate()
 
         slave2 = load_slave_from_file(
@@ -92,7 +97,7 @@ def test_serialize_panel_2d():
         size_u = med_panel.size_u
         size_v = med_panel.size_v
         slave.compute_2D_data(
-            u, 
+            u,
             v,
             origin,
             size_u,
@@ -107,6 +112,7 @@ def test_serialize_panel_2d():
             med_panel,
             "panel2d_test"
         )
+        mark_for_deletion(Path("panel2d_test"))
         slave.terminate()
 
         panel_2 = load_panel2d_from_file(
@@ -114,7 +120,7 @@ def test_serialize_panel_2d():
         )
         slave_2 = panel_2.get_slave()
         _, recomputed, = slave_2.compute_2D_data(
-            panel_2.u, 
+            panel_2.u,
             panel_2.v,
             panel_2.origin,  # tuple (origin_x, origin_y, origin_z)
             panel_2.size_u,
@@ -125,15 +131,13 @@ def test_serialize_panel_2d():
             caller="Test"
         )
         print(
-            panel_2.u, 
-            panel_2.v, 
+            panel_2.u,
+            panel_2.v,
             panel_2.origin,
             panel_2.size_u, panel_2.size_v,
             _, recomputed
         )
         assert not recomputed, "Slave should not have recomputed the polygons."
-
-        # panel_2.show()
     finally:
         if slave is not None:
             print("Terminating slave 0")
@@ -145,93 +149,164 @@ def test_serialize_panel_2d():
 @pytest.mark.medcoupling
 def test_serialize_split():
     from scivianna_example.med.split_item_example import get_med_panel, get_panel
-    panel, slaves = get_panel(None, True)
-
-    panel.save_to_zip("test.zip")
-
-    for slave in slaves:
-        slave.terminate()
-
+    new_layout = None
     try:
-        new_layout = SplitLayout.restore_from_zip("test.zip")
+        panel, slaves = get_panel(None, True)
+
+        panel.save_to_zip("test.zip")
+        mark_for_deletion(Path("test.zip"))
+
+        for slave in slaves:
+            slave.terminate()
+
+        try:
+            new_layout = SplitLayout.restore_from_zip("test.zip")
+        except Exception as e:
+            print(e)
+        finally:
+            if new_layout is not None:
+                for panel in new_layout.visualisation_panels.values():
+                    panel.get_slave().terminate()
+
     except Exception as e:
-        print(e)
-    finally:
-        for panel in new_layout.visualisation_panels.values():
-            panel.get_slave().terminate()
+        raise e
 
 @pytest.mark.medcoupling
 def test_serialize_gridstack():
     from scivianna_example.med.grid_stack_example import get_panel as get_gridstack_panel
-    panel, slaves = get_gridstack_panel(None, True)
-
-    panel.save_to_zip("test_gridstack.zip")
-
-    for slave in slaves:
-        slave.terminate()
-
+    new_layout = None
     try:
-        new_layout = GridStackLayout.restore_from_zip("test_gridstack.zip")
+        panel, slaves = get_gridstack_panel(None, True)
+
+        panel.save_to_zip("test_gridstack.zip")
+        mark_for_deletion(Path("test_gridstack.zip"))
+
+        for slave in slaves:
+            slave.terminate()
+
+        try:
+            new_layout = GridStackLayout.restore_from_zip("test_gridstack.zip")
+        except Exception as e:
+            print("Received exception ", e)
+        finally:
+            if new_layout is not None:
+                for panel in new_layout.visualisation_panels.values():
+                    panel.get_slave().terminate()
+
     except Exception as e:
-        print("Received exception ", e)
+        raise e
+
+@pytest.mark.pyvista
+def test_serialize_vtk():
+    """Serialize and restore the europe_grid layout, verify panels and fields survive."""
+    new_layout = None
+    try:
+        from scivianna.panel.panel_3d import Panel3D
+        from scivianna.plotter_2d.polygon.vtk_2d import VTK2DPolygonPlotter
+
+        layout, slaves = get_vtk_panel(None, return_slaves = True)
+
+        for panel in layout.visualisation_panels.values():
+            panel.set_colormap("viridis")
+
+        # Save the SplitLayout to a zip file
+        layout.save_to_zip("test_vtk_3d.zip")
+
+        for slave in slaves:
+            slave.terminate()
+
+        # Restore from zip
+        new_layout = SplitLayout.restore_from_zip(
+            "test_vtk_3d.zip",
+        )
+        mark_for_deletion(Path("test_vtk_3d.zip"))
+
+        # Verify all panels exist
+        assert "VTK slice" in new_layout.visualisation_panels
+        assert "VTK 3D Demo" in new_layout.visualisation_panels
+
+        assert isinstance(new_layout.visualisation_panels["VTK slice"].plotter, VTK2DPolygonPlotter)
+        assert isinstance(new_layout.visualisation_panels["VTK 3D Demo"], Panel3D)
+
+    except Exception as e:
+        raise e
+
     finally:
-        for panel in new_layout.visualisation_panels.values():
-            panel.get_slave().terminate()
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
+
 
 @pytest.mark.default
 def test_serialize_europe():
     """Serialize and restore the europe_grid layout, verify panels and fields survive."""
-    layout, slaves = make_europe_panel(None, True)
+    new_layout = None
+    try:
+        layout, slaves = make_europe_panel(None, True)
 
-    # Set fields to exercise serialization state
-    layout.visualisation_panels["Map"].set_field("load")
-    layout.visualisation_panels["Plot"].set_field("load")
+        # Set fields to exercise serialization state
+        layout.visualisation_panels["Map"].set_field("load")
+        layout.visualisation_panels["Plot"].set_field("load")
 
-    # Save the SplitLayout to a zip file
-    layout.save_to_zip("test_europe.zip")
+        # Save the SplitLayout to a zip file
+        layout.save_to_zip("test_europe.zip")
+        mark_for_deletion(Path("test_europe.zip"))
 
-    for slave in slaves:
-        slave.terminate()
+        for slave in slaves:
+            slave.terminate()
 
-    # Restore from zip
-    new_layout = SplitLayout.restore_from_zip(
-        "test_europe.zip",
-    )
+        # Restore from zip
+        new_layout = SplitLayout.restore_from_zip(
+            "test_europe.zip",
+        )
 
-    # Verify all panels exist
-    assert "Map" in new_layout.visualisation_panels
-    assert "Plot" in new_layout.visualisation_panels
-    assert "Dataframe" in new_layout.visualisation_panels
+        # Verify all panels exist
+        assert "Map" in new_layout.visualisation_panels
+        assert "Plot" in new_layout.visualisation_panels
+        assert "Dataframe" in new_layout.visualisation_panels
 
-    # Verify fields were restored
-    assert new_layout.visualisation_panels["Map"].displayed_field == "load"
+        # Verify fields were restored
+        assert new_layout.visualisation_panels["Map"].displayed_field == "load"
 
-    for panel in new_layout.visualisation_panels.values():
-        panel.get_slave().terminate()
+    except Exception as e:
+        raise e
+
+    finally:
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
 
 
 @pytest.mark.pyvista
 def test_serialize_demo_3d():
     """Serialize and restore the demo_3d layout, verify 2D/3D panels and coupling survive."""
-    from scivianna_example.med.demo_3d import get_panel
+    new_layout = None
+    try:
+        from scivianna_example.med.demo_3d import get_panel
 
-    layout, slaves = get_panel(None, return_slaves=True)
+        layout, slaves = get_panel(None, return_slaves=True)
 
-    # Save the SplitLayout to a zip file
-    layout.save_to_zip("test_demo_3d.zip")
+        # Save the SplitLayout to a zip file
+        layout.save_to_zip("test_demo_3d.zip")
+        mark_for_deletion(Path("test_demo_3d.zip"))
 
-    for slave in slaves:
-        slave.terminate()
+        for slave in slaves:
+            slave.terminate()
 
-    # Restore from zip
-    new_layout = SplitLayout.restore_from_zip("test_demo_3d.zip")
+        # Restore from zip
+        new_layout = SplitLayout.restore_from_zip("test_demo_3d.zip")
 
-    # Verify all panels exist
-    assert "3D Demo" in new_layout.visualisation_panels
-    assert "MEDCoupling slice" in new_layout.visualisation_panels
+        # Verify all panels exist
+        assert "3D Demo" in new_layout.visualisation_panels
+        assert "MEDCoupling slice" in new_layout.visualisation_panels
 
-    for panel in new_layout.visualisation_panels.values():
-        panel.get_slave().terminate()
+    except Exception as e:
+        raise e
+
+    finally:
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
 
 
 # =============================================================================
@@ -259,6 +334,7 @@ def test_serialize_panel1d_individual():
         # Save and load (use .zip suffix explicitly)
         zip_path = Path("panel1d_test.zip")
         save_panel1d_to_file(panel, zip_path)
+        mark_for_deletion(zip_path)
         slave.terminate()
 
         panel_loaded = load_panel1d_from_file(zip_path)
@@ -281,30 +357,38 @@ def test_serialize_panel1d_individual():
 @pytest.mark.default
 def test_serialize_panel1d_in_layout():
     """Serialize a layout containing Panel1D, verify panel state survives round-trip."""
-    layout, slaves = make_europe_panel(None, True)
+    new_layout = None
+    try:
+        layout, slaves = make_europe_panel(None, True)
 
-    # Change fields
-    layout.visualisation_panels["Plot"].set_field("load")
+        # Change fields
+        layout.visualisation_panels["Plot"].set_field("load")
 
-    # Save layout
-    layout.save_to_zip("test_panel1d_layout.zip")
+        # Save layout
+        layout.save_to_zip("test_panel1d_layout.zip")
+        mark_for_deletion(Path("test_panel1d_layout.zip"))
 
-    for slave in slaves:
-        slave.terminate()
+        for slave in slaves:
+            slave.terminate()
 
-    # Restore
-    new_layout = SplitLayout.restore_from_zip(
-        "test_panel1d_layout.zip",
-    )
+        # Restore
+        new_layout = SplitLayout.restore_from_zip(
+            "test_panel1d_layout.zip",
+        )
 
-    # Verify Panel1D state
-    plot_panel = new_layout.visualisation_panels["Plot"]
-    assert plot_panel.panel_name == "Plot"
-    # Verify the panel has valid state (non-empty visible fields)
-    assert len(plot_panel.visible_fields_list) > 0
+        # Verify Panel1D state
+        plot_panel = new_layout.visualisation_panels["Plot"]
+        assert plot_panel.panel_name == "Plot"
+        # Verify the panel has valid state (non-empty visible fields)
+        assert len(plot_panel.visible_fields_list) > 0
 
-    for panel in new_layout.visualisation_panels.values():
-        panel.get_slave().terminate()
+    except Exception as e:
+        raise e
+
+    finally:
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
 
 
 # =============================================================================
@@ -328,13 +412,10 @@ def test_serialize_panel3d_individual():
 
         panel = Panel3D(slave, name="Test 3D", displayed_field="INTEGRATED_POWER", colormap="viridis")
 
-        # Compute some data to populate current_data
-        data, _ = slave.compute_3D_data("INTEGRATED_POWER", {})
-        data.update_cell_data()
-
         # Save and load (use .zip suffix explicitly)
         zip_path = Path("panel3d_test.zip")
         save_panel3d_to_file(panel, zip_path)
+        mark_for_deletion(zip_path)
         slave.terminate()
 
         panel_loaded = load_panel3d_from_file(zip_path)
@@ -356,30 +437,38 @@ def test_serialize_panel3d_individual():
 @pytest.mark.pyvista
 def test_serialize_panel3d_in_layout():
     """Serialize a layout containing Panel3D, verify 3D panel state survives round-trip."""
-    from scivianna_example.med.demo_3d import get_panel
+    new_layout = None
+    try:
+        from scivianna_example.med.demo_3d import get_panel
 
-    layout, slaves = get_panel(None, return_slaves=True)
+        layout, slaves = get_panel(None, return_slaves=True)
 
-    # Change displayed field on 3D panel
-    panel_3d = layout.visualisation_panels["3D Demo"]
-    if "INTEGRATED_POWER" in [l for l in panel_3d.slave.get_labels()]:
-        panel_3d.set_field("INTEGRATED_POWER")
+        # Change displayed field on 3D panel
+        panel_3d = layout.visualisation_panels["3D Demo"]
+        if "INTEGRATED_POWER" in [l for l in panel_3d.slave.get_labels()]:
+            panel_3d.set_field("INTEGRATED_POWER")
 
-    # Save layout
-    layout.save_to_zip("test_panel3d_layout.zip")
+        # Save layout
+        layout.save_to_zip("test_panel3d_layout.zip")
+        mark_for_deletion(Path("test_panel3d_layout.zip"))
 
-    for slave in slaves:
-        slave.terminate()
+        for slave in slaves:
+            slave.terminate()
 
-    # Restore
-    new_layout = SplitLayout.restore_from_zip("test_panel3d_layout.zip")
+        # Restore
+        new_layout = SplitLayout.restore_from_zip("test_panel3d_layout.zip")
 
-    # Verify Panel3D state
-    restored_3d = new_layout.visualisation_panels["3D Demo"]
-    assert restored_3d.panel_name == "3D Demo"
+        # Verify Panel3D state
+        restored_3d = new_layout.visualisation_panels["3D Demo"]
+        assert restored_3d.panel_name == "3D Demo"
 
-    for panel in new_layout.visualisation_panels.values():
-        panel.get_slave().terminate()
+    except Exception as e:
+        raise e
+
+    finally:
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
 
 
 # =============================================================================
@@ -406,6 +495,7 @@ def test_serialize_paneldatframe_individual():
         # Save and load (use .zip suffix explicitly)
         zip_path = Path("paneldatframe_test.zip")
         save_paneldatframe_to_file(panel, zip_path)
+        mark_for_deletion(zip_path)
         slave.terminate()
 
         panel_loaded = load_paneldatframe_from_file(zip_path)
@@ -427,31 +517,39 @@ def test_serialize_paneldatframe_individual():
 @pytest.mark.default
 def test_serialize_paneldatframe_in_layout():
     """Serialize a layout containing PanelDataFrame, verify dataframe survives round-trip."""
-    layout, slaves = make_europe_panel(None, True)
+    new_layout = None
+    try:
+        layout, slaves = make_europe_panel(None, True)
 
-    # Trigger recomputation on dataframe panel
-    df_panel = layout.visualisation_panels["Dataframe"]
-    df_panel.recompute()
+        # Trigger recomputation on dataframe panel
+        df_panel = layout.visualisation_panels["Dataframe"]
+        df_panel.recompute()
 
-    # Save layout
-    layout.save_to_zip("test_paneldatframe_layout.zip")
+        # Save layout
+        layout.save_to_zip("test_paneldatframe_layout.zip")
+        mark_for_deletion(Path("test_paneldatframe_layout.zip"))
 
-    for slave in slaves:
-        slave.terminate()
+        for slave in slaves:
+            slave.terminate()
 
-    # Restore
-    new_layout = SplitLayout.restore_from_zip(
-        "test_paneldatframe_layout.zip",
-    )
+        # Restore
+        new_layout = SplitLayout.restore_from_zip(
+            "test_paneldatframe_layout.zip",
+        )
 
-    # Verify PanelDataFrame state
-    restored_df = new_layout.visualisation_panels["Dataframe"]
-    assert restored_df.panel_name == "Dataframe"
-    df = restored_df.plotter.get_data()
-    assert df is not None
+        # Verify PanelDataFrame state
+        restored_df = new_layout.visualisation_panels["Dataframe"]
+        assert restored_df.panel_name == "Dataframe"
+        df = restored_df.plotter.get_data()
+        assert df is not None
 
-    for panel in new_layout.visualisation_panels.values():
-        panel.get_slave().terminate()
+    except Exception as e:
+        raise e
+
+    finally:
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
 
 
 # =============================================================================
@@ -461,82 +559,100 @@ def test_serialize_paneldatframe_in_layout():
 @pytest.mark.default
 def test_serialize_europe_full_state():
     """Serialize the europe layout with all panels, verify every panel's state survives."""
-    layout, slaves = make_europe_panel(None, True)
+    new_layout = None
+    try:
+        layout, slaves = make_europe_panel(None, True)
 
-    # Set various fields to exercise different panel types
-    layout.visualisation_panels["Map"].set_field("load")
-    layout.visualisation_panels["Plot"].set_field("load")
-    layout.visualisation_panels["Dataframe"].recompute()
+        # Set various fields to exercise different panel types
+        layout.visualisation_panels["Map"].set_field("load")
+        layout.visualisation_panels["Plot"].set_field("load")
+        layout.visualisation_panels["Dataframe"].recompute()
 
-    # Save layout
-    layout.save_to_zip("test_europe_full.zip")
+        # Save layout
+        layout.save_to_zip("test_europe_full.zip")
+        mark_for_deletion(Path("test_europe_full.zip"))
 
-    for slave in slaves:
-        slave.terminate()
+        for slave in slaves:
+            slave.terminate()
 
-    # Restore
-    new_layout = SplitLayout.restore_from_zip(
-        "test_europe_full.zip",
-    )
+        # Restore
+        new_layout = SplitLayout.restore_from_zip(
+            "test_europe_full.zip",
+        )
 
-    # Verify Panel2D (Map) state
-    map_panel = new_layout.visualisation_panels["Map"]
-    assert map_panel.panel_name == "Map"
-    assert map_panel.displayed_field == "load"
+        # Verify Panel2D (Map) state
+        map_panel = new_layout.visualisation_panels["Map"]
+        assert map_panel.panel_name == "Map"
+        assert map_panel.displayed_field == "load"
 
-    # Verify Panel1D (Plot) state
-    plot_panel = new_layout.visualisation_panels["Plot"]
-    assert plot_panel.panel_name == "Plot"
-    assert len(plot_panel.visible_fields_list) > 0
+        # Verify Panel1D (Plot) state
+        plot_panel = new_layout.visualisation_panels["Plot"]
+        assert plot_panel.panel_name == "Plot"
+        assert len(plot_panel.visible_fields_list) > 0
 
-    # Verify PanelDataFrame (Dataframe) state
-    df_panel = new_layout.visualisation_panels["Dataframe"]
-    assert df_panel.panel_name == "Dataframe"
-    df = df_panel.plotter.get_data()
-    assert df is not None
+        # Verify PanelDataFrame (Dataframe) state
+        df_panel = new_layout.visualisation_panels["Dataframe"]
+        assert df_panel.panel_name == "Dataframe"
+        df = df_panel.plotter.get_data()
+        assert df is not None
 
-    for panel in new_layout.visualisation_panels.values():
-        panel.get_slave().terminate()
+    except Exception as e:
+        raise e
+
+    finally:
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
 
 
 @pytest.mark.pyvista
 def test_serialize_demo_3d_full_state():
     """Serialize the demo_3d layout with both panels, verify all state survives."""
-    from scivianna_example.med.demo_3d import get_panel
+    new_layout = None
+    try:
+        from scivianna_example.med.demo_3d import get_panel
 
-    layout, slaves = get_panel(None, return_slaves=True)
+        layout, slaves = get_panel(None, return_slaves=True)
 
-    # Set fields on both panels
-    panel_3d = layout.visualisation_panels["3D Demo"]
-    panel_2d = layout.visualisation_panels["MEDCoupling slice"]
-    
-    panel_3d.set_field("INTEGRATED_POWER")
-    panel_2d.set_field("INTEGRATED_POWER")
+        # Set fields on both panels
+        panel_3d = layout.visualisation_panels["3D Demo"]
+        panel_2d = layout.visualisation_panels["MEDCoupling slice"]
 
-    # Save layout
-    layout.save_to_zip("test_demo_3d_full.zip")
+        panel_3d.set_field("INTEGRATED_POWER")
+        panel_2d.set_field("INTEGRATED_POWER")
 
-    for slave in slaves:
-        slave.terminate()
+        # Save layout
+        layout.save_to_zip("test_demo_3d_full.zip")
+        mark_for_deletion(Path("test_demo_3d_full.zip"))
 
-    # Restore
-    new_layout = SplitLayout.restore_from_zip("test_demo_3d_full.zip")
+        for slave in slaves:
+            slave.terminate()
 
-    # Verify Panel3D state
-    restored_3d = new_layout.visualisation_panels["3D Demo"]
-    assert restored_3d.panel_name == "3D Demo"
-    assert restored_3d.displayed_field == "INTEGRATED_POWER"
+        # Restore
+        new_layout = SplitLayout.restore_from_zip("test_demo_3d_full.zip")
 
-    # Verify Panel2D state
-    restored_2d = new_layout.visualisation_panels["MEDCoupling slice"]
-    assert restored_2d.panel_name == "MEDCoupling slice"
-    assert restored_2d.displayed_field == "INTEGRATED_POWER"
+        # Verify Panel3D state
+        restored_3d = new_layout.visualisation_panels["3D Demo"]
+        assert restored_3d.panel_name == "3D Demo"
+        assert restored_3d.displayed_field == "INTEGRATED_POWER"
 
-    for panel in new_layout.visualisation_panels.values():
-        panel.get_slave().terminate()
+        # Verify Panel2D state
+        restored_2d = new_layout.visualisation_panels["MEDCoupling slice"]
+        assert restored_2d.panel_name == "MEDCoupling slice"
+        assert restored_2d.displayed_field == "INTEGRATED_POWER"
+
+    except Exception as e:
+        raise e
+
+    finally:
+        if new_layout is not None:
+            for panel in new_layout.visualisation_panels.values():
+                panel.get_slave().terminate()
 
 
 if __name__ == "__main__":
     # test_serialize_panel()
-    test_serialize_split()
+    # test_serialize_split()
     # test_serialize_gridstack()
+    # test_serialize_panel3d_individual()
+    test_serialize_vtk()
