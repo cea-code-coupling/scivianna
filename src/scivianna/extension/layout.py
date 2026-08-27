@@ -58,6 +58,12 @@ You can use the following drop box to change the currently edited panel. Otherwi
             for val in self.layout.available_interfaces.keys()
         ]
 
+        if not (
+            self.layout.visualisation_panels[self.layout.current_frame].slave.code_interface
+            in list(self.layout.available_interfaces.values())
+        ):
+            raise RuntimeError(f"Interface {self.layout.visualisation_panels[self.layout.current_frame].slave.code_interface} is not registered. Please register it using scivianna.interface.register_interface.")
+
         self.interface_selector = pn.widgets.Select(
             label="Code",
             options=interface_options,

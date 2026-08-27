@@ -14,6 +14,7 @@ import shapely.coords
 from scivianna.interface.generic_interface import Geometry2D
 from scivianna.logging_config import get_logger
 from scivianna.utils.color_tools import get_edges_colors
+from scivianna.utils.polygonize_tools import polygons_to_polydata
 
 logger = get_logger(__name__)
 
@@ -67,59 +68,12 @@ class ExtrudedStructuredMesh(Geometry2D):
 
         # Preparing point and face per base polygon
 
-        polygons = [p.to_shapely(z_coord=0) for p in self.base_polygons]
-        polygon_points: List[shapely.coords.CoordinateSequence] = []
-        polygon_faces = []
-        cell_ids = []
-
-        remap_cells = any([len(polygons[k].interiors) for k in range(count_cells)])
-
-        logger.warning("PyVista remapping cell IDs")
-
-        for k in range(count_cells):
-            if len(polygons[k].interiors) == 0:
-                poly = polygons[k]
-                points = poly.exterior.coords
-                faces = [len(points)] + list(range(len(points)))
-                cell_ids += [k] if remap_cells else [self.base_polygons[k].cell_id]
-            else:
-                triangulated = shapely.constrained_delaunay_triangles(polygons[k])
-                points = []
-                faces = []
-                for triangle in triangulated.geoms:
-                    points.extend(np.array(triangle.exterior.coords))
-
-                    # Create face indices (3 for triangle)
-                    face = [3] + [len(points) - 3 + i for i in range(3)]
-                    faces.extend(face)
-                    cell_ids += [k]
-
-            polygon_points.append(points)
-            polygon_faces.append(faces)
-
-        all_points = []
-        all_cells = []
-        points_ids = []
-        current_point_count = 0
-
-        for k in range(count_cells):
-            all_points += polygon_points[k]
-            faces = np.array(polygon_faces[k])
-            faces[1:] += current_point_count
-            all_cells += [faces]
-
-            current_point_count += len(polygon_points[k])
-
-            points_ids += [k for _ in range(len(polygon_points[k]))]
-
-        all_cells = np.concatenate(all_cells, axis=0)
-
-        mesh = pv.PolyData(
-            np.array(all_points),
-            all_cells,
-        )  # .clean()
-
-        mesh.cell_data["cell_id"] = cell_ids
+        mesh = polygons_to_polydata(
+            self.base_polygons,
+            [np.nan] * len(self.base_polygons),
+            [(1., 1., 1.)] * len(self.base_polygons),
+            [(1., 1., 1.)] * len(self.base_polygons),
+        )
 
         extruded_cells = [
             mesh.copy(deep=True)
@@ -267,6 +221,9 @@ class ExtrudedStructuredMesh(Geometry2D):
             found = False
 
             while len(edges) > 0:
+                if len(edges[0]) != 2:
+                    edges.remove(edges[0])
+
                 if current_loop == []:
                     current_loop.append(edges[0])
                     current_point = current_loop[0][1]

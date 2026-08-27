@@ -4,8 +4,10 @@ Polygon tools for Scivianna.
 This module provides utilities for polygon manipulation and rasterization.
 """
 
+import copy
 import math
-from typing import Any, Dict, List, Tuple, Type, Union
+import string
+from typing import Any, Dict, List, Tuple, Type, Union, TYPE_CHECKING
 
 import numpy as np
 
@@ -27,6 +29,8 @@ import shapely
 from shapely.geometry import shape
 from shapely.geometry.polygon import Polygon
 
+if TYPE_CHECKING:
+    import pyvista as pv
 
 class PolygonCoords:
     """Object ontaining the X and Y coordinates of a polygon"""
@@ -59,6 +63,19 @@ class PolygonCoords:
         self.y_coords: np.ndarray = np.array(y_coords)
         """ Y coordinate of each vertex of a polygon
         """
+
+    def deepcopy(self) -> "PolygonCoords":
+        """Returns a deep copy of this PolygonCoords instance.
+
+        Returns
+        -------
+        PolygonCoords
+            A new PolygonCoords with independently copied x and y coordinate arrays.
+        """
+        return PolygonCoords(
+            x_coords=copy.deepcopy(self.x_coords),
+            y_coords=copy.deepcopy(self.y_coords),
+        )
 
     def translate(self, dx: float, dy: float):
         """Translates the PolygonCoords by (dx, dy)
@@ -138,6 +155,20 @@ class PolygonElement:
         self.compo: str = ""
         """ Composition in the polygon
         """
+
+    def deepcopy(self) -> "PolygonElement":
+        """Returns a deep copy of this PolygonElement instance.
+
+        Returns
+        -------
+        PolygonElement
+            A new PolygonElement with independently copied exterior, holes, and attributes.
+        """
+        return PolygonElement(
+            exterior_polygon=self.exterior_polygon.deepcopy(),
+            holes=[hole.deepcopy() for hole in self.holes],
+            cell_id=self.cell_id,
+        )
 
     def translate(self, dx: float, dy: float):
         """Translates the PolygonElement by (dx, dy)
@@ -297,6 +328,119 @@ def numpy_2D_array_to_polygons(
         )
 
     return polygon_element_list
+
+def cast_to_ascii_arr(arr):
+    """Convert an array of strings to ASCII-printable characters.
+
+    Filters each string in the input array to keep only printable ASCII characters.
+    This is used to handle cell data that may contain non-printable characters
+    which VTK cannot process.
+
+    Parameters
+    ----------
+    arr : array-like
+        Array of strings to filter.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array containing only the printable ASCII characters from each string.
+    """
+    printable = set(string.printable)
+    return np.array([filter(lambda x: x in printable, s) for s in arr])
+
+def polygons_to_polydata(
+    polygons: List[PolygonElement], cell_values: List, cell_colors: List, cell_edge_colors: List
+) -> "pv.PolyData":
+    """
+    Convert a list of polygons to a pyvista PolyData object.
+
+    Parameters
+    ----------
+    polygons : List[PolygonElement]
+        List of polygon elements with exterior and holes.
+    cell_values : List
+        List of cell values (one per polygon).
+    cell_colors : List
+        List of cell colors (RGBA, 0-255).
+
+    Returns
+    -------
+    pv.PolyData
+        PolyData object with geometry and cell data.
+    """
+    import pyvista as pv
+
+    # Collect all points and faces
+    all_points = []
+    all_faces = []
+    point_offset = 0
+
+    # Build cell data arrays that account for holes (each hole becomes a separate cell)
+    cell_ids_data = []
+    cell_values_data = []
+    cell_colors_data = []
+    cell_edge_colors_data = []
+
+    for i, polygon in enumerate(polygons):
+        pol = polygon.to_shapely(z_coord=0)
+
+        if not pol.is_valid:
+            pol = shapely.make_valid(pol)
+
+        triangulated = shapely.constrained_delaunay_triangles(pol)
+
+        for triangle in triangulated.geoms:
+            cell_ids_data.append(polygon.cell_id)
+            cell_values_data.append(cell_values[i])
+            cell_colors_data.append(cell_colors[i])
+            cell_edge_colors_data.append(cell_edge_colors[i])
+
+            ext_x, ext_y = triangle.exterior.xy
+
+            for x, y in zip(ext_x, ext_y):
+                all_points.append([x, y, 0.0])
+
+            n_ext = len(ext_x)
+            all_faces.append(n_ext)
+            all_faces.extend(range(point_offset, point_offset + n_ext))
+            point_offset += n_ext
+
+    # Create PolyData
+    polydata = pv.PolyData()
+    polydata.points = np.array(all_points)
+    polydata.faces = np.array(all_faces)
+
+    # Add cell data - now matches the actual number of cells (exteriors + holes)
+    if len(cell_ids_data) > 0:
+        # Cell IDs - use 'cell_id' to match JS side expectations
+        try:
+            polydata.cell_data["cell_id"] = np.array(cell_ids_data)
+        except ValueError as e:
+            if isinstance(cell_ids_data[0], str):
+                polydata.cell_data["cell_id"] = cast_to_ascii_arr(cell_ids_data)
+            else:
+                raise e
+
+        # Cell values - use 'cell_value' to match JS side expectations
+        try:
+            polydata.cell_data["cell_value"] = np.array(cell_values_data)
+        except ValueError as e:
+            if isinstance(cell_values_data[0], str):
+                polydata.cell_data["cell_value"] = cast_to_ascii_arr(cell_values_data)
+            else:
+                raise e
+
+        # Cell colors (convert from 0-255 RGBA to 0-1 RGB for VTK)
+        # Use 'rgba' name to match JS side expectations (even though we only send RGB)
+        colors_array = np.array(cell_colors_data, dtype=float) / 255.0
+        edge_colors_array = np.array(cell_edge_colors_data, dtype=float) / 255.0
+
+        polydata.cell_data["rgb"] = colors_array  # Send full RGBA array
+        polydata.cell_data["edge_rgb"] = edge_colors_array[:, :3]  # RGB only
+
+    polydata.clean(inplace=True, tolerance=1e-6)
+    return polydata
 
 
 if __name__ == "__main__":

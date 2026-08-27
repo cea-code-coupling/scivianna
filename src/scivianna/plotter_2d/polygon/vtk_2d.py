@@ -4,7 +4,6 @@ VTK-based 2D polygon plotter for Scivianna.
 This module provides a 2D polygon renderer using VTK/vtk.js via the scivianna_vtk
 plotter component with 2D mode enabled.
 """
-import string
 from typing import Callable, List, Tuple
 
 import numpy as np
@@ -16,32 +15,12 @@ import shapely
 from scivianna.data.data2d import Data2D
 from scivianna.logging_config import get_logger
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.utils.polygonize_tools import PolygonElement
+from scivianna.utils.polygonize_tools import polygons_to_polydata
 from scivianna_vtk.plotter import VTKPlotter
 from scivianna.utils.color_tools import beautiful_color_maps
 
 logger = get_logger(__name__)
 
-
-def cas_to_ascii_arr(arr):
-    """Convert an array of strings to ASCII-printable characters.
-
-    Filters each string in the input array to keep only printable ASCII characters.
-    This is used to handle cell data that may contain non-printable characters
-    which VTK cannot process.
-
-    Parameters
-    ----------
-    arr : array-like
-        Array of strings to filter.
-
-    Returns
-    -------
-    numpy.ndarray
-        Array containing only the printable ASCII characters from each string.
-    """
-    printable = set(string.printable)
-    return np.array([filter(lambda x: x in printable, s) for s in arr])
 
 class VTK2DPolygonPlotter(Plotter2D):
     """2D geometry plotter based on VTK/vtk.js with 2D top-down view mode."""
@@ -103,97 +82,6 @@ class VTK2DPolygonPlotter(Plotter2D):
                     space_location=tuple(pos),
                     cell_id=cell_id,
                 )
-
-    def _polygons_to_polydata(
-        self, polygons: List[PolygonElement], cell_values: List, cell_colors: List, cell_edge_colors: List
-    ) -> pv.PolyData:
-        """
-        Convert a list of polygons to a pyvista PolyData object.
-
-        Parameters
-        ----------
-        polygons : List[PolygonElement]
-            List of polygon elements with exterior and holes.
-        cell_values : List
-            List of cell values (one per polygon).
-        cell_colors : List
-            List of cell colors (RGBA, 0-255).
-
-        Returns
-        -------
-        pv.PolyData
-            PolyData object with geometry and cell data.
-        """
-        # Collect all points and faces
-        all_points = []
-        all_faces = []
-        point_offset = 0
-
-        # Build cell data arrays that account for holes (each hole becomes a separate cell)
-        cell_ids_data = []
-        cell_values_data = []
-        cell_colors_data = []
-        cell_edge_colors_data = []
-
-        for i, polygon in enumerate(polygons):
-            pol = polygon.to_shapely(z_coord=0)
-
-            if not pol.is_valid:
-                pol = shapely.make_valid(pol)
-
-            triangulated = shapely.constrained_delaunay_triangles(pol)
-
-            for triangle in triangulated.geoms:
-                cell_ids_data.append(polygon.cell_id)
-                cell_values_data.append(cell_values[i])
-                cell_colors_data.append(cell_colors[i])
-                cell_edge_colors_data.append(cell_edge_colors[i])
-
-                ext_x, ext_y = triangle.exterior.xy
-
-                for x, y in zip(ext_x, ext_y):
-                    all_points.append([x, y, 0.0])
-
-                n_ext = len(ext_x)
-                all_faces.append(n_ext)
-                all_faces.extend(range(point_offset, point_offset + n_ext))
-                point_offset += n_ext
-
-        # Create PolyData
-        polydata = pv.PolyData()
-        polydata.points = np.array(all_points)
-        polydata.faces = np.array(all_faces)
-
-        # Add cell data - now matches the actual number of cells (exteriors + holes)
-        if len(cell_ids_data) > 0:
-            # Cell IDs - use 'cell_id' to match JS side expectations
-            try:
-                polydata.cell_data["cell_id"] = np.array(cell_ids_data)
-            except ValueError as e:
-                if isinstance(cell_ids_data[0], str):
-                    polydata.cell_data["cell_id"] = cas_to_ascii_arr(cell_ids_data)
-                else:
-                    raise e
-
-            # Cell values - use 'cell_value' to match JS side expectations
-            try:
-                polydata.cell_data["cell_value"] = np.array(cell_values_data)
-            except ValueError as e:
-                if isinstance(cell_values_data[0], str):
-                    polydata.cell_data["cell_value"] = cas_to_ascii_arr(cell_values_data)
-                else:
-                    raise e
-
-            # Cell colors (convert from 0-255 RGBA to 0-1 RGB for VTK)
-            # Use 'rgba' name to match JS side expectations (even though we only send RGB)
-            colors_array = np.array(cell_colors_data, dtype=float) / 255.0
-            edge_colors_array = np.array(cell_edge_colors_data, dtype=float) / 255.0
-
-            polydata.cell_data["rgb"] = colors_array  # Send full RGBA array
-            polydata.cell_data["edge_rgb"] = edge_colors_array[:, :3]  # RGB only
-
-        polydata.clean(inplace=True, tolerance=1e-6)
-        return polydata
 
     def display_borders(self, display: bool):
         """
@@ -259,7 +147,7 @@ class VTK2DPolygonPlotter(Plotter2D):
             return
 
         # Convert polygons to PolyData (colors are taken from data.cell_colors)
-        polydata = self._polygons_to_polydata(
+        polydata = polygons_to_polydata(
             data.get_polygons(),
             data.cell_values,
             data.cell_colors,
@@ -294,7 +182,6 @@ class VTK2DPolygonPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the updated color data.
         """
-        print("updating colors", self._current_polydata is None)
         if self._current_polydata is None:
             # No existing data, do full plot
             self.plot_2d_frame(data)
