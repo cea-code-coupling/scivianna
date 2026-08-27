@@ -26,9 +26,6 @@ from scivianna_example.europe_grid.europe_grid import (
     EuropeGridInterface,
     make_europe_panel,
 )
-from scivianna_example.vtk_example.demo_3d import (
-    get_panel as get_vtk_panel
-)
 
 scivianna.utils._testing = True
 
@@ -203,6 +200,9 @@ def test_serialize_vtk():
     try:
         from scivianna.panel.panel_3d import Panel3D
         from scivianna.plotter_2d.polygon.vtk_2d import VTK2DPolygonPlotter
+        from scivianna_example.vtk_example.demo_3d import (
+            get_panel as get_vtk_panel
+        )
 
         layout, slaves = get_vtk_panel(None, return_slaves = True)
 
