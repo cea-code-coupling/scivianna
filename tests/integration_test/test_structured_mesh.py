@@ -16,7 +16,7 @@ try:
         CylindricalStructuredMesh,
         SphericalStructuredMesh,
     )
-    
+
     class CarthesianInterface(StructuredMeshInterface):
         def read_file(self, file_path: str, file_label: str):
             """Read a file and store its content in the interface
@@ -83,7 +83,7 @@ except ImportError:
         pass
 
 @pytest.mark.pyvista
-def test_plot_carthesian():
+def test_plot_carthesian(plot=False):
     """Test plotting a carthesian structured mesh
     """
     # Field example
@@ -107,12 +107,14 @@ def test_plot_carthesian():
         axes=axes,
     )
 
+    if plot:
+        fig.savefig("carthesian_xy.png")
     slave.terminate()
     plt.close()
 
     assert True
 @pytest.mark.pyvista
-def test_plot_cylindrical():
+def test_plot_cylindrical(plot=False):
     """Test plotting a cylindrical structured mesh
     """
     # Field example
@@ -135,6 +137,8 @@ def test_plot_cylindrical():
         display_colorbar=True,
         axes=axes,
     )
+    if plot:
+        fig.savefig("cylindrical_xy.png")
 
     slave.terminate()
     plt.close()
@@ -142,7 +146,7 @@ def test_plot_cylindrical():
     assert True
 
 @pytest.mark.pyvista
-def test_plot_spherical():
+def test_plot_spherical(plot=False):
     """Test plotting a spherical structured mesh
     """
     # Field example
@@ -167,16 +171,18 @@ def test_plot_spherical():
     )
 
     slave.terminate()
+    if plot:
+        fig.savefig("spherical_xy.png")
     plt.close()
 
     assert True
 
 if __name__ == "__main__":
     print("Testing carthesian")
-    test_plot_carthesian()
+    test_plot_carthesian(plot=True)
 
     print("Testing cylindrical")
-    test_plot_cylindrical()
+    test_plot_cylindrical(plot=True)
 
     print("Testing spherical")
-    test_plot_spherical()
+    test_plot_spherical(plot=True)

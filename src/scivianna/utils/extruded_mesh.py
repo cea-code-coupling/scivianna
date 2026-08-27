@@ -87,6 +87,7 @@ class ExtrudedStructuredMesh(Geometry2D):
                     j_size=1e6,
                 ),
                 inplace=True,
+                extrusion="all_edges"
             )
             for i in range(len(self.z_coords) - 1)
         ]

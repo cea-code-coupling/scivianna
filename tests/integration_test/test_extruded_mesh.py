@@ -9,14 +9,14 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 try:
     from scivianna.utils.extruded_mesh import ExtrudedStructuredMesh
-    
+
 except ImportError:
     from scivianna.interface.generic_interface import Geometry2D
     class ExtrudedStructuredMesh(Geometry2D):
         pass
 
 @pytest.mark.pyvista
-def test_extruded_mesh():
+def test_extruded_mesh(plot=False):
     outer_square = [(0, 0), (2, 0), (2, 2), (0, 2)]
     inner_hole = [(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)]
     inner_hole_0 = [(0.5, 0.5), (1., 0.5), (1., 1.5), (0.5, 1.5)]
@@ -26,22 +26,22 @@ def test_extruded_mesh():
         [e[0] for e in outer_square],
         [e[1] for e in outer_square]
     )
-    
+
     inner_coords = PolygonCoords(
         [e[0] for e in inner_hole],
         [e[1] for e in inner_hole]
     )
-    
+
     inner_coords_0 = PolygonCoords(
         [e[0] for e in inner_hole_0],
         [e[1] for e in inner_hole_0]
     )
-    
+
     inner_coords_1 = PolygonCoords(
         [e[0] for e in inner_hole_1],
         [e[1] for e in inner_hole_1]
     )
-    
+
     p0 = PolygonElement(outer_coords, [inner_coords], 0 )
 
     p1 = PolygonElement(inner_coords_0, [], 1)
@@ -61,10 +61,11 @@ def test_extruded_mesh():
     data.cell_values = mesh.get_cells_values("id", [p.cell_id for p in polygons])
     data.cell_colors = interpolate_cmap_at_values("viridis", np.array(data.cell_values)/(4*3))
     data.cell_edge_colors = get_edges_colors(data.cell_colors)
-    
+
     plotter = Matplotlib2DPolygonPlotter()
     plotter.plot_2d_frame(data)
-    # plotter.figure.savefig("test_extruded_0.png")
+    if plot:
+        plotter.figure.savefig("test_extruded_0.png")
     plt.close()
 
     polygons = mesh.compute_2D_slice((1., 1., 0.5), (1, 0, 0), (0, 0, 1))
@@ -76,5 +77,9 @@ def test_extruded_mesh():
 
     plotter = Matplotlib2DPolygonPlotter()
     plotter.plot_2d_frame(data)
-    # plotter.figure.savefig("test_extruded_1.png")
+    if plot:
+        plotter.figure.savefig("test_extruded_1.png")
     plt.close()
+
+if __name__ == "__main__":
+    test_extruded_mesh(plot=True)
