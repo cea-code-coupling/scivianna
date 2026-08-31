@@ -315,6 +315,17 @@ class Panel2D(VisualizationPanel):
             else:
                 self.plotter.update_colors(self.current_data)
 
+            if isinstance(self.plotter, Bokeh2DGridPlotter):
+                self.plotter.set_range(
+                    (
+                        self.current_data.u_values.min(),
+                        self.current_data.u_values.max()
+                    ),(
+                        self.current_data.v_values.min(),
+                        self.current_data.v_values.max()
+                    )
+                )
+
         # Clear pending updates
         self._pending_updates = {}
         self.marked_to_recompute = False

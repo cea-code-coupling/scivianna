@@ -18,6 +18,7 @@ from bokeh.models import (
     CustomJSHover,
     HoverTool,
     LinearColorMapper,
+    Range1d
 )
 from bokeh.plotting import figure as Figure
 from bokeh.plotting import output_file, save
@@ -221,7 +222,7 @@ class Bokeh2DGridPlotter(Plotter2D):
                 new_data.x = [x*u0 + y*v0 + w*w0];
                 new_data.y = [x*u1 + y*v1 + w*w1];
                 new_data.z = [x*u2 + y*v2 + w*w2];
-                
+
                 console.log(new_data);
 
                 mouse.data = new_data;
@@ -351,7 +352,7 @@ class Bokeh2DGridPlotter(Plotter2D):
 
     def _ensure_renderer_exists(self, data: Data2D):
         """Ensures the figure has a renderer, creating one if necessary.
-        
+
         Parameters
         ----------
         data : Data2D
@@ -359,12 +360,12 @@ class Bokeh2DGridPlotter(Plotter2D):
         """
         # Check if renderer exists by looking for image_rgba glyph in figure renderers
         has_renderer = any(
-            hasattr(renderer, 'glyph') and 
-            hasattr(renderer.glyph, '__class__') and 
+            hasattr(renderer, 'glyph') and
+            hasattr(renderer.glyph, '__class__') and
             renderer.glyph.__class__.__name__ == 'ImageRGBA'
             for renderer in self.figure.renderers
         )
-        
+
         if not has_renderer:
             # Renderer is missing, recreate it
             logger.info("Replacing missing renderer")
@@ -409,11 +410,11 @@ class Bokeh2DGridPlotter(Plotter2D):
         """
         # First ensure the renderer exists (recover from edge cases where it's missing)
         renderer_created = self._ensure_renderer_exists(data)
-        
+
         # If we just created the renderer, we're done
         if renderer_created:
             return
-        
+
         img, view, grid, val_grid = get_grids(data, self.display_edges)
 
         if self.save_data:
@@ -451,11 +452,11 @@ class Bokeh2DGridPlotter(Plotter2D):
         """
         # Check if renderer exists (recover from edge cases where it's missing)
         renderer_created = self._ensure_renderer_exists(data)
-        
+
         # If we just created the renderer, we're done
         if renderer_created:
             return
-        
+
         self.update_2d_frame(data)
 
     def update_range(self, event: events.RangesUpdate):
@@ -759,3 +760,34 @@ class Bokeh2DGridPlotter(Plotter2D):
             self.permanent_source_mouse.data["y"],
             self.permanent_source_mouse.data["z"],
         )
+
+    def set_range(self, u_range: Tuple[float, float], v_range: Tuple[float, float]):
+        """Updates the plot ranges
+
+        Parameters
+        ----------
+        u_range : Tuple[float, float]
+            Range along the horizontal axis
+        v_range : Tuple[float, float]
+            Range along the vertical axis
+        """
+        u_center = (u_range[0] + u_range[1]) / 2
+        v_center = (v_range[0] + v_range[1]) / 2
+
+        u_span = abs(u_range[1] - u_range[0])
+        v_span = abs(v_range[1] - v_range[0])
+
+        # Forcing the plot to move to the data ranges for smoother use
+        res_x, res_y = self.get_resolution()
+        if res_y is not None:
+            aspect = res_x / res_y
+
+            if u_span / v_span > aspect:
+                v_span = u_span / aspect
+            else:
+                u_span = v_span * aspect
+
+        self.figure.x_range.start = u_center - u_span / 2
+        self.figure.x_range.end = u_center + u_span / 2
+        self.figure.y_range.start = v_center - v_span / 2
+        self.figure.y_range.end = v_center + v_span / 2
