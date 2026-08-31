@@ -987,14 +987,17 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
             logger.warning("No file information available to rebuild reader")
             return
 
-        # Clear current state before re-reading files (read_file appends to file_infos)
+        # Store a copy of file_infos before clearing (read_file appends to file_infos)
+        files_to_read = list(self.file_infos)
+
+        # Clear current state before re-reading files
         self.reader = None
         self.mesh = None
         self.times = []
         self.current_time = 0.0
         self.file_infos.clear()
 
-        for file_path, file_label in self.file_infos:
+        for file_path, file_label in files_to_read:
             try:
                 logger.info("Re-reading saved file: %s as %s", file_path, file_label)
                 self.read_file(file_path, file_label)
@@ -1046,7 +1049,9 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
                 )
                 pickle.dump((*data, *full_data), f)
             else:
+                # Even in minimal mode, save file_infos so we can rebuild the reader
                 minimal_data = (
+                    self.file_infos,
                     self.last_computed_frame,
                     self.data,
                     self.last_3d_frame,
@@ -1112,18 +1117,17 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
                     self.mesh,
                 ) = data[5:]
 
-                print(self.mesh)
-                # Rebuild the reader from saved file paths
-                self._rebuild_reader()
-
             else:
                 (
+                    self.file_infos,
                     self.last_computed_frame,
                     self.data,
                     self.last_3d_frame,
                     self.results,
                     self.mesh,
                 ) = data[5:]
+
+            self._rebuild_reader()
 
     def custom_function(self, function_name: str, arguments: Dict[str, Any]) -> Any:
         """

@@ -443,6 +443,8 @@ panel.show()  # or use _show_panel from scivianna.notebook_tools
 3. **Queue blocking:** The worker processes tasks sequentially. Long-running `compute_2D_data` calls block subsequent requests. Use `allow_errors=True` in `ComputeSlave` to prevent UI freeze on errors.
 4. **Extension feedback loops:** Set `_restoring = True` during `from_json()` restoration to prevent callback triggers.
 5. **Parameter mismatch:** When implementing `compute_2D_data`, always use the new signature with `origin`, `size_u`, `size_v`. Never use `u_min`, `u_max`, `v_min`, `v_max` directly.
+6. **ELinks terminal browser:** When calling `.show()` in a terminal environment, Panel may attempt to open a text-based browser (ELinks). To avoid this, use `.servable()` and manually open the provided URL in your web browser, or run the application in a GUI environment.
+7. **VTK interface serialization:** After loading a serialized VTK layout, the interface's `.mesh` attribute is rebuilt by re-reading the saved file paths. Make sure the original file paths are still accessible when restoring from a pickle file.
 
 ---
 
