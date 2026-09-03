@@ -36,7 +36,7 @@ dependencies = [
     "numpy",
     "shapely",
     "holoviews",
-    "panel_material_ui",
+    "panel_material_ui>=0.12.0",
     "geopandas<1.1",
     "dill",
     "pandas",
