@@ -157,7 +157,7 @@ class AIAssistant(Extension):
             self.description = f"""
 The AI assistant allows you to edit the plot cells colors based on its values. A code will be generated and executed at each cells updates.
 
-Agent not loaded, received error : 
+Agent not loaded, received error :
 *{e}*
 """
             self.agent_row = pn.Row(self.description)
@@ -173,7 +173,7 @@ Agent not loaded, received error :
         pn.viewable.Viewable
             Viewable to display in the extension tab
         """
-        col = pmui.Column()
+        col = pmui.Column(self.agent_row)
         if self.has_agent:
             col.append(self.dialog)
         return col
