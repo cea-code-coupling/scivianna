@@ -142,6 +142,8 @@ class VTK2DPolygonPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the geometry to plot.
         """
+        if data is None:
+            raise ValueError("Provided polygons is None, an error occured before, please check the terminal.")
         if len(data.cell_ids) == 0:
             logger.warning("No polygons to plot")
             return

@@ -288,14 +288,21 @@ The following keys are binded:
 
         self.axis_buttons = pn.Row(self.xplus, self.yplus, self.zplus, margin=0)
 
+        self.origin_column = pmui.Column(self.origin_x_inp, self.origin_y_inp, self.origin_z_inp, margin=0)
+        self.size_column = pmui.Column(self.size_u_inp, self.size_v_inp, margin=0)
+
         self.bounds_card = pmui.Card(
-            pmui.Typography("Slice center and size"),
-            pmui.Column(
-                pmui.Row(self.origin_x_inp, self.origin_y_inp, self.origin_z_inp, margin=0),
-                pmui.Row(self.size_u_inp, self.size_v_inp, margin=0),
-                margin=0,
-            ),
+            pmui.Typography("Slice size"),
+            self.size_column,
             title="Slice bounds",
+            width=300,
+            margin=0,
+            collapsed=True,
+        )
+        self.origin_card = pmui.Card(
+            pmui.Typography("Origin"),
+            self.origin_column,
+            title="Slice Origin",
             width=300,
             margin=0,
             collapsed=True,
@@ -346,6 +353,7 @@ The following keys are binded:
             pmui.Typography("Hide/show axis"),
             self.recompute_button,
             self.hide_show_button,
+            self.origin_card,
             self.bounds_card,
             self.axes_card,
             margin=0,
@@ -447,7 +455,7 @@ The following keys are binded:
         # Definition of U and V vectors
         self.axes_card.visible = geom_type in [GeometryType._3D, GeometryType._3D_INFINITE]
 
-        # Definition of U and V coords
+        self.origin_card.visible = geom_type in [GeometryType._2D, GeometryType._3D, GeometryType._3D_INFINITE]
         self.bounds_card.visible = geom_type in [GeometryType._2D, GeometryType._3D]
 
         # Origin Z is only relevant for 3D (for 2D, origin is in u-v plane)

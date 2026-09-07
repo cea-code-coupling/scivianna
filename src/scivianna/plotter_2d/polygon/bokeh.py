@@ -216,7 +216,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                 new_data.x = [x*u0 + y*v0 + w*w0];
                 new_data.y = [x*u1 + y*v1 + w*w1];
                 new_data.z = [x*u2 + y*v2 + w*w2];
-                
+
                 console.log(new_data);
 
                 mouse.data = new_data;
@@ -307,6 +307,8 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         data : Data2D
             Data2D object containing the geometry to plot
         """
+        if data is None:
+            raise ValueError("Provided polygons is None, an error occured before, please check the terminal.")
         xs, ys = self._polygons_to_coords(data.get_polygons())
 
         if len(data.cell_ids) > 0:
@@ -347,7 +349,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
     def _ensure_renderer_exists(self, data: Data2D):
         """Ensures the figure has a renderer, creating one if necessary.
-        
+
         Parameters
         ----------
         data : Data2D
@@ -355,17 +357,19 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         """
         # Check if renderer exists by looking for multi_polygons glyph in figure renderers
         has_renderer = any(
-            hasattr(renderer, 'glyph') and 
-            hasattr(renderer.glyph, '__class__') and 
+            hasattr(renderer, 'glyph') and
+            hasattr(renderer.glyph, '__class__') and
             renderer.glyph.__class__.__name__ == 'MultiPolygons'
             for renderer in self.figure.renderers
         )
-        
+
         if not has_renderer:
             # Renderer is missing, recreate it
             logger.info("Replacing missing renderer")
+            if data is None:
+                raise ValueError("Provided polygons is None, an error occured before, please check the terminal.")
             xs, ys = self._polygons_to_coords(data.get_polygons())
-            
+
             if len(data.cell_ids) > 0:
                 self.source_polygons.data = {
                     XS: xs,
@@ -388,7 +392,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
                     EDGE_COLORS: [],
                     EDGE_ALPHA: [],
                 }
-            
+
             self.hovered_glyph = self.figure.multi_polygons(
                 xs=XS,
                 ys=YS,
@@ -415,11 +419,13 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         """
         # First ensure the renderer exists (recover from edge cases where it's missing)
         renderer_created = self._ensure_renderer_exists(data)
-        
+
         # If we just created the renderer, we're done (data was already set)
         if renderer_created:
             return
-        
+
+        if data is None:
+            raise ValueError("Provided polygons is None, an error occured before, please check the terminal.")
         xs, ys = self._polygons_to_coords(data.get_polygons())
 
         if len(data.cell_ids) > 0:
@@ -464,7 +470,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
 
         # Check if renderer exists (recover from edge cases where it's missing)
         renderer_created = self._ensure_renderer_exists(data)
-        
+
         # If we just created the renderer, we're done
         if renderer_created:
             return

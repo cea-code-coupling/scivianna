@@ -103,6 +103,9 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
         plot_options : Dict[str, Any])
             Color options to be passed on to the actual plot function, such as edgecolor, facecolor, linewidth, markersize, alpha.
         """
+        if data is None:
+            raise ValueError("Provided polygons is None, an error occured before, please check the terminal.")
+
         data.convert_to_polygons()
         cell_list: List[Union[str, int]] = data.cell_ids
 
