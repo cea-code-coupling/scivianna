@@ -799,7 +799,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
 
         # Try results from CSV or other sources
         for result in self.results.values():
-            if hasattr(result, "get_fields") and value_label in result.get_fields():
+            if hasattr(result, "get_labels") and value_label in result.get_labels():
                 if hasattr(result, "get_values"):
                     values = result.get_values([], cells, [], value_label)
                     return {cells[i]: values[i] for i in range(len(cells))}
@@ -832,8 +832,8 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
 
         # Add fields from results
         for result in self.results.values():
-            if hasattr(result, "get_fields"):
-                labels.extend(result.get_fields())
+            if hasattr(result, "get_labels"):
+                labels.extend(result.get_labels())
 
         logger.debug("Available fields: %s", labels)
         return labels

@@ -132,16 +132,6 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
 
         return result
 
-    def get_fields(self) -> List[str]:
-        """Returns the fields names providable.
-
-        Returns
-        -------
-        List[str]
-            Fields names
-        """
-        return [c for c in self.df.columns if c != "cell"]
-
     def get_labels(self) -> List[str]:
         """Returns the fields names providable.
 
@@ -150,7 +140,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
         List[str]
             Fields names
         """
-        return self.df.columns.tolist()
+        return [c for c in self.df.columns if c != "cell"]
 
     def set_time(self, time: float):
         """This non-Icoco function allows setting the current time in an interface to associate to the received value.

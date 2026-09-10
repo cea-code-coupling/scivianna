@@ -290,7 +290,7 @@ class EuropeGridInterface(Geometry2DPolygon):
             return dict_compo
 
         for res in self.results.values():
-            if value_label in res.get_fields():
+            if value_label in res.get_labels():
                 results = res.get_values(
                     [],
                     cells,
@@ -316,7 +316,7 @@ class EuropeGridInterface(Geometry2DPolygon):
         labels = [MATERIAL, MESH, "Europe"]
 
         for res in self.results.values():
-            labels += res.get_fields()
+            labels += res.get_labels()
 
         return labels
 

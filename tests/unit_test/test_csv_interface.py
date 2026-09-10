@@ -14,17 +14,17 @@ from scivianna.interface.csv_result import CSVInterface
 
 def create_csv_file(filename: str, data: dict) -> str:
     """Helper to create a temporary CSV file with a specific filename.
-    
+
     Uses a unique subdirectory to avoid race conditions when tests run in parallel
     (e.g., with pytest-xdist -n 8 in CI).
-    
+
     Parameters
     ----------
     filename : str
         The desired filename (without path)
     data : dict
         Dictionary of column data for the DataFrame
-        
+
     Returns
     -------
     str
@@ -44,9 +44,9 @@ def create_csv_file(filename: str, data: dict) -> str:
 @pytest.fixture
 def csv_cell_file():
     """Create a CSV file with cell-indexed data.
-    
+
     File: data.csv with columns 'cell', 'temp', 'pressure'
-    get_fields() returns ['temp', 'pressure'] (prefixed)
+    get_labels() returns ['temp', 'pressure'] (prefixed)
     get_value()/get_values() use raw column names ('temp', 'pressure')
     """
     path = create_csv_file("data.csv", {
@@ -311,43 +311,43 @@ class TestCSVInterfaceGetValues:
         assert results == [10.0, 20.0]
 
 
-# ---- get_fields Tests ----
-# Note: get_fields() returns basename-prefixed column names
+# ---- get_labels Tests ----
+# Note: get_labels() returns basename-prefixed column names
 
 @pytest.mark.default
 class TestCSVInterfaceGetFields:
-    def test_get_fields_cell_file(self, csv_cell_file):
-        """Test get_fields returns prefixed field names for cell file."""
+    def test_get_labels_cell_file(self, csv_cell_file):
+        """Test get_labels returns prefixed field names for cell file."""
         interface = CSVInterface(csv_cell_file)
-        fields = interface.get_fields()
+        fields = interface.get_labels()
         assert "temp" in fields
         assert "pressure" in fields
         assert "cell" not in fields
 
-    def test_get_fields_excludes_special_columns(self, csv_cell_file):
-        """Test get_fields excludes 'cell' column."""
+    def test_get_labels_excludes_special_columns(self, csv_cell_file):
+        """Test get_labels excludes 'cell' column."""
         interface = CSVInterface(csv_cell_file)
-        fields = interface.get_fields()
+        fields = interface.get_labels()
         for f in fields:
             assert f != "cell"
 
-    def test_get_fields_returns_list(self, csv_cell_file):
-        """Test get_fields returns a list."""
+    def test_get_labels_returns_list(self, csv_cell_file):
+        """Test get_labels returns a list."""
         interface = CSVInterface(csv_cell_file)
-        fields = interface.get_fields()
+        fields = interface.get_labels()
         assert isinstance(fields, list)
 
-    def test_get_fields_count(self, csv_cell_file):
-        """Test get_fields returns correct number of fields."""
+    def test_get_labels_count(self, csv_cell_file):
+        """Test get_labels returns correct number of fields."""
         interface = CSVInterface(csv_cell_file)
-        fields = interface.get_fields()
+        fields = interface.get_labels()
         # 2 data columns: temp, pressure
         assert len(fields) == 2
 
-    def test_get_fields_custom_basename(self, csv_custom_basename_file):
-        """Test get_fields with custom basename."""
+    def test_get_labels_custom_basename(self, csv_custom_basename_file):
+        """Test get_labels with custom basename."""
         interface = CSVInterface(csv_custom_basename_file)
-        fields = interface.get_fields()
+        fields = interface.get_labels()
         # basename is "output", column is "field" -> "output_field"
         assert "field" in fields
 
@@ -359,12 +359,12 @@ class TestCSVInterfaceIntegration:
     def test_full_workflow(self, csv_cell_file):
         """Test a full workflow with cell-indexed CSV."""
         interface = CSVInterface(csv_cell_file)
-        
+
         # Get available fields (returns prefixed names)
-        fields = interface.get_fields()
+        fields = interface.get_labels()
         assert len(fields) == 2
         assert "temp" in fields
-        
+
         # Get single value (uses raw column name)
         val = interface.get_value(
             position=(0.5, 0.5, 0.5),
@@ -373,7 +373,7 @@ class TestCSVInterfaceIntegration:
             field="temp",  # Raw column name
         )
         assert val == 20.0
-        
+
         # Get multiple values (uses raw column name)
         vals = interface.get_values(
             positions=[(0.0, 0.0, 0.0), (1.0, 1.0, 1.0)],
@@ -386,7 +386,7 @@ class TestCSVInterfaceIntegration:
     def test_inf_handling_integration(self, csv_cell_file_numeric_cells):
         """Test np.inf handling in get_values."""
         interface = CSVInterface(csv_cell_file_numeric_cells)
-        
+
         results = interface.get_values(
             positions=[],
             cell_indexes=[np.inf],

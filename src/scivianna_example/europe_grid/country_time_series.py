@@ -169,16 +169,6 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
 
         return pd.Series(output)
 
-    def get_fields(self) -> List[str]:
-        """Returns the fields names providable.
-
-        Returns
-        -------
-        List[str]
-            Fields names
-        """
-        return self.fields
-
     def get_labels(self) -> List[str]:
         """Returns the fields names providable.
 
@@ -187,7 +177,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
         List[str]
             Fields names
         """
-        return self.get_fields()
+        return self.fields
 
     def get_label_coloring_mode(self, label: str) -> VisualizationMode:
         """Returns the coloring mode of the field.
