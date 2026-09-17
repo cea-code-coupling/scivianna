@@ -291,7 +291,6 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
         return {"2d": path_2d, "3d": path_3d}
         # Kept around (rather than discarded as a local var) so it can be
         # inspected or saved for debugging - see save_debug_meshes().
-        self.base_2d_mesh = mesh2d
 
     # ------------------------------------------------------------------
     # Field handling
