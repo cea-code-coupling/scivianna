@@ -54,6 +54,7 @@ from scivianna.interface.med_interface import MEDInterface
 import shapely
 import shapely.coords
 
+from scivianna.data.data2d import Data2D
 from scivianna.interface.generic_interface import Geometry2D, Geometry3D
 from scivianna.logging_config import get_logger
 from scivianna.utils.color_tools import get_edges_colors
@@ -567,11 +568,11 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
             U and V are either parallel or one is of zero length.
         """
         if self.past_computation == [*list(u), *list(v), *list(origin)]:
-            return self.polygons
+            return self.data
 
-        self.polygons = self.med_interface.compute_2D_data(u, v, origin, None, None, None, {})
+        polygons = self.med_interface.compute_2D_data(u, v, origin, None, None, None, {})[0]
 
-        cell_ids = self.polygons[0].cell_ids
+        cell_ids = polygons.cell_ids
         slices = (cell_ids / len(self.base_cell_polygon_id_dict.keys())).astype(int)
         base_ids = np.mod(cell_ids, len(self.base_cell_polygon_id_dict.keys()))
         base_ids = [
@@ -579,148 +580,38 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
         ]
         cell_ids = base_ids + len(self.base_polygons) * slices
 
-        self.polygons[0].cell_ids = cell_ids
-        for i, p in enumerate(self.polygons[0].polygons):
+        polygons.cell_ids = cell_ids
+        for i, p in enumerate(polygons.polygons):
             p.cell_id = cell_ids[i]
 
-        self.past_computation = [*list(u), *list(v), *list(origin)]
+        polygons_to_union: Dict[int, List[PolygonElement]] = {e: [] for e in cell_ids}
 
-        return self.polygons
+        for polygon in polygons.get_polygons():
+            polygons_to_union[polygon.cell_id].append(polygon)
 
+        def union_to_polygons(geometries):
+            union = shapely.union_all(geometries)
 
-        return self.med_interface.compute_2D_data(u, v, origin, None, None, None, {})
-        u = np.array(u) / np.linalg.norm(u)
-        v = np.array(v) / np.linalg.norm(v)
-        w = np.cross(u, v)
+            if union.geom_type == "MultiPolygon":
+                return list(union.geoms)
 
-        if np.linalg.norm(w) == 0.0:
-            raise ValueError(f"u and v must be both non zero and non parallel, found {u}, {v}")
+            return [union]
 
-        w /= np.linalg.norm(w)
-
-        eps = 1e-8
-        mesh_slice, cell_correspondence = self.unstructured_mesh.buildSlice3D(
-            list(origin), list(w), eps
+        new_polygon_list = [
+            PolygonElement.from_shapely(
+                polygon=polygon,
+                cell_id=cell_id
+            )
+            for cell_id, e in polygons_to_union.items()
+            for polygon in union_to_polygons([p.to_shapely() for p in e])
+        ]
+        self.data = Data2D.from_polygon_list(
+            new_polygon_list
         )
 
-        if mesh_slice.getNumberOfCells() == 0:
-            raise ValueError(
-                f"Requested slice is out of the box (u, v, origin) : {u}, {v}, {origin}. Please change your axes."
-            )
-
-        origin_cell_ids = cell_correspondence.toNumPyArray()
-
-        if not merge_loops:
-            ...
-
-        # Collect, per *field* cell_id (a single field cell_id can be backed by
-        # several elementary MEDCoupling cells due to triangulation), the list
-        # of cut edges (pairs of node ids) produced by buildSlice3D. These are
-        # then stitched back together below, exactly as the original VTK
-        # implementation did: triangulation seams reconnect into one bigger
-        # loop, while genuine holes remain as separate, disconnected loops.
-        edges_per_id: Dict[int, List[List[int]]] = {}
-
-        for local_cell_index in range(mesh_slice.getNumberOfCells()):
-            src_cell_id = int(self.cell_id_values[origin_cell_ids[local_cell_index]])
-            node_ids = list(mesh_slice.getNodeIdsOfCell(local_cell_index))
-
-            edges_per_id.setdefault(src_cell_id, [])
-
-            # A cut through a single (elementary) 3D cell is itself already a
-            # closed polygonal loop (buildSlice3D returns intersection
-            # polygons, not raw edge soup); break it down into its edges so
-            # they can be stitched together with edges coming from
-            # neighbouring cells sharing the same field cell_id.
-            n = len(node_ids)
-            for k in range(n):
-                edges_per_id[src_cell_id].append([node_ids[k], node_ids[(k + 1) % n]])
-
-        slice_coords = mesh_slice.getCoords().toNumPyArray()
-
-        polygon_elements = {}
-
-        for cell_id, edges in edges_per_id.items():
-            rings: List[List[List[int]]] = []
-
-            current_loop: List[List[int]] = []
-            current_point = None
-
-            while len(edges) > 0:
-                if current_loop == []:
-                    current_loop.append(edges[0])
-                    current_point = current_loop[0][1]
-                    edges.pop(0)
-                else:
-                    found = False
-                    for s in edges:
-                        if current_point in [s[0], s[1]]:
-                            if s[1] == current_point:
-                                current_loop.append([s[1], s[0]])
-                                current_point = s[0]
-                            else:
-                                current_loop.append(s)
-                                current_point = s[1]
-                            edges.remove(s)
-                            found = True
-                            break
-
-                    if not found:
-                        rings.append(current_loop)
-                        current_loop = []
-
-            if current_loop != []:
-                rings.append(current_loop)
-
-            polys: List[shapely.Polygon] = []
-
-            for loop in rings:
-                if len(loop) < 3:
-                    continue
-                ids = np.array([e[0] for e in loop] + [loop[0][0]])
-                pts = slice_coords[ids]
-                uv = np.column_stack([pts.dot(u), pts.dot(v)])
-                polys.append(shapely.Polygon(uv))
-
-            if len(polys) == 0:
-                continue
-
-            if len(polys) == 1:
-                polygon_elements[cell_id] = PolygonElement(
-                    PolygonCoords(
-                        np.array(polys[0].exterior.coords)[:, 0],
-                        np.array(polys[0].exterior.coords)[:, 1],
-                    ),
-                    [],
-                    cell_id,
-                )
-            else:
-                main = polys[0]
-                holes = []
-                for poly in polys[1:]:
-                    if main.contains(poly):
-                        holes.append(poly)
-                    else:
-                        holes.append(main)
-                        main = poly
-
-                polygon_elements[cell_id] = PolygonElement(
-                    PolygonCoords(
-                        np.array(main.exterior.coords)[:, 0], np.array(main.exterior.coords)[:, 1]
-                    ),
-                    [
-                        PolygonCoords(
-                            np.array(h.exterior.coords)[:, 0], np.array(h.exterior.coords)[:, 1]
-                        )
-                        for h in holes
-                    ],
-                    cell_id,
-                )
-
-        self.polygons = list(polygon_elements.values())
         self.past_computation = [*list(u), *list(v), *list(origin)]
 
-        return self.polygons
+        return self.data, True
 
 
 if __name__ == "__main__":
