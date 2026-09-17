@@ -403,8 +403,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         """Dictionary of field name to list of (np_array, time) tuples"""
         self.fields_iterations = {}
         """Dictionnary containing the med file available (iter, order) couples"""
-        self.cell_dicts = {}
-        """Dictionary with caller as key storing the cell_dict for each caller"""
         self.last_computed_frame = {}
         """Dictionary with caller as key storing parameters of the last computed frame"""
         self.current_time = 0.0
@@ -584,28 +582,18 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             vec = [float(e) for e in np.cross(u, v)]
 
             try:
-                eps = 0.0
-                mesh: medcoupling.MEDCouplingUMesh = current_mesh.buildSlice3D(origin, vec, eps)[0]
-
-                cell_ids = (
-                    current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-                    .toNumPyArray()
-                    .astype(int)
-                )
-
+                eps = 0.
+                mesh, cell_ids = current_mesh.buildSlice3D(origin, vec, eps)
             except Exception:
                 eps = 1e-7
 
-                mesh: medcoupling.MEDCouplingUMesh = current_mesh.buildSlice3D(origin, vec, eps)[0]
+                mesh, cell_ids = current_mesh.buildSlice3D(origin, vec, eps)
 
-                cell_ids = (
-                    current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-                    .toNumPyArray()
-                    .astype(int)
-                )
-
+            cell_ids = [
+                int(e) for e in cell_ids
+            ]
             if len(cell_ids) != mesh.getNumberOfCells():
-                use_cell_id = False
+                raise ValueError(f"Expecting {mesh.getNumberOfCells()} cell ids, found {len(cell_ids)}")
         else:
             raise ValueError(
                 f"Mesh dimension is {mesh_dimension}, should be either 2 or 3 to be displayed."
@@ -620,9 +608,8 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         polygons = []
 
         vertices_coords = [list(c) for c in list(mesh.getCoords())]
-        caller_cell_dict = {}
 
-        for cell in range(cells_count):
+        for cell in range(len(cell_ids)):
             x_vals = [vertices_coords[cell_id][0] for cell_id in mesh.getNodeIdsOfCell(cell)]
             y_vals = [vertices_coords[cell_id][1] for cell_id in mesh.getNodeIdsOfCell(cell)]
             z_vals = [
@@ -639,21 +626,9 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 PolygonElement(
                     exterior_polygon=PolygonCoords(x_coords=u_vals, y_coords=v_vals),
                     holes=[],
-                    cell_id=int(cell),
+                    cell_id=cell_ids[cell],
                 )
             )
-
-            if not use_cell_id:
-                caller_cell_dict[int(cell)] = int(
-                    current_mesh.getCellContainingPoint(
-                        [np.mean(x_vals), np.mean(y_vals), np.mean(z_vals)], eps=0.0
-                    )
-                )
-
-        if use_cell_id:
-            caller_cell_dict = dict(zip(list(range(cells_count)), cell_ids))
-
-        self.cell_dicts[caller] = caller_cell_dict
 
         if profile_time:
             logger.debug(
@@ -766,10 +741,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 self.fields[value_label] = [(field_np_array, coupling_time)]
 
         if field_np_array is not None:
-            caller_cell_dict = self.cell_dicts.get(caller, dict(zip(cells, cells)))
-            indexes = np.array(list(caller_cell_dict.values()))
-
-            values = field_np_array[indexes[np.array(cells)].tolist()]
+            values = field_np_array[np.array(cells)].tolist()
 
             value_dict = dict(zip(np.array(cells), values))
 
@@ -952,7 +924,10 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
             connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
             last_cell_type = connectivity[offsets[-2]]
-            max_type = MC_DIM[last_cell_type]
+
+            # print(last_cell_type, type(last_cell_type))
+            # max_type = MC_DIM[last_cell_type]
+            max_type = 3
 
             if max_type == 3:
                 pv_mesh = _to_unstructured(mesh, coords)
@@ -1321,7 +1296,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     self.fieldnames,
                     self.fields,
                     self.fields_iterations,
-                    self.cell_dicts,
                     self.last_computed_frame,
                     self.data,
                     self.current_time,
@@ -1335,7 +1309,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     include_files,
                     "MEDInterface",
                     self.last_computed_frame,
-                    self.cell_dicts,
                     self.data,
                 )
 
@@ -1392,7 +1365,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     self.fieldnames,
                     self.fields,
                     self.fields_iterations,
-                    self.cell_dicts,
                     self.last_computed_frame,
                     self.data,
                     self.current_time,
@@ -1400,7 +1372,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 ) = data[5:]
 
             else:
-                (self.last_computed_frame, self.cell_dicts, self.data) = data[5:]
+                (self.last_computed_frame, self.data) = data[5:]
 
 
 if __name__ == "__main__":
