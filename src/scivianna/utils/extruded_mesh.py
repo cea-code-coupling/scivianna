@@ -30,12 +30,17 @@ Design notes
   offsetting the ``cell_id`` field per layer straightforward.
 * Because a single logical polygon can be represented by several prism
   cells (from triangulation) sharing one ``cell_id``, slicing needs to
-  reassemble their cut edges into one polygon boundary, exactly like the
-  original VTK implementation did. ``MEDCouplingUMesh.buildSlice3D`` returns
-  one cut loop per elementary 3D cell (not merged across cells sharing a
-  field value), so ``compute_2D_slice`` below re-implements the same
-  point-id edge-walking reconstruction as the original code, just sourced
-  from MEDCoupling's slice output instead of VTK's.
+  reassemble their cut edges into one polygon boundary. ``compute_2D_data``
+  below performs that logic on top of the raw slice produced by the MED
+  interface: it takes the per-prism polygons returned by
+  ``MEDInterface.compute_2D_data`` (one cut loop per elementary 3D cell),
+  maps their cells back to the logical polygon ids, and unions the cut loops
+  belonging to the same id into single polygons.
+* Once the MED geometry is built, this class hands it over (mesh + ``cell_id``
+  field) to an internal :class:`~scivianna.interface.med_interface.MEDInterface`
+  instance, which performs all the actual Scivianna operations (2D slicing,
+  3D data computation, value extraction), so no logic is duplicated between
+  this class and the MED interface.
 
 Caveats
 -------
@@ -45,19 +50,21 @@ slightly between MEDCoupling releases; adjust as needed for your install.
 """
 
 import os
-import time
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
+
+import multiprocessing as mp
 
 import numpy as np
-from scivianna.constants import GEOMETRY
+from scivianna.constants import GEOMETRY, MESH
 from scivianna.interface.med_interface import MEDInterface
 import shapely
 import shapely.coords
 
 from scivianna.data.data2d import Data2D
-from scivianna.interface.generic_interface import Geometry2D, Geometry3D
+from scivianna.enums import GeometryType, VisualizationMode
+from scivianna.interface.generic_interface import Geometry2DPolygon, Geometry3D
 from scivianna.logging_config import get_logger
-from scivianna.utils.color_tools import get_edges_colors
 
 if TYPE_CHECKING:
     from scivianna.data.data3d import Data3D
@@ -79,47 +86,200 @@ except ImportError:
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 
-class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
-    """Structured mesh build from a set of PolygonElement on the XY plane, extruded at a set of Z values"""
+class ExtrudedStructuredMesh(Geometry2DPolygon, Geometry3D):
+    """Structured mesh build from a set of PolygonElement on the XY plane, extruded at a set of Z values.
+
+    The base polygons, the z bins and the extrusion vector are either given at construction time or
+    provided through ``read_file`` (which allows driving the interface through a ComputeSlave). The
+    MEDCoupling geometry is built lazily by :meth:`build_medcoupling_geometry` before the first
+    ``compute_2D_data`` / ``compute_3D_data`` call, then handed over to an internal
+    :class:`~scivianna.interface.med_interface.MEDInterface`, which performs all the actual Scivianna
+    operations (2D slicing, 3D data, value extraction) so that no logic is duplicated between this
+    class and the MED interface.
+    """
+
+    geometry_type: GeometryType = GeometryType._3D_INFINITE
 
     def __init__(
         self,
-        xy_mesh: List[PolygonElement],
-        z_coords: np.ndarray,
+        xy_mesh: List[PolygonElement] = None,
+        z_coords: np.ndarray = None,
         extrusion_vector: Tuple[float, float, float] = (0, 0, 1),
     ):
-        """Builds the mesh based on the (r, theta, phi) bins.
+        """Builds the interface from a set of base polygons on the XY plane.
+
+        The MEDCoupling geometry is not built here; it is built lazily by
+        ``build_medcoupling_geometry`` before the first ``compute_2D_data`` /
+        ``compute_3D_data`` call, once all the geometry inputs are available
+        (either from these arguments or from a prior ``read_file`` call).
 
         Parameters
         ----------
-        xy_mesh : List[PolygonElement]
+        xy_mesh : List[PolygonElement], optional
             List of PolygonElement to extrude along the z axis
-        z_coords : np.ndarray
-            Bins on the Z axis
+        z_coords : np.ndarray, optional
+            Bins on the Z axis (m)
+        extrusion_vector : Tuple[float, float, float], optional
+            Direction vector along which the base mesh is extruded (default: (0, 0, 1))
         """
         super().__init__()
 
         self.base_polygons = xy_mesh
-        self.z_coords = np.asarray(z_coords, dtype=float)
+        self.z_coords = np.asarray(z_coords, dtype=float) if z_coords is not None else None
         self.extrusion_vector = np.array(extrusion_vector, dtype=float)
 
         self.med_interface = MEDInterface()
 
-        self.build_medcoupling_geometry()
-
+        # Storing a dictionnary mapping fields names to their base mesh ids
         self.grids: Dict[str, Dict[int, Any]] = {}
-        self.fields: Dict[str, Any] = {}
 
-        self.past_computation = []
+    # ------------------------------------------------------------------
+    # Generic interface - file handling
+    # ------------------------------------------------------------------
+    def read_file(self, file_path: str, file_label: str) -> None:
+        """Read a geometry input and store its content in the interface.
 
-        # Cache for compute_3D_data(); invalidated whenever a field is set
-        # (the mesh itself never changes after construction).
-        self._data3d: "Data3D" = None
+        The geometry is described by three inputs, each sent through one call of this function:
 
+        -   ``file_path="base_polygons"`` with ``file_label`` a list of :class:`PolygonElement`
+            (the 2D base polygons on the XY plane),
+        -   ``file_path="z_coords"`` with ``file_label`` a list of z bins,
+        -   ``file_path="extrusion_vector"`` with ``file_label`` a 3D direction vector.
+
+        The MEDCoupling geometry itself is not built here; it is built lazily by
+        ``build_medcoupling_geometry`` before the first ``compute_2D_data`` /
+        ``compute_3D_data`` call, once all the inputs are available.
+
+        Parameters
+        ----------
+        file_path : str
+            Geometry input label: "base_polygons", "z_coords" or "extrusion_vector"
+        file_label : List[PolygonElement], list of float, or Tuple[float, float, float]
+            Value associated to the given geometry input label
+
+        Raises
+        ------
+        ValueError
+            If the given file_path is not a supported geometry input label.
+        """
+        if file_path == "base_polygons":
+            self.base_polygons = list(file_label)
+
+        elif file_path == "z_coords":
+            self.z_coords = np.asarray(file_label, dtype=float)
+
+        elif file_path == "extrusion_vector":
+            self.extrusion_vector = np.array(file_label, dtype=float)
+
+        else:
+            raise ValueError(
+                f"Unknown geometry input label {file_path}. "
+                "Expected one of 'base_polygons', 'z_coords' or 'extrusion_vector'."
+            )
+
+    def get_labels(self) -> List[str]:
+        """Returns a list of fields names displayable with this interface.
+
+        Returns
+        -------
+        List[str]
+            List of fields names (the mesh itself plus every field set through ``set_values``).
+        """
+        return [MESH] + list(self.grids.keys())
+
+    def get_label_coloring_mode(self, label: str) -> VisualizationMode:
+        """Returns wheter the given field is colored based on a string value or a float.
+
+        Parameters
+        ----------
+        label : str
+            Field to color name
+
+        Returns
+        -------
+        VisualizationMode
+            Coloring mode
+        """
+        if label == MESH:
+            return VisualizationMode.NONE
+
+        return VisualizationMode.FROM_VALUE
+
+    def get_file_input_list(self) -> List[Tuple[str, str]]:
+        """Returns a list of file label and its description for the GUI.
+
+        Returns
+        -------
+        List[Tuple[str, str]]
+            List of (file label, description). This interface reads no file, so the list is empty.
+        """
+        return []
+
+    def save(self, file_path: Path, include_files: bool):
+        """Pickle saves the slave content to a file, allows slave state reload.
+
+        Two modes are available:
+            -   If **include_files** is at True, all loaded data are saved, the pickled file can be loaded on its own to recover last session.
+            -   If **include_files** is at False, only the computed data are loaded, enabling faster first computation allowing a smaller pickle file size.
+
+        Parameters
+        ----------
+        file_path : Path
+            File in which save the file
+        include_files : bool
+            Included loaded file
+        """
+        raise NotImplementedError(
+            f"Function save not implemented for class {self.__class__.__name__}."
+        )
+
+    def load(self, file_path: Path, include_files: bool):
+        """Pickle loads the slave content to a file, allows slave state reload.
+
+        Two modes are available:
+            -   If **include_files** is at True, all loaded data are saved, the pickled file can be loaded on its own to recover last session.
+            -   If **include_files** is at False, only the computed data are loaded, enabling faster first computation allowing a smaller pickle file size.
+
+        Parameters
+        ----------
+        file_path : Path
+            File from which load the slave
+        include_files : bool
+            Included loaded file
+        """
+        raise NotImplementedError(
+            f"Function load not implemented for class {self.__class__.__name__}."
+        )
 
     # ------------------------------------------------------------------
     # Geometry construction
     # ------------------------------------------------------------------
+    def _ensure_geometry_built(self):
+        """Builds the MEDCoupling geometry if it has not been built yet.
+
+        The build is lazy so that the geometry inputs (base polygons, z bins and
+        extrusion vector) can be provided either at construction time or through
+        ``read_file`` calls before the first ``compute_2D_data`` /
+        ``compute_3D_data`` request.
+        """
+        if getattr(self, "unstructured_mesh", None) is not None:
+            return
+
+        if self.base_polygons is None or len(self.base_polygons) == 0:
+            raise RuntimeError(
+                "No base polygons defined; provide them at construction time or through a "
+                "read_file call with file_path='base_polygons' before computing data."
+            )
+
+        if self.z_coords is None or len(self.z_coords) < 2:
+            raise RuntimeError(
+                "Not enough z coordinates (at least two are required); provide them at "
+                "construction time or through a read_file call with file_path='z_coords' "
+                "before computing data."
+            )
+
+        self.build_medcoupling_geometry()
+
     def _build_base_2d_mesh(self) -> Tuple["mc.MEDCouplingUMesh", np.ndarray]:
         """Triangulates every base polygon (accounting for holes) and returns a
         2D MEDCouplingUMesh (lying in 3D space, z=0) together with an array
@@ -197,7 +357,9 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
         mesh2d, base_cell_polygon_id = self._build_base_2d_mesh()
         mesh1d = self._build_1d_path_mesh()
 
-        self.base_cell_polygon_id_dict = dict(zip(range(len(base_cell_polygon_id)), base_cell_polygon_id))
+        self.base_cell_polygon_id_dict = dict(
+            zip(range(len(base_cell_polygon_id)), base_cell_polygon_id)
+        )
 
         # Policy 0 = "translation only": each level of the resulting 3D mesh
         # is a translated copy of mesh2d, following the vectors of mesh1d's
@@ -220,7 +382,14 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
         # inspected or saved for debugging - see save_debug_meshes().
         self.base_2d_mesh = mesh2d
 
-        self.med_interface.read_file("extruded_mesh_debug_3d.med", GEOMETRY)
+        # Hand the built geometry over to the MED interface, which then performs
+        # all the actual Scivianna operations (slicing, 3D data, value extraction).
+        cell_id_field = mc.MEDCouplingFieldDouble(mc.ON_CELLS, mc.ONE_TIME)
+        cell_id_field.setName("cell_id")
+        cell_id_field.setMesh(mesh3d)
+        cell_id_field.setArray(mc.DataArrayDouble(cell_id_values.astype(float)))
+
+        self.med_interface.read_file(cell_id_field, GEOMETRY)
 
     def save_debug_meshes(
         self,
@@ -282,15 +451,20 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
         mc.WriteFieldUsingAlreadyWrittenMesh(path_3d, cell_id_field)
 
         if write_fields:
-            for name, field in self.fields.items():
+            for name in self.med_interface.fields:
+                field_np_array, _ = self.med_interface._get_field_at_time(name, 0.0)
+                if field_np_array is None:
+                    continue
+
+                field = mc.MEDCouplingFieldDouble(mc.ON_CELLS, mc.ONE_TIME)
                 field.setName(name)
+                field.setMesh(self.unstructured_mesh)
+                field.setArray(mc.DataArrayDouble(np.asarray(field_np_array, dtype=float)))
                 mc.WriteFieldUsingAlreadyWrittenMesh(path_3d, field)
 
         logger.info("Wrote debug meshes to %s and %s", path_2d, path_3d)
 
         return {"2d": path_2d, "3d": path_3d}
-        # Kept around (rather than discarded as a local var) so it can be
-        # inspected or saved for debugging - see save_debug_meshes().
 
     # ------------------------------------------------------------------
     # Field handling
@@ -298,15 +472,23 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
     def set_values(self, name: str, grid: Dict[int, Any]):
         """Setting a dict grid (cell_id -> value) to the given name.
 
+        The values are scattered onto the extruded mesh cells following the
+        ``cell_id`` mapping and stored in the internal MED interface as a
+        MEDCoupling field, which then serves them for display and extraction.
+
         Parameters
         ----------
         name : str
             Field name
         grid : Dict[int, Any]
             Field value, keyed by cell_id
+
+        Raises
+        ------
+        RuntimeError
+            If the geometry has not been built yet (no base polygons or z coordinates provided).
         """
-        self.grids[name] = grid
-        self._data3d = None  # invalidate cached 3D data, it needs this field baked in
+        self._ensure_geometry_built()
 
         cell_ids = self.cell_id_values
 
@@ -322,62 +504,65 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
         if not np.all(sorted_keys[idx] == cell_ids):
             raise ValueError("Some cell_ids are missing from grid")
 
-        cell_values = sorted_values[idx]
+        self.grids[name] = grid
 
-        field = mc.MEDCouplingFieldDouble(mc.ON_CELLS, mc.ONE_TIME)
-        field.setName(name)
-        field.setMesh(self.unstructured_mesh)
-        field.setArray(mc.DataArrayDouble(cell_values))
-        field.checkConsistencyLight()
-
-        self.fields[name] = field
-
-    def get_cells_values(self, name: str, cell_ids: List[int]) -> np.ndarray:
-        """Returns a field values for a list of cell indexes
+    def get_value_dict(
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name.
 
         Parameters
         ----------
-        name : str
-            field name
-        cell_ids : List[int]
-            cells indexes
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
-        np.ndarray
-            List of values per cell
-
-        Raises
-        ------
-        RuntimeError
-            Requested a field before defining it
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
         """
-        if name not in self.grids:
-            raise RuntimeError(f"Field {name} is not defined. Found {list(self.grids.keys())}.")
-        if len(cell_ids) == 0:
-            return []
+        if value_label == MESH:
+            return {v: np.nan for v in cells}
 
-        return [self.grids[name][c] for c in cell_ids]
+        if value_label == "cell_id":
+            # The cell_id field is internal (set at build time), but the slave
+            # asks for it to fill Data2D.cell_values when used as a label.
+            self._ensure_geometry_built()
+            return dict(zip(cells, [int(c) for c in cells]))
+
+        if value_label not in self.grids:
+            raise RuntimeError(
+                f"Field {value_label} is not defined. Found {list(self.grids.keys())}."
+            )
+
+        grid = self.grids[value_label]
+
+        return dict(zip(cells, [grid[int(c)] for c in cells]))
 
     # ------------------------------------------------------------------
     # 3D data
     # ------------------------------------------------------------------
-    def compute_3D_data(self, options: Dict[str, Any] = None) -> Tuple["Data3D", bool]:
+    def compute_3D_data(self, options: Dict[str, Any]) -> Tuple["Data3D", bool]:
         """Returns the full extruded 3D mesh (with a ``cell_id`` field and any
         field previously set via ``set_values``) ready for 3D display.
 
-        This mirrors ``MEDInterface.compute_3D_data``: the MEDCoupling mesh is
-        converted to a PyVista mesh (PyVista/VTK still being the rendering
-        backend for the 3D viewer) and wrapped into a ``Data3D``. Unlike
-        ``MEDInterface``, this mesh is static (built once at construction), so
-        the cache is only invalidated when a new field is registered via
-        ``set_values``, not by a "time" option.
+        Delegates to the internal MED interface, which converts the
+        MEDCoupling mesh to a PyVista mesh and wraps it into a ``Data3D``.
 
         Parameters
         ----------
-        options : Dict[str, Any], optional
-            Unused for now; kept for interface-compatibility with
-            ``MEDInterface.compute_3D_data``.
+        options : Dict[str, Any]
+            Additional options for frame computation.
 
         Returns
         -------
@@ -385,191 +570,121 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
             3D geometry (and any field set via ``set_values``) to display
         bool
             Whether the data changed since the last call
+
+        Raises
+        ------
+        RuntimeError
+            If the geometry has not been built yet (no base polygons or z coordinates provided).
         """
-        import pyvista as pv
+        self._ensure_geometry_built()
 
-        from scivianna.data.data3d import Data3D
+        return self.med_interface.compute_3D_data(options if options is not None else {})
 
-        if self._data3d is not None:
-            logger.debug("Skipping 3D mesh computation (cached)")
-            return self._data3d, False
+    def get_3d_value_dict(
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name on the 3D mesh.
 
-        MC_TO_PV_CELLTYPE = {
-            mc.NORM_POINT1: pv.CellType.VERTEX,
-            mc.NORM_SEG2: pv.CellType.LINE,
-            mc.NORM_SEG3: pv.CellType.QUADRATIC_EDGE,
-            mc.NORM_TRI3: pv.CellType.TRIANGLE,
-            mc.NORM_QUAD4: pv.CellType.QUAD,
-            mc.NORM_TETRA4: pv.CellType.TETRA,
-            mc.NORM_PENTA6: pv.CellType.WEDGE,
-            mc.NORM_HEXA8: pv.CellType.HEXAHEDRON,
-            mc.NORM_POLYGON: pv.CellType.POLYGON,
-            mc.NORM_QPOLYG: pv.CellType.QUADRATIC_POLYGON,
-            mc.NORM_POLYHED: pv.CellType.POLYHEDRON,
-        }
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
-        MC_DIM = {
-            mc.NORM_POINT1: 0,
-            mc.NORM_SEG2: 1,
-            mc.NORM_SEG3: 1,
-            mc.NORM_TRI3: 2,
-            mc.NORM_QUAD4: 2,
-            mc.NORM_TETRA4: 3,
-            mc.NORM_PENTA6: 3,
-            mc.NORM_HEXA8: 3,
-            mc.NORM_POLYGON: 2,
-            mc.NORM_QPOLYG: 3,  # only UnstructuredGrid
-            mc.NORM_POLYHED: 3,
-        }
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
 
-        def _mc_ph_to_vtk_fast(connectivity: np.ndarray, offsets: np.ndarray) -> np.ndarray:
-            if len(connectivity) == 0:
-                return np.array([], dtype=int)
-            cell_length = offsets[1:] - offsets[:-1]
-            face_delims = connectivity == -1  # all face separators
-            face_delims[offsets[:-1]] = True  # all cell separators
+        Raises
+        ------
+        RuntimeError
+            If the geometry has not been built yet (no base polygons or z coordinates provided),
+            or if the requested field is not defined.
+        """
+        self._ensure_geometry_built()
 
-            face_offsets = np.r_[np.flatnonzero(face_delims), len(connectivity)]
+        if value_label == MESH:
+            return {v: np.nan for v in cells}
 
-            cell_delim_in_face_offsets = face_offsets.searchsorted(offsets)
-            num_faces = cell_delim_in_face_offsets[1:] - cell_delim_in_face_offsets[:-1]
+        if value_label == "cell_id":
+            # The cell_id field is internal (set at build time), but it can be
+            # requested to check the mesh cells <-> logical polygon mapping.
+            return dict(zip(cells, [int(c) for c in cells]))
 
-            face_length = face_offsets[1:] - face_offsets[:-1] - 1
-            connectivity[face_delims] = face_length
-
-            inds = np.empty((2 * len(cell_length),), dtype=int)
-            inds[::2] = offsets[:-1]
-            inds[1::2] = offsets[:-1]
-
-            vals = np.empty((2 * len(cell_length),), dtype=int)
-            vals[::2] = cell_length + 1
-            vals[1::2] = num_faces
-
-            return np.insert(connectivity, obj=inds, values=vals)
-
-        def _to_unstructured(mesh: "mc.MEDCouplingUMesh", coords: np.ndarray) -> pv.UnstructuredGrid:
-            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
-            cell_length = offsets[1:] - offsets[:-1] - 1
-
-            cell_types_idx = offsets[:-1]
-            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
-            mc_cell_types = np.array(connectivity[cell_types_idx])
-
-            # Split off polyhedrons (assumed to have a higher type id than the
-            # other cell types present).
-            ind_l = np.searchsorted(mc_cell_types, mc.NORM_POLYHED, side="left")
-            ind_r = np.searchsorted(mc_cell_types, mc.NORM_POLYHED, side="right")
-            cell_types = np.array(mc_cell_types)
-
-            types_idx = dict()
-            for mc_type in MC_TO_PV_CELLTYPE:
-                types_idx[mc_type] = cell_types == mc_type
-            for mc_type, pv_type in MC_TO_PV_CELLTYPE.items():
-                cell_types[types_idx[mc_type]] = pv_type
-
-            connectivity_npl = connectivity[: offsets[ind_l]]
-            connectivity_npl[cell_types_idx[:ind_l]] = cell_length[:ind_l]
-            connectivity_npr = connectivity[offsets[ind_r]:]
-            connectivity_npr[cell_types_idx[ind_r:]] = cell_length[ind_r:]
-
-            connectivity_ph = _mc_ph_to_vtk_fast(
-                connectivity[offsets[ind_l]: offsets[ind_r]],
-                offsets=offsets[ind_l: ind_r + 1] - offsets[ind_l],
+        if value_label not in self.grids:
+            raise RuntimeError(
+                f"Field {value_label} is not defined. Found {list(self.grids.keys())}."
             )
 
-            connectivity = np.r_[connectivity_npl, connectivity_npr, connectivity_ph]
+        grid = self.grids[value_label]
 
-            return pv.UnstructuredGrid(connectivity, cell_types, coords)
-
-        def _to_polydata(mesh: "mc.MEDCouplingUMesh", coords: np.ndarray) -> pv.PolyData:
-            offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
-            cell_length = offsets[1:] - offsets[:-1] - 1
-            cell_types_idx = offsets[:-1]
-
-            connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
-            any_type = connectivity[0]
-            connectivity[cell_types_idx] = cell_length
-
-            if MC_DIM[any_type] == 0:
-                return pv.PolyData(coords, verts=connectivity)
-            if MC_DIM[any_type] == 1:
-                return pv.PolyData(coords, lines=connectivity)
-            if MC_DIM[any_type] == 2:
-                return pv.PolyData(coords, faces=connectivity)
-            raise ValueError(f"{any_type} is not in known types: {MC_DIM=}")
-
-        # Sort a working copy in MED file order (required before converting
-        # to a single-cell-type-block PyVista mesh), and keep the resulting
-        # permutation to reorder our own per-cell arrays (cell_id, fields).
-        mesh = self.unstructured_mesh.deepCopyConnectivityOnly()
-        permut = mesh.sortCellsInMEDFileFrmt()
-
-        coords = np.array(mesh.getCoords().toNumPyArray())
-        coords = np.c_[coords, np.zeros((coords.shape[0], 3 - coords.shape[1]))]
-
-        offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
-        connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
-        last_cell_type = connectivity[offsets[-2]]
-        max_type = MC_DIM[last_cell_type]
-
-        if max_type == 3:
-            pv_mesh = _to_unstructured(mesh, coords)
-        elif max_type < 3:
-            pv_mesh = _to_polydata(mesh, coords)
-        else:
-            raise ValueError(f"The coords shape is not valid: {coords.shape=}")
-
-        if permut is not None:
-            permut_np = permut.toNumPyArray()
-            p = np.empty_like(permut_np)
-            p[permut_np] = np.arange(permut_np.size)
-        else:
-            p = np.arange(pv_mesh.GetNumberOfCells())
-
-        pv_mesh.cell_data["cell_id"] = self.cell_id_values[p]
-
-        for name, field in self.fields.items():
-            farr = field.getArray().toNumPyArray()
-            pv_mesh.cell_data[name] = farr[p]
-
-        self._data3d = Data3D.from_vtk(pv_mesh)
-
-        return self._data3d, True
+        return dict(zip(cells, [grid[int(c)] for c in cells]))
 
     # ------------------------------------------------------------------
     # Slicing
     # ------------------------------------------------------------------
-    def compute_2D_slice(
+    def compute_2D_data(
         self,
-        origin: Tuple[float, float, float],
         u: Tuple[float, float, float],
-        v: Tuple[float, float, float]
-    ) -> List[PolygonElement]:
-        """Computes the PolygonElement list for a slice of the mesh
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
+        size_u: float,
+        size_v: float,
+        q_tasks: mp.Queue,
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Tuple[Data2D, bool]:
+        """Returns a list of polygons that defines the geometry in a given frame.
 
         Parameters
         ----------
-        origin : Tuple[float, float, float]
-            Slice origin
         u : Tuple[float, float, float]
-            First axis vector
+            Horizontal coordinate director vector
         v : Tuple[float, float, float]
-            Second axis vector
+            Vertical coordinate director vector
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        size_u : float
+            Size of the slice along the u axis
+        size_v : float
+            Size of the slice along the v axis
+        q_tasks : mp.Queue
+            Queue from which get orders from the master.
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
 
         Returns
         -------
-        List[PolygonElement]
-            List of polygon elements defining the cut
+        Data2D
+            Geometry to display
+        bool
+            Were the polygons updated compared to the past call
 
         Raises
         ------
-        ValueError
-            U and V are either parallel or one is of zero length.
+        RuntimeError
+            If the geometry has not been built yet (no base polygons or z coordinates provided).
         """
-        if self.past_computation == [*list(u), *list(v), *list(origin)]:
-            return self.data
+        if options is None:
+            options = {}
 
-        polygons = self.med_interface.compute_2D_data(u, v, origin, None, None, None, {})[0]
+        self._ensure_geometry_built()
+
+        polygons = self.med_interface.compute_2D_data(
+            u, v, origin, size_u, size_v, q_tasks, options, caller
+        )[0]
 
         cell_ids = polygons.cell_ids
         slices = (cell_ids / len(self.base_cell_polygon_id_dict.keys())).astype(int)
@@ -604,21 +719,21 @@ class ExtrudedStructuredMesh(Geometry2D, Geometry3D):
             for cell_id, e in polygons_to_union.items()
             for polygon in union_to_polygons([p.to_shapely() for p in e])
         ]
-        self.data = Data2D.from_polygon_list(
-            new_polygon_list
+        data = Data2D.from_polygon_list(new_polygon_list)
+
+        value_dict = self.med_interface.get_value_dict(
+            "cell_id", data.cell_ids.tolist(), options, caller
         )
+        data.cell_values = np.array([value_dict[c] for c in data.cell_ids])
 
-        self.past_computation = [*list(u), *list(v), *list(origin)]
-
-        return self.data, True
+        return data, True
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    from scivianna.data.data2d import Data2D
-    from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
-    from scivianna.utils.color_tools import interpolate_cmap_at_values
+    from scivianna.slave import ComputeSlave
+    from scivianna.plotter_2d.api import plot_frame_in_axes
 
     outer_square = [(0, 0), (2, 0), (2, 2), (0, 2)]
     inner_hole = [(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)]
@@ -639,30 +754,27 @@ if __name__ == "__main__":
 
     p2 = PolygonElement(inner_coords_1, [], 2)
 
-    mesh = ExtrudedStructuredMesh([p0, p1, p2], list(range(5)))
-    mesh.set_values("id", {i: i for i in range(4 * 3)})
+    # Drive the interface through a ComputeSlave: the geometry inputs are sent
+    # with read_file, and the MEDCoupling geometry is built lazily on the first
+    # compute_2D_data call. The "cell_id" field (set at build time) is used as
+    # the coloring label, so the slave fills data.cell_values itself.
+    slave = ComputeSlave(ExtrudedStructuredMesh)
+    slave.read_file("base_polygons", [p0, p1, p2])
+    slave.read_file("z_coords", list(range(5)))
+    slave.read_file("extrusion_vector", (0, 0, 1))
 
-    polygons = mesh.compute_2D_slice((1.0, 1.0, 0.5), (1, 0, 0), (0, 1, 0))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
 
-    data = Data2D.from_polygon_list(polygons)
+    plot_frame_in_axes(
+        slave,
+        "cell_id",
+        axs[0]
+    )
+    plot_frame_in_axes(
+        slave,
+        "cell_id",
+        axs[1],
+        v = (0, 0, 1)
+    )
 
-    data.cell_values = mesh.get_cells_values("id", [p.cell_id for p in polygons])
-    data.cell_colors = interpolate_cmap_at_values("viridis", np.array(data.cell_values) / (4 * 3))
-    data.cell_edge_colors = get_edges_colors(data.cell_colors)
-
-    plotter = Matplotlib2DPolygonPlotter()
-    plotter.plot_2d_frame(data)
-    plotter.figure.savefig("test_extruded_0.png")
-    plt.close()
-
-    polygons = mesh.compute_2D_slice((1.0, 1.0, 0.5), (1, 0, 0), (0, 0, 1))
-    data = Data2D.from_polygon_list(polygons)
-
-    data.cell_values = mesh.get_cells_values("id", [p.cell_id for p in polygons])
-    data.cell_colors = interpolate_cmap_at_values("viridis", np.array(data.cell_values) / (4 * 3))
-    data.cell_edge_colors = get_edges_colors(data.cell_colors)
-
-    plotter = Matplotlib2DPolygonPlotter()
-    plotter.plot_2d_frame(data)
-    plotter.figure.savefig("test_extruded_1.png")
-    plt.close()
+    fig.savefig("test_extruded.png")

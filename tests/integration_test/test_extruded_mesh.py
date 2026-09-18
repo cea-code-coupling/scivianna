@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 
 from scivianna.data.data2d import Data2D
-from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
-from scivianna.utils.color_tools import get_edges_colors, interpolate_cmap_at_values
+from scivianna.plotter_2d.api import plot_frame_in_axes
+from scivianna.slave import ComputeSlave
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 try:
@@ -15,7 +15,7 @@ except ImportError:
     class ExtrudedStructuredMesh(Geometry2D):
         pass
 
-@pytest.mark.pyvista
+@pytest.mark.medcoupling
 def test_extruded_mesh(plot=False):
     outer_square = [(0, 0), (2, 0), (2, 2), (0, 2)]
     inner_hole = [(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)]
@@ -48,38 +48,26 @@ def test_extruded_mesh(plot=False):
 
     p2 = PolygonElement(inner_coords_1, [], 2)
 
+    slave = ComputeSlave(ExtrudedStructuredMesh)
+    slave.read_file("base_polygons", [p0, p1, p2])
+    slave.read_file("z_coords", list(range(5)))
+    slave.read_file("extrusion_vector", (0, 0, 1))
 
-    mesh = ExtrudedStructuredMesh(
-        [p0, p1, p2], list(range(5))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+
+    plot_frame_in_axes(
+        slave,
+        "cell_id",
+        axs[0]
     )
-    mesh.set_values("id", {i:i for i in range(4*3)})
+    plot_frame_in_axes(
+        slave,
+        "cell_id",
+        axs[1],
+        v = (0, 0, 1)
+    )
 
-    polygons = mesh.compute_2D_slice((1., 1., 0.5), (1, 0, 0), (0, 1, 0))
-
-    data = Data2D.from_polygon_list(polygons)
-
-    data.cell_values = mesh.get_cells_values("id", [p.cell_id for p in polygons])
-    data.cell_colors = interpolate_cmap_at_values("viridis", np.array(data.cell_values)/(4*3))
-    data.cell_edge_colors = get_edges_colors(data.cell_colors)
-
-    plotter = Matplotlib2DPolygonPlotter()
-    plotter.plot_2d_frame(data)
-    if plot:
-        plotter.figure.savefig("test_extruded_0.png")
-    plt.close()
-
-    polygons = mesh.compute_2D_slice((1., 1., 0.5), (1, 0, 0), (0, 0, 1))
-    data = Data2D.from_polygon_list(polygons)
-
-    data.cell_values = mesh.get_cells_values("id", [p.cell_id for p in polygons])
-    data.cell_colors = interpolate_cmap_at_values("viridis", np.array(data.cell_values)/(4*3))
-    data.cell_edge_colors = get_edges_colors(data.cell_colors)
-
-    plotter = Matplotlib2DPolygonPlotter()
-    plotter.plot_2d_frame(data)
-    if plot:
-        plotter.figure.savefig("test_extruded_1.png")
-    plt.close()
+    # fig.savefig("test_extruded.png")
 
 if __name__ == "__main__":
     test_extruded_mesh(plot=True)
