@@ -51,6 +51,9 @@ medcoupling = [
 agent = [
     "smolagents[openai]",
 ]
+gmsh = [
+    "gmsh",
+]
 grid = [
     "rasterio",
 ]
