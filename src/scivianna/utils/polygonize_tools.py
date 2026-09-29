@@ -114,6 +114,11 @@ class PolygonCoords:
         self.x_coords = rotated_coords[:, 0] + origin[0]
         self.y_coords = rotated_coords[:, 1] + origin[1]
 
+    def get_closed_coords(self,) -> Tuple[np.ndarray, np.ndarray]:
+        return (
+            np.array(self.x_coords.tolist() + [self.x_coords[-1]]),
+            np.array(self.y_coords.tolist() + [self.y_coords[-1]]),
+        )
 
 class PolygonElement:
     """Object containing the exterior polygon and the holes of a polygonal object"""
@@ -213,24 +218,53 @@ class PolygonElement:
         """
         if z_coord is None:
             return shapely.Polygon(
-                np.array([self.exterior_polygon.x_coords, self.exterior_polygon.y_coords]),
-                [np.array([h.x_coords, h.y_coords]) for h in self.holes],
+                np.array(self.exterior_polygon.get_closed_coords()).T,
+                [np.array(h.get_closed_coords()).T for h in self.holes],
             )
         else:
             return shapely.Polygon(
                 np.array(
                     [
-                        self.exterior_polygon.x_coords,
-                        self.exterior_polygon.y_coords,
-                        [z_coord] * len(self.exterior_polygon.y_coords),
+                        *self.exterior_polygon.get_closed_coords(),
+                        [z_coord] * (len(self.exterior_polygon.y_coords) + 1),
                     ]
                 ).T,
                 [
-                    np.array([h.x_coords, h.y_coords, [z_coord] * len(h.y_coords)]).T
+                    np.array([*h.get_closed_coords(), [z_coord] * (len(h.y_coords) + 1)]).T
                     for h in self.holes
                 ],
             )
 
+    @classmethod
+    def from_shapely(cls, polygon: shapely.Polygon, cell_id: Union[int, str]) -> 'PolygonElement':
+        """Creates an instance of PolygonElement from a shapely Polygon.
+
+        Parameters
+        ----------
+        polygon : shapely.Polygon
+            The shapely Polygon to convert from
+        cell_id : Union[int, str]
+            Polygon cell id
+
+        Returns
+        -------
+        PolygonElement
+            An instance of PolygonElement with the polygon's coordinates
+        """
+        exterior = np.array(polygon.exterior.coords)
+        x_coords = exterior[:, 0]
+        y_coords = exterior[:, 1]
+        exterior_polygon = PolygonCoords(x_coords=x_coords, y_coords=y_coords)
+
+        # Extract holes
+        holes = []
+        for interior in polygon.interiors:
+            hole_coords = np.array(interior.coords)
+            x_coords = hole_coords[:, 0]
+            y_coords = hole_coords[:, 1]
+            holes.append(PolygonCoords(x_coords=x_coords, y_coords=y_coords))
+
+        return cls(exterior_polygon=exterior_polygon, holes=holes, cell_id=cell_id)
 
 def numpy_2D_array_to_polygons(
     x: Union[List[float], np.ndarray],

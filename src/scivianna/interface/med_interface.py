@@ -403,8 +403,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         """Dictionary of field name to list of (np_array, time) tuples"""
         self.fields_iterations = {}
         """Dictionnary containing the med file available (iter, order) couples"""
-        self.cell_dicts = {}
-        """Dictionary with caller as key storing the cell_dict for each caller"""
         self.last_computed_frame = {}
         """Dictionary with caller as key storing parameters of the last computed frame"""
         self.current_time = 0.0
@@ -416,53 +414,188 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         self.last_computed_3d_time = -1
         """Last computed 3D time"""
 
-    def read_file(self, file_path: str, file_label: str):
+    def read_file(
+        self,
+        file_path: Union[
+            str, Path, "medcoupling.MEDCouplingUMesh", "medcoupling.MEDCouplingFieldDouble"
+        ],
+        file_label: str,
+    ):
         """Read a file and store its content in the interface
 
         Parameters
         ----------
-        file_path : str
-            File to read
+        file_path : str, Path, MEDCouplingUMesh or MEDCouplingFieldDouble
+            File to read, or a MEDCoupling mesh/field object provided directly.
+            If a mesh or field object is given, it is stored as-is and no file I/O is performed.
         file_label : str
             Label to define the file type
         """
         if file_label == GEOMETRY:
             if profile_time:
                 start_time = time.time()
-            logger.info("Reading MED file: %s", file_path)
 
-            file_path = str(file_path)
-            self.file_path = file_path
+            if isinstance(file_path, medcoupling.MEDCouplingFieldDouble):
+                logger.info("Storing MEDCoupling field provided directly (no file read)")
+                self.file_path = None
+                mesh = file_path.getMesh()
+                self.meshnames = [mesh.getName()]
+                self.mesh = [(mesh, 0.0)]
 
-            if not os.path.isfile(file_path):
-                raise ValueError(f"Provided file name does not exist {file_path}")
+                field_array: medcoupling.DataArrayDouble = file_path.getArray()
+                key = file_path.getName() or MESH
+                self.fields[key] = [(field_array.toNumPyArray(), 0.0)]
+                self.fields_iterations[key] = [(-1, -1)]
+                self.fieldnames += [key]
 
-            self.meshnames = medcoupling.GetMeshNames(file_path)
-            self.fieldnames = medcoupling.GetAllFieldNamesOnMesh(file_path, self.meshnames[0])
+            elif isinstance(file_path, medcoupling.MEDCouplingUMesh):
+                logger.info("Storing MEDCoupling mesh provided directly (no file read)")
+                self.file_path = None
+                self.meshnames = [file_path.getName()]
+                self.fieldnames = []
+                self.fields_iterations = {}
+                self.mesh = [(file_path, 0.0)]
 
-            self.fields_iterations = {}
+            else:
+                logger.info("Reading MED file: %s", file_path)
 
-            for field in self.fieldnames:
-                components = medcoupling.GetComponentsNamesOfField(file_path, field)
+                file_path = str(file_path)
+                self.file_path = file_path
 
-                iterations = medcoupling.GetFieldIterations(
-                    medcoupling.ON_CELLS, file_path, self.meshnames[0], field
-                )
+                if not os.path.isfile(file_path):
+                    raise ValueError(f"Provided file name does not exist {file_path}")
 
-                for component in components:
-                    for iteration in iterations:
-                        self.fields_iterations[
-                            ("@".join([field, component[0]]) if component[0] != "" else field)
-                        ] = [tuple(iteration)]
-
-            mesh_data = medcoupling.ReadMeshFromFile(file_path, 0)
-
-            self.mesh = [(mesh_data, 0.0)]
+                self._load_file_metadata()
+                mesh_data = medcoupling.ReadMeshFromFile(self.file_path, 0)
+                self.mesh = [(mesh_data, 0.0)]
 
             if profile_time:
                 logger.debug("File reading time: %.3fs", time.time() - start_time)
         else:
             raise ValueError(f"File label '{file_label}' not implemented")
+
+    def _load_file_metadata(self):
+        """Loads mesh/field names and iteration metadata from the stored MED file.
+
+        This is the lazy-load step that inspects the .med file on disk to build
+        ``meshnames``, ``fieldnames`` and ``fields_iterations``. It does not read
+        the mesh or field arrays themselves.
+
+        Raises
+        ------
+        ValueError
+            If no file path has been set (i.e., the interface was built from a
+            directly-provided mesh instead of a file).
+        """
+        if self.file_path is None:
+            raise ValueError(
+                "No MED file path set. The interface was initialized with a direct "
+                "mesh, so file-based metadata cannot be loaded."
+            )
+
+        self.meshnames = medcoupling.GetMeshNames(self.file_path)
+        self.fieldnames = medcoupling.GetAllFieldNamesOnMesh(self.file_path, self.meshnames[0])
+
+        self.fields_iterations = {}
+
+        for field in self.fieldnames:
+            components = medcoupling.GetComponentsNamesOfField(self.file_path, field)
+
+            iterations = medcoupling.GetFieldIterations(
+                medcoupling.ON_CELLS, self.file_path, self.meshnames[0], field
+            )
+
+            for component in components:
+                for iteration in iterations:
+                    self.fields_iterations[
+                        ("@".join([field, component[0]]) if component[0] != "" else field)
+                    ] = [tuple(iteration)]
+
+    def _load_field_from_file(self, value_label: str, options: Dict[str, Any]) -> np.ndarray:
+        """Lazily loads a single field array from the stored MED file.
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to load (may include a component suffix ``"field@component"``)
+        options : Dict[str, Any]
+            Options providing at least ``Iteration`` and ``Order`` keys
+
+        Returns
+        -------
+        np.ndarray
+            Field values as a numpy array (single component if a component suffix is given)
+        """
+        logger.info("Reading MEDCouplingFieldDouble from %s", self.file_path)
+
+        field_name = value_label.split("@")[0]
+        field: medcoupling.MEDCouplingFieldDouble = medcoupling.ReadField(
+            medcoupling.ON_CELLS,
+            self.file_path,
+            self.meshnames[0],
+            0,
+            field_name,
+            options["Iteration"],
+            options["Order"],
+        )
+        field_array: medcoupling.DataArrayDouble = field.getArray()
+        field_np_array: np.ndarray = field_array.toNumPyArray()
+
+        if "@" in value_label:
+            components: List[str] = field_array.getInfoOnComponents()
+            field_np_array = field_np_array[:, components.index(value_label.split("@")[1])]
+
+        return field_np_array
+
+    def _ensure_metadata_loaded(self):
+        """Ensures file metadata is available, loading it from disk if needed.
+
+        No-op when the interface was initialized with a directly-provided mesh
+        (``file_path is None``).
+        """
+        if self.file_path is not None and len(self.meshnames) == 0:
+            self._load_file_metadata()
+
+    def set_mesh(
+        self,
+        mesh: "medcoupling.MEDCouplingUMesh",
+        time: float = 0.0,
+        replace: bool = True,
+    ):
+        """Stores a MEDCoupling mesh directly in the interface without file I/O.
+
+        This allows providing the geometry from an in-memory mesh (e.g., built by
+        another code) instead of reading it from a .med file on disk. Field data
+        can then be associated with this mesh via ``append_data`` / ``update_data``
+        or ``append_mesh`` / ``update_mesh``.
+
+        Parameters
+        ----------
+        mesh : MEDCouplingUMesh
+            Mesh to store
+        time : float, optional
+            Simulation time associated with the mesh (default: 0.0)
+        replace : bool, optional
+            If True (default), replaces the current mesh at the last time step.
+            If False, appends a new mesh entry at the given time.
+        """
+        if not isinstance(mesh, medcoupling.MEDCouplingUMesh):
+            raise TypeError(
+                f"Expecting a MEDCouplingUMesh, found {type(mesh).__name__}"
+            )
+
+        if replace:
+            if len(self.mesh) > 0:
+                self.mesh[-1] = (mesh, time)
+            else:
+                self.mesh = [(mesh, time)]
+        else:
+            self.mesh.append((mesh, time))
+
+        # Invalidate any cached frame since the mesh changed
+        self.last_computed_frame = {}
+        self.last_computed_3d_time = -1
+
 
     def _get_mesh_at_time(self, time: float) -> Tuple[medcoupling.MEDCouplingUMesh, float]:
         """Returns the mesh with the highest time below the specified time. If not found, return the last mesh.
@@ -584,28 +717,18 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             vec = [float(e) for e in np.cross(u, v)]
 
             try:
-                eps = 0.0
-                mesh: medcoupling.MEDCouplingUMesh = current_mesh.buildSlice3D(origin, vec, eps)[0]
-
-                cell_ids = (
-                    current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-                    .toNumPyArray()
-                    .astype(int)
-                )
-
+                eps = 0.
+                mesh, cell_ids = current_mesh.buildSlice3D(origin, vec, eps)
             except Exception:
                 eps = 1e-7
 
-                mesh: medcoupling.MEDCouplingUMesh = current_mesh.buildSlice3D(origin, vec, eps)[0]
+                mesh, cell_ids = current_mesh.buildSlice3D(origin, vec, eps)
 
-                cell_ids = (
-                    current_mesh.getCellIdsCrossingPlane(origin, vec, eps)
-                    .toNumPyArray()
-                    .astype(int)
-                )
-
+            cell_ids = [
+                int(e) for e in cell_ids
+            ]
             if len(cell_ids) != mesh.getNumberOfCells():
-                use_cell_id = False
+                raise ValueError(f"Expecting {mesh.getNumberOfCells()} cell ids, found {len(cell_ids)}")
         else:
             raise ValueError(
                 f"Mesh dimension is {mesh_dimension}, should be either 2 or 3 to be displayed."
@@ -620,9 +743,8 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         polygons = []
 
         vertices_coords = [list(c) for c in list(mesh.getCoords())]
-        caller_cell_dict = {}
 
-        for cell in range(cells_count):
+        for cell in range(len(cell_ids)):
             x_vals = [vertices_coords[cell_id][0] for cell_id in mesh.getNodeIdsOfCell(cell)]
             y_vals = [vertices_coords[cell_id][1] for cell_id in mesh.getNodeIdsOfCell(cell)]
             z_vals = [
@@ -639,21 +761,9 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 PolygonElement(
                     exterior_polygon=PolygonCoords(x_coords=u_vals, y_coords=v_vals),
                     holes=[],
-                    cell_id=int(cell),
+                    cell_id=cell_ids[cell],
                 )
             )
-
-            if not use_cell_id:
-                caller_cell_dict[int(cell)] = int(
-                    current_mesh.getCellContainingPoint(
-                        [np.mean(x_vals), np.mean(y_vals), np.mean(z_vals)], eps=0.0
-                    )
-                )
-
-        if use_cell_id:
-            caller_cell_dict = dict(zip(list(range(cells_count)), cell_ids))
-
-        self.cell_dicts[caller] = caller_cell_dict
 
         if profile_time:
             logger.debug(
@@ -727,6 +837,8 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         # Get time from options, default to 0 if absent
         coupling_time = options.get("time", 0.0)
 
+        self._ensure_metadata_loaded()
+
         field_np_array = None
 
         # Array already loaded in fields
@@ -734,42 +846,18 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             # Get field data at specified time
             field_np_array, _ = self._get_field_at_time(value_label, coupling_time)
 
-        # Loading it if available
-        else:
-            logger.info("Reading MEDCouplingFieldDouble from %s", self.file_path)
-            if value_label in self.fields_iterations:
-                # if "Iteration" in options and "Order" in options and (options["Iteration"], options["Order"]) in self.fields_iterations[value_label]:
-                if True:
-                    field_name = value_label.split("@")[0]
-                    field: medcoupling.MEDCouplingFieldDouble = medcoupling.ReadField(
-                        medcoupling.ON_CELLS,
-                        self.file_path,
-                        self.meshnames[0],
-                        0,
-                        field_name,
-                        options["Iteration"],
-                        options["Order"],
-                    )
-                    field_array: medcoupling.DataArrayDouble = field.getArray()
-                    field_np_array: np.ndarray = field_array.toNumPyArray()
-
-                    if "@" in value_label:
-                        components: List[str] = field_array.getInfoOnComponents()
-                        field_np_array = field_np_array[
-                            :, components.index(value_label.split("@")[1])
-                        ]
-                    else:
-                        field_np_array = field_np_array
-
-            if field_np_array is not None:
-                # Store as list of (array, time) tuples
-                self.fields[value_label] = [(field_np_array, coupling_time)]
+        # Loading it lazily from file if available
+        elif (
+            value_label in self.fields_iterations
+            and self.file_path is not None
+            and len(self.meshnames) > 0
+        ):
+            field_np_array = self._load_field_from_file(value_label, options)
+            # Store as list of (array, time) tuples
+            self.fields[value_label] = [(field_np_array, coupling_time)]
 
         if field_np_array is not None:
-            caller_cell_dict = self.cell_dicts.get(caller, dict(zip(cells, cells)))
-            indexes = np.array(list(caller_cell_dict.values()))
-
-            values = field_np_array[indexes[np.array(cells)].tolist()]
+            values = field_np_array[np.array(cells)].tolist()
 
             value_dict = dict(zip(np.array(cells), values))
 
@@ -952,7 +1040,10 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
             connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
             last_cell_type = connectivity[offsets[-2]]
-            max_type = MC_DIM[last_cell_type]
+
+            # print(last_cell_type, type(last_cell_type))
+            # max_type = MC_DIM[last_cell_type]
+            max_type = 3
 
             if max_type == 3:
                 pv_mesh = _to_unstructured(mesh, coords)
@@ -1055,6 +1146,8 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         # Get time from options, default to 0 if absent
         coupling_time = options.get("time", 0.0)
 
+        self._ensure_metadata_loaded()
+
         field_np_array = None
 
         # Array already loaded in fields
@@ -1062,36 +1155,15 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             # Get field data at specified time
             field_np_array, _ = self._get_field_at_time(value_label, coupling_time)
 
-        # Loading it if available
-        else:
-            logger.info("Reading MEDCouplingFieldDouble from %s", self.file_path)
-            if value_label in self.fields_iterations:
-                # if "Iteration" in options and "Order" in options and (options["Iteration"], options["Order"]) in self.fields_iterations[value_label]:
-                if True:
-                    field_name = value_label.split("@")[0]
-                    field: medcoupling.MEDCouplingFieldDouble = medcoupling.ReadField(
-                        medcoupling.ON_CELLS,
-                        self.file_path,
-                        self.meshnames[0],
-                        0,
-                        field_name,
-                        options["Iteration"],
-                        options["Order"],
-                    )
-                    field_array: medcoupling.DataArrayDouble = field.getArray()
-                    field_np_array: np.ndarray = field_array.toNumPyArray()
-
-                    if "@" in value_label:
-                        components: List[str] = field_array.getInfoOnComponents()
-                        field_np_array = field_np_array[
-                            :, components.index(value_label.split("@")[1])
-                        ]
-                    else:
-                        field_np_array = field_np_array
-
-            if field_np_array is not None:
-                # Store as list of (array, time) tuples
-                self.fields[value_label] = [(field_np_array, coupling_time)]
+        # Loading it lazily from file if available
+        elif (
+            value_label in self.fields_iterations
+            and self.file_path is not None
+            and len(self.meshnames) > 0
+        ):
+            field_np_array = self._load_field_from_file(value_label, options)
+            # Store as list of (array, time) tuples
+            self.fields[value_label] = [(field_np_array, coupling_time)]
 
         if field_np_array is not None:
             values = field_np_array[cells.tolist()]
@@ -1248,11 +1320,14 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         name : str
             Field name
         template : Any
-            Object to set as template
+            Object to set as template (a MED file path or a MEDCouplingUMesh)
         """
-        # Templates are not used with MEDInterface, pass silently
         self.templates[name] = template
-        self.read_file(template, GEOMETRY)
+
+        if isinstance(template, medcoupling.MEDCouplingUMesh):
+            self.set_mesh(template, replace=False)
+        else:
+            self.read_file(template, GEOMETRY)
 
     def get_iterations(
         self,
@@ -1321,7 +1396,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     self.fieldnames,
                     self.fields,
                     self.fields_iterations,
-                    self.cell_dicts,
                     self.last_computed_frame,
                     self.data,
                     self.current_time,
@@ -1335,7 +1409,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     include_files,
                     "MEDInterface",
                     self.last_computed_frame,
-                    self.cell_dicts,
                     self.data,
                 )
 
@@ -1392,7 +1465,6 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                     self.fieldnames,
                     self.fields,
                     self.fields_iterations,
-                    self.cell_dicts,
                     self.last_computed_frame,
                     self.data,
                     self.current_time,
@@ -1400,11 +1472,12 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 ) = data[5:]
 
             else:
-                (self.last_computed_frame, self.cell_dicts, self.data) = data[5:]
+                (self.last_computed_frame, self.data) = data[5:]
 
 
 if __name__ == "__main__":
     from scivianna.notebook_tools import _show_panel
+    from scivianna.slave import ComputeSlave
 
     slave = ComputeSlave(MEDInterface)
     # slave.read_file("/volatile/catA/tmoulignier/Workspace/some_holoviz/jdd/mesh_hexa_3d.med", GEOMETRY)
