@@ -203,6 +203,16 @@ class GmshInterface(Geometry2DPolygon, Geometry3D):
         self.last_3d_frame = None
         self.file_infos = [(str(file_path), file_label)]
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {}
+
     @staticmethod
     def _model_has_no_elements() -> bool:
         """Returns whether the current gmsh model contains no mesh element."""

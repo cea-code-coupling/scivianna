@@ -145,6 +145,16 @@ class GenericInterface:
 
         return ComputeSlave(cls)
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        raise NotImplementedError
+
 
 class Geometry2D(GenericInterface):
     """Interface parent class for classes that can compute geometry 2D slices."""

@@ -51,6 +51,16 @@ class StructuredMeshInterface(Geometry2DPolygon):
         """
         raise NotImplementedError()
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {}
+
     def compute_2D_data(
         self,
         u: Tuple[float, float, float],

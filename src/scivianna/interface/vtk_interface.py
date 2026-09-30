@@ -559,6 +559,19 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
 
         logger.debug("Loaded mesh at time %s with %d cells", time, self.mesh.number_of_cells)
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {
+            "time": self.current_time,
+            "recompute": True,
+        }
+
     def compute_2D_data(
         self,
         u: Tuple[float, float, float],
@@ -610,10 +623,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         _require_pyvista()
 
         # Set default options
-        if "recompute" not in options:
-            options["recompute"] = True
-        if "time" not in options:
-            options["time"] = self.current_time
+        options = {**self.get_options_dictionnary(), **options}
 
         # Load data at requested time
         time_updated = False
@@ -767,10 +777,7 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
         >>> print(f"Cell 0 temperature: {values[0]}")
         """
         # Set default options
-        if "recompute" not in options:
-            options["recompute"] = True
-        if "time" not in options:
-            options["time"] = self.current_time
+        options = {**self.get_options_dictionnary(), **options}
 
         # Load data at requested time
         if self.current_time != options["time"]:

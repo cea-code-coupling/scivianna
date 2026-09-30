@@ -409,6 +409,9 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         """Current simulation time"""
         self.templates = {}
 
+        self.last_label = None
+        """Last called label"""
+
         self.data3d: Dict[str, Data3D] = {}
         """Dictionary with caller as key storing past computed data3D for each caller"""
         self.last_computed_3d_time = -1
@@ -473,6 +476,28 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 logger.debug("File reading time: %.3fs", time.time() - start_time)
         else:
             raise ValueError(f"File label '{file_label}' not implemented")
+
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {
+            "time": self.current_time,
+            "Iteration": (
+                self.fields_iterations[self.last_label][0][0]
+                if self.last_label is not None and self.last_label in self.fields_iterations
+                else -1
+            ),
+            "Order": (
+                self.fields_iterations[self.last_label][0][0]
+                if self.last_label is not None and self.last_label in self.fields_iterations
+                else -1
+            ),
+        }
 
     def _load_file_metadata(self):
         """Loads mesh/field names and iteration metadata from the stored MED file.
@@ -687,6 +712,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             Were the polygons updated compared to the past call
         """
         # Get time from options, default to 0 if absent
+        options = {**self.get_options_dictionnary(), **options}
         time = options.get("time", 0.0)
 
         if len(self.mesh) == 0:
@@ -814,6 +840,8 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         """
         if profile_time:
             start_time = time.time()
+
+        self.last_label = value_label
 
         if value_label == MESH:
             return {int(v): np.nan for v in cells}

@@ -64,5 +64,27 @@ def test_plot_medcoupling_from_memory():
 
     slave.terminate()
 
+@pytest.mark.medcoupling
+def test_medcoupling_options_dict():
+    import medcoupling
+    from scivianna.interface.med_interface import MEDInterface
+
+    file_path = str(Path(scivianna.__file__).parent / "input_file" / "power.med")
+
+    # Field example
+    slave = ComputeSlave(MEDInterface)
+    slave.read_file(
+        file_path,
+        GEOMETRY,
+    )
+
+    options_dict = slave.get_options_dictionnary()
+
+    assert "Iteration" in options_dict and options_dict["Iteration"] == -1
+    assert "Order" in options_dict and options_dict["Order"] == -1
+    assert "time" in options_dict and options_dict["time"] == 0.
+
+    slave.terminate()
+
 if __name__ == "__main__":
-    test_plot_medcoupling_from_memory()
+    test_medcoupling_options_dict()

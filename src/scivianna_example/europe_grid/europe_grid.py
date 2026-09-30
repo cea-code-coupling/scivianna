@@ -412,6 +412,16 @@ class EuropeGridInterface(Geometry2DPolygon):
         self.country_list = state.get("country_list")
         self.europe = state.get("europe")
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {}
+
 
 register_interface("EuropeGridInterface", EuropeGridInterface)
 

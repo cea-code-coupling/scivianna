@@ -278,3 +278,13 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
             # Restore current dataframe from the last time step
             if self.dfs:
                 self.df = self.dfs.get(self.time, list(self.dfs.values())[-1])
+
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {}

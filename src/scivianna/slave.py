@@ -88,6 +88,8 @@ class SlaveCommand:
     """Pickle saves the slave state to a file"""
     LOAD = "load"
     """Pickle loads the slave state from a file"""
+    GET_OPTIONS_DICTIONNARY = "get_options_dictionnary"
+    """Returns the interface options dictionnary"""
 
     #   Geometry2D functions
     COMPUTE_2D_DATA = "compute_2d_data"
@@ -192,6 +194,10 @@ def worker(
                 file_path, include_files = data
                 interface.load(file_path=file_path, include_files=include_files)
                 q_returns.put("OK")
+
+            elif task == SlaveCommand.GET_OPTIONS_DICTIONNARY:
+                options_dict = interface.get_options_dictionnary()
+                q_returns.put(options_dict)
 
             #
             #   Geometry2D functions
@@ -616,6 +622,16 @@ See https://docs.python.org/3/library/__main__.html for more information.
             List of (file label, description)
         """
         return self.__get_function([SlaveCommand.GET_FILE_INPUT_LIST, None])
+
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return self.__get_function([SlaveCommand.GET_OPTIONS_DICTIONNARY, None])
 
     #   Geometry2D functions
     def compute_2D_data(

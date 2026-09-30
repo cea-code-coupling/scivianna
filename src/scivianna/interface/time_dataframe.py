@@ -33,6 +33,18 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
             labels += ["Time"]
         return labels
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {
+            "time": self.time,
+        }
+
     def get_1D_value(
         self,
         position: Tuple[float, float, float],
@@ -61,6 +73,7 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         Union[pd.Series, List[pd.Series]]
             Field value
         """
+        options = {**self.get_options_dictionnary(), **(options if options is not None else {})}
         if field == "Time":
             if "time" in options:
                 return pd.Series(["min", "max"], index=[options["time"], options["time"]]).rename(

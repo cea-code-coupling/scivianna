@@ -355,6 +355,19 @@ class MandelBrotInterface(Geometry2DGrid):
         """
         return []
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {
+            "u_steps": self.last_computed_frame[-3] if self.last_computed_frame != {} else 300,
+            "v_steps": self.last_computed_frame[-2] if self.last_computed_frame != {} else 300,
+            "max_iter": self.last_computed_frame[-1] if self.last_computed_frame != {} else 10
+        }
 
 def make_panel(
     _, return_slaves=False

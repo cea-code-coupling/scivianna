@@ -250,5 +250,15 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
         self.country_codes = state["country_codes"]
         self.fields = state["fields"]
 
+    def get_options_dictionnary(self) -> dict[str, any]:
+        """Returns a current interface state option dictionnary.
+
+        Returns
+        -------
+        dict[str, any]
+            Option dictionnary to provide to the interface functions
+        """
+        return {}
+
 
 register_interface("CountryTimeSeriesInterface", CountryTimeSeriesInterface)
