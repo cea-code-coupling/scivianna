@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import panel as pn
 import panel_material_ui as pmui
@@ -135,7 +135,7 @@ This extension allows you run coupling simulations.
             else:
                 self.layout.recompute_all()
 
-    def provide_options(self) -> dict[str, any]:
+    def provide_options(self) -> dict[str, Any]:
         """Provide the option extension option dictionnary
 
         Returns

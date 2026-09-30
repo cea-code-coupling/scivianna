@@ -623,12 +623,12 @@ See https://docs.python.org/3/library/__main__.html for more information.
         """
         return self.__get_function([SlaveCommand.GET_FILE_INPUT_LIST, None])
 
-    def get_options_dictionnary(self) -> dict[str, any]:
+    def get_options_dictionnary(self) -> dict[str, Any]:
         """Returns a current interface state option dictionnary.
 
         Returns
         -------
-        dict[str, any]
+        dict[str, Any]
             Option dictionnary to provide to the interface functions
         """
         return self.__get_function([SlaveCommand.GET_OPTIONS_DICTIONNARY, None])

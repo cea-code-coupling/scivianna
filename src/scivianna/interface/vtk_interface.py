@@ -559,12 +559,12 @@ class VTKInterface(Geometry2DPolygon, Geometry3D):
 
         logger.debug("Loaded mesh at time %s with %d cells", time, self.mesh.number_of_cells)
 
-    def get_options_dictionnary(self) -> dict[str, any]:
+    def get_options_dictionnary(self) -> dict[str, Any]:
         """Returns a current interface state option dictionnary.
 
         Returns
         -------
-        dict[str, any]
+        dict[str, Any]
             Option dictionnary to provide to the interface functions
         """
         return {

@@ -203,12 +203,12 @@ class GmshInterface(Geometry2DPolygon, Geometry3D):
         self.last_3d_frame = None
         self.file_infos = [(str(file_path), file_label)]
 
-    def get_options_dictionnary(self) -> dict[str, any]:
+    def get_options_dictionnary(self) -> dict[str, Any]:
         """Returns a current interface state option dictionnary.
 
         Returns
         -------
-        dict[str, any]
+        dict[str, Any]
             Option dictionnary to provide to the interface functions
         """
         return {}

@@ -279,12 +279,12 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
             if self.dfs:
                 self.df = self.dfs.get(self.time, list(self.dfs.values())[-1])
 
-    def get_options_dictionnary(self) -> dict[str, any]:
+    def get_options_dictionnary(self) -> dict[str, Any]:
         """Returns a current interface state option dictionnary.
 
         Returns
         -------
-        dict[str, any]
+        dict[str, Any]
             Option dictionnary to provide to the interface functions
         """
         return {}

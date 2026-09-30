@@ -477,12 +477,12 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         else:
             raise ValueError(f"File label '{file_label}' not implemented")
 
-    def get_options_dictionnary(self) -> dict[str, any]:
+    def get_options_dictionnary(self) -> dict[str, Any]:
         """Returns a current interface state option dictionnary.
 
         Returns
         -------
-        dict[str, any]
+        dict[str, Any]
             Option dictionnary to provide to the interface functions
         """
         return {
