@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import scivianna.interface
 
 try:
     import gmsh
@@ -55,6 +56,7 @@ except ImportError as e:  # pragma: no cover
         "Install them with: pip install gmsh pyvista"
     ) from e
 
+import scivianna
 from scivianna.constants import GEOMETRY, MATERIAL, MESH
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
@@ -646,3 +648,5 @@ class GmshInterface(Geometry2DPolygon, Geometry3D):
         self.data = state["data"]
         self.last_computed_frame = state["last_computed_frame"]
         self.last_3d_frame = None
+
+scivianna.interface.register_interface("GMSH", GmshInterface)
