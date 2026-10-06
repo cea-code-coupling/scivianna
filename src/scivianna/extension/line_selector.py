@@ -141,6 +141,8 @@ If a color bar is used, you can decide to center it on zero.
             extension.y_scale.value = info_dict["y_scale"]
 
         extension._restoring = False
+        extension.set_x_scale()
+        extension.set_y_scale()
         return extension
 
     def on_coupling_update(self):

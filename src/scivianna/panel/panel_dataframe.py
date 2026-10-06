@@ -25,6 +25,7 @@ class PanelDataFrame(VisualizationPanel):
         slave: ComputeSlave,
         name: str = "",
         extensions: List[Extension] = default_extensions,
+        extension_jsons: dict[Type[Extension], dict] = {},
     ):
         """Visualization panel constructor
 
@@ -36,6 +37,8 @@ class PanelDataFrame(VisualizationPanel):
             Name of the panel.
         extensions : List[Extension]
             List of extensions loaded with the visualizer.
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
         """
         self.plotter = DataframePlotter()
 
@@ -46,7 +49,7 @@ class PanelDataFrame(VisualizationPanel):
 
         self._restoring = False
 
-        super().__init__(slave, name, extensions.copy())
+        super().__init__(slave, name, extensions.copy(), extension_jsons)
 
         self.periodic_recompute_added = False
         self.marked_to_recompute = False
@@ -111,13 +114,34 @@ class PanelDataFrame(VisualizationPanel):
         cls,
         info_dict: Dict,
         slave: ComputeSlave,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
+        extensions: List[Extension],
+        extension_jsons: dict[Type[Extension], dict]
     ) -> "PanelDataFrame":
-        """Restores the visualization panel from its information dict."""
+        """Restores the visualization panel from its information dict
+
+        Parameters
+        ----------
+        info_dict : Dict
+            Dictionnary containing all required information to restore the panel
+        slave : ComputeSlave
+            Panel associated slave
+        data : Data2D
+            Initial state Data2D
+        extensions : List[Extension]
+            Extensions to add to the panel
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
+
+        Returns
+        -------
+        PanelDataFrame
+            Restored panel
+        """
         panel = PanelDataFrame(
             slave,
             info_dict.get("name", ""),
             extensions,
+            extension_jsons = extension_jsons
         )
         panel._restoring = True
         panel.panel_name = info_dict.get("name", "")

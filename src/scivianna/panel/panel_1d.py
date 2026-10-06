@@ -31,7 +31,7 @@ class Panel1D(VisualizationPanel):
     """cell ID where request the plot"""
 
     def __init__(
-        self, slave: ComputeSlave, name: str = "", extensions: List[Extension] = default_extensions
+        self, slave: ComputeSlave, name: str = "", extensions: List[Extension] = default_extensions, extension_jsons: dict[Type[Extension], dict] = {}
     ):
         """Visualization panel constructor
 
@@ -41,10 +41,14 @@ class Panel1D(VisualizationPanel):
             Slave used to take the information from.
         name : str
             Name of the panel.
+        extensions : List[Extension]
+            Extensions to add to the panel
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
         """
         self.plotter = BokehPlotter1D()
 
-        super().__init__(slave, name, extensions.copy())
+        super().__init__(slave, name, extensions.copy(), extension_jsons)
 
         self.copy_index = 1
 
@@ -298,7 +302,8 @@ class Panel1D(VisualizationPanel):
         cls,
         info_dict: Dict,
         slave: ComputeSlave,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
+        extensions: List[Extension],
+        extension_jsons: dict[Type[Extension], dict]
     ) -> "Panel1D":
         """Restores the visualization panel from its information dict
 
@@ -308,15 +313,22 @@ class Panel1D(VisualizationPanel):
             Dictionnary containing all required information to restore the panel
         slave : ComputeSlave
             Panel associated slave
-        extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
-            GUI extensions, can be extension classes or tuples of (class, state_dict)
+        extensions : List[Extension]
+            Extensions to add to the panel
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
 
         Returns
         -------
         Panel1D
             Restored panel
         """
-        panel = Panel1D(slave, info_dict["name"], extensions)
+        panel = Panel1D(
+            slave,
+            info_dict["name"],
+            extensions,
+            extension_jsons = extension_jsons
+        )
         panel.position = info_dict["position"]
         panel.cell_id = info_dict["cell_id"]
         panel.set_field(info_dict["visible_field_names"])

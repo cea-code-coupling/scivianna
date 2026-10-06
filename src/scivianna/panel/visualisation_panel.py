@@ -62,7 +62,8 @@ class VisualizationPanel(pn.viewable.Viewer):
         self,
         slave: ComputeSlave,
         name="",
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
+        extensions: List[Extension] = [],
+        extension_jsons: dict[Type[Extension], dict] = {},
     ):
         """Visualization panel constructor
 
@@ -72,8 +73,10 @@ class VisualizationPanel(pn.viewable.Viewer):
             ComputeSlave object to which request the plots.
         name : str
             Name of the panel.
-        extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
-            List of extensions loaded with the visualizer. Can be either extension classes or tuples of (class, state_dict).
+        extensions : List[Extension]
+            List of extensions loaded with the visualizer.
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
         """
         #
         #   Initializing attributes
@@ -109,12 +112,7 @@ class VisualizationPanel(pn.viewable.Viewer):
 
         # Process extensions - can be classes or (class, state) tuples
         for ext in extensions:
-            if isinstance(ext, tuple):
-                ext_class, ext_state = ext
-                self.extension_classes.append(ext_class)
-                extension_states[ext_class.__name__] = ext_state
-            else:
-                self.extension_classes.append(ext)
+            self.extension_classes.append(ext)
 
         # Add interface extensions
         for extension in code_interface.extensions:
@@ -132,8 +130,8 @@ class VisualizationPanel(pn.viewable.Viewer):
         for e in self.extension_classes:
             ext = e(self.slave, self.plotter, self)
             # Apply saved state if available
-            if e.__name__ in extension_states:
-                e.from_json(ext, extension_states[e.__name__])
+            if e in extension_jsons:
+                e.from_json(ext, extension_jsons[e])
             self.extensions.append(ext)
 
         self.gui = GUI(self.extensions)
