@@ -83,6 +83,7 @@ class Panel2D(VisualizationPanel):
         display_polygons: bool = True,
         plotter_backend: PlotterBackend = PlotterBackend.BOKEH,
         extensions: List[Extension] = None,
+        extension_jsons: dict[Type[Extension], dict] = {},
         data: Data2D = None,
         displayed_field: str = MESH,
         colormap: str = "BuRd",
@@ -105,7 +106,9 @@ class Panel2D(VisualizationPanel):
         plotter_backend : PlotterBackend
             Backend to use for rendering. BOKEH for Bokeh-based renderer, VTK for VTK/vtk.js-based renderer.
         extensions : List[Extension]
-            List of extensions to add to the gui.
+            Extensions to add to the panel
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
         data : Data2D
             Data2D object with which the panel is initialized.
         displayed_field : str
@@ -171,7 +174,7 @@ class Panel2D(VisualizationPanel):
             else:
                 extensions = default_extensions_bokeh
 
-        super().__init__(slave, name, extensions.copy())
+        super().__init__(slave, name, extensions.copy(), extension_jsons)
 
         self.u = u
         self.v = v
@@ -808,7 +811,8 @@ class Panel2D(VisualizationPanel):
         info_dict: Dict,
         slave: ComputeSlave,
         data: Data2D,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
+        extensions: List[Extension],
+        extension_jsons: dict[Type[Extension], dict]
     ) -> "Panel2D":
         """Restores the visualization panel from its information dict
 
@@ -820,8 +824,10 @@ class Panel2D(VisualizationPanel):
             Panel associated slave
         data : Data2D
             Initial state Data2D
-        extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
-            GUI extensions, can be extension classes or tuples of (class, state_dict)
+        extensions : List[Extension]
+            Extensions to add to the panel
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
 
         Returns
         -------
@@ -846,6 +852,7 @@ class Panel2D(VisualizationPanel):
             origin=info_dict.get("origin"),
             size_u=info_dict.get("size_u", 1.0),
             size_v=info_dict.get("size_v", 1.0),
+            extension_jsons = extension_jsons
         )
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]

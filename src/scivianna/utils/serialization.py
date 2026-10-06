@@ -222,14 +222,16 @@ def _restore_extensions(
         List of (extension_class, state_dict) tuples
     """
     extensions = []
+    extension_dict = {}
     for ext_name in saved_extensions:
         ext_state = extensions_data.get(ext_name, {})
         ext_class = _get_extension_class(ext_name, interface, panel_type)
 
         if ext_class is not None:
-            extensions.append((ext_class, ext_state))
+            extensions.append(ext_class)
+            extension_dict[ext_class] = ext_state
 
-    return extensions
+    return extensions, extension_dict
 
 
 # =============================================================================
@@ -425,10 +427,10 @@ def load_panel2d_from_file(file_path: Union[str, Path], include_files: bool = Tr
         # Rebuild extensions with their state using the utility function
         extensions_data = panel_data.get("extensions_data", {})
         saved_extensions = panel_data.get("extensions", [])
-        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel2D")
+        extensions, extension_options = _restore_extensions(extensions_data, saved_extensions, interface, "Panel2D")
 
         # Restore panel from json with the loaded data
-        panel = Panel2D.from_json(panel_data["panel_json"], slave, current_data, extensions)
+        panel = Panel2D.from_json(panel_data["panel_json"], slave, current_data, extensions, extension_options)
 
         return panel
 
@@ -556,10 +558,10 @@ def load_panel1d_from_file(file_path: Union[str, Path], include_files: bool = Tr
         # Rebuild extensions with their state using the utility function
         extensions_data = panel_data.get("extensions_data", {})
         saved_extensions = panel_data.get("extensions", [])
-        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel1D")
+        extensions, extension_options = _restore_extensions(extensions_data, saved_extensions, interface, "Panel1D")
 
         # Restore panel from json
-        panel = Panel1D.from_json(panel_data["panel_json"], slave, extensions)
+        panel = Panel1D.from_json(panel_data["panel_json"], slave, extensions, extension_options)
 
         return panel
 
@@ -701,10 +703,10 @@ def load_panel3d_from_file(file_path: Union[str, Path], include_files: bool = Tr
         # Rebuild extensions with their state using the utility function
         extensions_data = panel_data.get("extensions_data", {})
         saved_extensions = panel_data.get("extensions", [])
-        extensions = _restore_extensions(extensions_data, saved_extensions, interface, "Panel3D")
+        extensions, extension_options = _restore_extensions(extensions_data, saved_extensions, interface, "Panel3D")
 
         # Restore panel from json with the loaded data
-        panel = Panel3D.from_json(panel_data["panel_json"], slave, current_data, extensions)
+        panel = Panel3D.from_json(panel_data["panel_json"], slave, current_data, extensions, extension_options)
 
         return panel
 
@@ -855,12 +857,12 @@ def load_paneldatframe_from_file(
         # Rebuild extensions with their state using the utility function
         extensions_data = panel_data.get("extensions_data", {})
         saved_extensions = panel_data.get("extensions", [])
-        extensions = _restore_extensions(
+        extensions, extension_options = _restore_extensions(
             extensions_data, saved_extensions, interface, "PanelDataFrame"
         )
 
         # Restore panel from json with the loaded dataframe
-        panel = PanelDataFrame.from_json(panel_data["panel_json"], slave, extensions)
+        panel = PanelDataFrame.from_json(panel_data["panel_json"], slave, extensions, extension_options)
 
         if dataframe_dict is not None:
             panel.plotter.update_data(pd.DataFrame(dataframe_dict))

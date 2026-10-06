@@ -53,6 +53,7 @@ class Panel3D(VisualizationPanel):
         slave: ComputeSlave,
         name="",
         extensions: List[Extension] = default_extensions,
+        extension_jsons: dict[Type[Extension], dict] = {},
         data: Data3D = None,
         displayed_field: str = MESH,
         colormap: str = "BuRd",
@@ -69,24 +70,14 @@ class Panel3D(VisualizationPanel):
             Display as polygons or as a 2D grid.
         extensions : List[Extension]
             List of extensions to add to the gui.
-        data : Data2D
-            Data2D object with which the panel is initialized.
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
+        data : Data3D
+            Data3D object with which the panel is initialized.
         displayed_field : str
             Name of the field to display initially, defaults to MESH.
         colormap : str
             Colormap name for coloring the data, defaults to "BuRd".
-        u : Tuple[float, float, float]
-            Direction vector for the horizontal axis, defaults to X.
-        v : Tuple[float, float, float]
-            Direction vector for the vertical axis, defaults to Y.
-        origin : Tuple[float, float, float], optional
-            Physical 3D position of the slice center, defaults to None
-        size_u : float
-            Size of the slice along the u axis (not used for 3D but kept for API compatibility), defaults to None
-        size_v : float
-            Size of the slice along the v axis (not used for 3D but kept for API compatibility), defaults to None
-        w : float
-            Value along the u ^ v (normal) axis, defaults to 0.5.
         """
         code_interface: Type[Geometry3D] = slave.code_interface
         assert issubclass(
@@ -104,7 +95,7 @@ class Panel3D(VisualizationPanel):
 
         self.plotter = Plotter3D()
 
-        super().__init__(slave, name, extensions.copy())
+        super().__init__(slave, name, extensions.copy(), extension_jsons)
 
         #
         #   First plot on XY basic range
@@ -433,7 +424,8 @@ class Panel3D(VisualizationPanel):
         info_dict: Dict,
         slave: ComputeSlave,
         data: Data3D,
-        extensions: Union[List[Extension], List[Tuple[Type[Extension], dict]]] = [],
+        extensions: List[Extension],
+        extension_jsons: dict[Type[Extension], dict]
     ) -> "Panel3D":
         """Restores the visualization panel from its information dict
 
@@ -445,8 +437,10 @@ class Panel3D(VisualizationPanel):
             Panel associated slave
         data : Data3D
             Initial state Data3D
-        extensions : Union[List[Extension], List[Tuple[Type[Extension], dict]]]
-            GUI extensions, can be extension classes or tuples of (class, state_dict)
+        extensions : List[Extension]
+            Extensions to add to the panel
+        extension_jsons : dict[Type[Extension], dict]
+            Panel extensions initial options
 
         Returns
         -------
@@ -460,6 +454,7 @@ class Panel3D(VisualizationPanel):
             data=data,
             displayed_field=info_dict["displayed_field"],
             colormap=info_dict["colormap"],
+            extension_jsons = extension_jsons
         )
         panel.sync_field = info_dict["sync_field"]
         panel.update_event = info_dict["update_event"]
