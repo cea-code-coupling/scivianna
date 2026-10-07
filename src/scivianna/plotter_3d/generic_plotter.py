@@ -1,3 +1,5 @@
+"""Abstract interface for 3D plotters."""
+
 from typing import Callable, Optional, Tuple
 
 import numpy as np
@@ -11,6 +13,7 @@ class Plotter3D:
     def __init__(
         self,
     ):
+        """Initialize an empty 3D plotter."""
         self.on_axes_change_callback = None
 
     def plot(self, data: Data3D):
@@ -168,5 +171,15 @@ class Plotter3D:
         -------
         Tuple[float, float, float]
             Mouse location
+        """
+        raise NotImplementedError()
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value).
+
+        Returns
+        -------
+        str
+            Information on mouse hovered location
         """
         raise NotImplementedError()

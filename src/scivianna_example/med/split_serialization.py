@@ -1,9 +1,12 @@
+"""Restores a serialized split MED layout."""
+
 from scivianna.layout.split import SplitLayout
 from scivianna.utils.file_cleaner import mark_for_deletion
 from scivianna_example.med.split_item_example import get_panel
 
 
 def get_restored_split():
+    """Build the split demo and restore it from its saved state."""
     panel, slaves = get_panel(None, True)
 
     panel.save_to_zip("test_split.zip")

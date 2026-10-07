@@ -1,3 +1,5 @@
+"""Integration test for importing a serialized split layout."""
+
 import pytest
 
 from scivianna.constants import X, Y, Z
@@ -7,6 +9,7 @@ from scivianna.notebook_tools import get_med_panel
 
 
 def get_panel() -> SplitLayout:
+    """Build the split layout of MED panels used by this test."""
 
     med_1 = get_med_panel(geo=None, title="MEDCoupling visualizer XY")
     med_2 = get_med_panel(geo=None, title="MEDCoupling visualizer XZ")

@@ -1,3 +1,5 @@
+"""Worker operating on a copy of a Data2D, used by the LLM agent to test generated code."""
+
 import numpy as np
 
 from scivianna.data.data2d import Data2D

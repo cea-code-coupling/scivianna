@@ -1,3 +1,9 @@
+"""CSV file interface.
+
+Reads a CSV file (with a mandatory "cell" column) and exposes its columns as
+displayable fields, with support for time-stepped data updates during a coupling.
+"""
+
 import os
 import pickle
 from pathlib import Path
@@ -11,6 +17,8 @@ from scivianna.interface.generic_interface import CouplingInterface, ValueAtLoca
 
 
 class CSVInterface(ValueAtLocation, CouplingInterface):
+    """Interface reading a CSV file (with a mandatory "cell" column) and exposing its columns as fields."""
+
     def __init__(self, csv_file_path: str):
         """CSV file interface to get results from.
 

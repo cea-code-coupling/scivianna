@@ -1,3 +1,5 @@
+"""MED example with a split layout of two views."""
+
 from pathlib import Path
 
 import scivianna
@@ -10,6 +12,7 @@ from scivianna.slave import ComputeSlave
 
 
 def get_panel(_, return_slaves=False) -> SplitLayout:
+    """Build the split layout of two synchronized MED views."""
     from scivianna.interface.med_interface import MEDInterface
 
     slave = ComputeSlave(MEDInterface)

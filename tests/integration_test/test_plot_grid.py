@@ -1,3 +1,4 @@
+"""Integration test for plotting grid data with the public API."""
 
 import matplotlib.pyplot as plt
 import pytest

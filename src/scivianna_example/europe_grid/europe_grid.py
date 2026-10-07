@@ -1,3 +1,5 @@
+"""Europe electricity grid example: country map with production/consumption fields."""
+
 import multiprocessing as mp
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
@@ -100,6 +102,7 @@ country_cat = {
 
 
 def get_country_category(country_code: str):
+    """Return the category (production/consumption group) of a country code."""
     for cat in country_cat:
         if country_code in country_cat[cat]:
             return cat
@@ -107,6 +110,8 @@ def get_country_category(country_code: str):
 
 
 class EuropeGridInterface(Geometry2DPolygon):
+    """Geometry and field interface for the Europe electricity grid map."""
+
     geometry_type: GeometryType = GeometryType._2D_INFINITE
 
     def __init__(
@@ -427,6 +432,7 @@ register_interface("EuropeGridInterface", EuropeGridInterface)
 
 
 def make_europe_panel(_, return_slaves: bool = False) -> SplitLayout:
+    """Build the Europe grid demo: map panel plus time series and DataFrame panels."""
     slave = ComputeSlave(EuropeGridInterface)
     # Time serie CSV coming from a post processing of the data available at https://www.entsoe.eu/eraa/
     slave.read_file(str(Path(__file__).parent / "time_series.csv"), "TimeSeries")

@@ -73,6 +73,11 @@ class RemoteException(Exception):
 
 
 def _method(self, method_name, *args, **kwargs):
+    """Calls the given method on the remote problem instance.
+
+    Wraps any exception raised by the remote call in a ``RemoteException``
+    carrying the original traceback to help diagnose failures.
+    """
     try:
         # print(f"remote calls: '{method_name}'", flush=True)
         # pylint: disable=protected-access
@@ -124,6 +129,7 @@ def redirect_icoco_to_server(cls):
     """
 
     def create_icoco_method(method_name):
+        """Build a bound method that redirects to the problem server via _method."""
         return lambda self, *args, **kwargs: _method(self, method_name, *args, **kwargs)
 
     for name in ICoCoMethods.ALL:

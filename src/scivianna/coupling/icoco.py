@@ -75,6 +75,12 @@ class Value:
     UPDATE_RATE : str
         Key for the update rate parameter. Defines how frequently updates
         are performed (1 update per UPDATE_RATE calls to solveTimeStep).
+    NOTIFICATION_SUCCESS : str
+        Key for success notifications displayed in the layout.
+    NOTIFICATION_INFO : str
+        Key for informational notifications displayed in the layout.
+    NOTIFICATION_ERROR : str
+        Key for error notifications displayed in the layout.
     """
 
     UPDATE_RATE = "UPDATE_RATE"
@@ -319,6 +325,19 @@ class LayoutProblem(Problem):
             )
 
     def _terminate(self) -> bool:
+        """
+        Terminate the problem and release its resources.
+
+        Saves the layout to the working directory, waits for all client
+        connections to disconnect, terminates the panel slaves and stops
+        the Panel server.
+
+        Returns
+        -------
+        bool
+            False if the problem was not initialized (nothing to terminate),
+            True otherwise.
+        """
         if not self._initialized:
             return False
 

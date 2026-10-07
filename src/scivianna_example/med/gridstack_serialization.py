@@ -1,9 +1,12 @@
+"""Restores a serialized gridstack MED layout."""
+
 from scivianna.layout.gridstack import GridStackLayout
 from scivianna.utils.file_cleaner import mark_for_deletion
 from scivianna_example.med.grid_stack_example import get_panel
 
 
 def get_restored_gridstack():
+    """Build the gridstack demo and restore it from its saved state."""
     panel, slaves = get_panel(None, True)
 
     panel.save_to_zip("test_gridstack.zip")

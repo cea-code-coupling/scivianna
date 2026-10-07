@@ -115,6 +115,7 @@ class PolygonCoords:
         self.y_coords = rotated_coords[:, 1] + origin[1]
 
     def get_closed_coords(self,) -> Tuple[np.ndarray, np.ndarray]:
+        """Returns the x and y coordinates of the polygon with the first vertex repeated at the end."""
         return (
             np.array(self.x_coords.tolist() + [self.x_coords[-1]]),
             np.array(self.y_coords.tolist() + [self.y_coords[-1]]),

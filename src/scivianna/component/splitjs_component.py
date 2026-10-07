@@ -1,3 +1,5 @@
+"""SplitJS-based split layout components for scivianna."""
+
 import panel as pn
 from panel.custom import Child, JSComponent, ReactComponent
 from panel_splitjs import HSplit as SplitJSVertical

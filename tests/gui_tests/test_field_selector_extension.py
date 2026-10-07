@@ -69,7 +69,7 @@ class TestFieldSelectorInitialization:
         try:
             # Get labels from slave
             labels = panel.slave.get_labels()
-            
+
             # Field color selector options should match slave labels
             assert set(field_sel.field_color_selector.options) == set(labels)
         finally:
@@ -84,7 +84,7 @@ class TestFieldSelectorInitialization:
             # For MESH (VisualizationMode.NONE), should be hidden
             initial_field = field_sel.field_color_selector.value
             initial_mode = panel.slave.get_label_coloring_mode(initial_field)
-            
+
             if initial_mode == VisualizationMode.FROM_VALUE:
                 assert field_sel.center_colormap_on_zero_tick.visible is True
             else:
@@ -116,12 +116,12 @@ class TestFieldSelectorCallbacks:
         try:
             # Get available fields
             available_fields = field_sel.field_color_selector.options
-            
+
             if len(available_fields) > 1:
                 # Change to a different field
                 new_field = available_fields[1]
                 field_sel.field_color_selector.value = new_field
-                
+
                 # The trigger should call panel.set_field
                 # This is tested indirectly via the callback watch
                 assert field_sel.field_color_selector.value == new_field
@@ -136,13 +136,13 @@ class TestFieldSelectorCallbacks:
         try:
             # Simulate colormap change from panel
             original_value_name = field_sel.color_map_selector.value_name
-            
+
             # Change panel's colormap
             panel.colormap = "viridis"
-            
+
             # Receive the change - should update selector
             field_sel.receive_colormap_change()
-            
+
             assert field_sel.color_map_selector.value_name == "viridis"
         finally:
             cleanup()
@@ -158,10 +158,10 @@ class TestFieldSelectorCallbacks:
             new_cmap_name = "viridis"
             field_sel.color_map_selector.value_name = new_cmap_name
             field_sel.color_map_selector.value = beautiful_color_maps[new_cmap_name]
-            
+
             # Trigger should update panel colormap
             field_sel.trigger_colormap_change()
-            
+
             assert panel.colormap == new_cmap_name
         finally:
             cleanup()
@@ -188,13 +188,13 @@ class TestFieldSelectorCallbacks:
         try:
             # Get available fields
             available_fields = field_sel.field_color_selector.options
-            
+
             if len(available_fields) > 1:
                 new_field = available_fields[1]
-                
+
                 # Call on_field_change
                 field_sel.on_field_change(new_field)
-                
+
                 # Selector value should be updated
                 assert field_sel.field_color_selector.value == new_field
         finally:
@@ -208,14 +208,14 @@ class TestFieldSelectorCallbacks:
         try:
             # Store initial value
             initial_value = field_sel.field_color_selector.value
-            
+
             # Call on_file_load - should update options and reset value
             field_sel.on_file_load("/some/path.dat", "GEOMETRY")
-            
+
             # Options should be updated from slave
             new_options = list(panel.slave.get_labels())
             assert set(field_sel.field_color_selector.options) == set(new_options)
-            
+
             # Value should be reset to first option
             assert field_sel.field_color_selector.value == new_options[0]
         finally:
@@ -229,7 +229,7 @@ class TestFieldSelectorCallbacks:
         try:
             # Create mock Data2D
             from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-            
+
             polygons = [
                 PolygonElement(
                     exterior_polygon=PolygonCoords(
@@ -241,21 +241,21 @@ class TestFieldSelectorCallbacks:
                 )
                 for i in range(3)
             ]
-            
+
             data = Data2D.from_polygon_list(polygons)
-            
+
             # Set cell values for testing
             data.cell_values = [0.0, 1.0, 2.0]
-            
+
             # Get current field selector value
             current_field = field_sel.field_color_selector.value
             current_cmap = field_sel.color_map_selector.value_name
             center_zero = field_sel.center_colormap_on_zero_tick.value
-            
+
             # Call on_updated_data - should call set_colors_list internally
             # This should not raise an error
             field_sel.on_updated_data(data)
-            
+
             # Data should have cell_colors set
             assert hasattr(data, 'cell_colors')
             assert data.cell_colors is not None
@@ -274,10 +274,10 @@ class TestFieldSelectorGUI:
 
         try:
             gui = field_sel.make_gui()
-            
+
             assert gui is not None
             assert isinstance(gui, pn.layout.Column) or hasattr(gui, '__panel__')
-            
+
             # Should contain the expected components
             # The GUI should have field_color_selector, color_map_selector, center_colormap_on_zero_tick
         finally:
@@ -306,11 +306,11 @@ class TestSetColorsList:
     def test_set_colors_list_from_string_mode(self, panel_fixture):
         """Test set_colors_list with FROM_STRING visualization mode."""
         panel, extensions_dict, cleanup = panel_fixture
-        
+
         try:
             # Create mock Data2D with string values
             from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-            
+
             polygons = [
                 PolygonElement(
                     exterior_polygon=PolygonCoords(
@@ -322,16 +322,17 @@ class TestSetColorsList:
                 )
                 for i in range(5)
             ]
-            
+
             data = Data2D.from_polygon_list(polygons)
             data.cell_values = ["material_a", "material_b", "material_a", "material_c", "material_b"]
-            
+
             # Set coloring mode to FROM_STRING for testing
             def mock_get_coloring_mode(label):
+                """Return the FROM_STRING coloring mode for any label."""
                 return VisualizationMode.FROM_STRING
-            
+
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
-            
+
             # Call set_colors_list
             set_colors_list(
                 data,
@@ -341,7 +342,7 @@ class TestSetColorsList:
                 False,       # center_colormap_on_zero
                 {}           # options
             )
-            
+
             # Check that edge_colors was set
             assert hasattr(data, 'cell_edge_colors')
             assert data.cell_edge_colors is not None
@@ -351,11 +352,11 @@ class TestSetColorsList:
     def test_set_colors_list_from_value_mode(self, panel_fixture):
         """Test set_colors_list with FROM_VALUE visualization mode."""
         panel, extensions_dict, cleanup = panel_fixture
-        
+
         try:
             # Create mock Data2D with numeric values
             from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-            
+
             polygons = [
                 PolygonElement(
                     exterior_polygon=PolygonCoords(
@@ -367,16 +368,17 @@ class TestSetColorsList:
                 )
                 for i in range(5)
             ]
-            
+
             data = Data2D.from_polygon_list(polygons)
             data.cell_values = [1.0, 2.0, 3.0, 4.0, 5.0]
-            
+
             # Set coloring mode to FROM_STRING for testing (since TestInterface returns FROM_STRING for MATERIAL)
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
-            
+
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
-            
+
             # Call set_colors_list with FROM_VALUE mode
             set_colors_list(
                 data,
@@ -386,7 +388,7 @@ class TestSetColorsList:
                 False,       # center_colormap_on_zero
                 {}           # options
             )
-            
+
             # Check that cell_colors was set
             assert hasattr(data, 'cell_colors')
             assert data.cell_colors is not None
@@ -397,11 +399,11 @@ class TestSetColorsList:
     def test_set_colors_list_none_mode(self, panel_fixture):
         """Test set_colors_list with NONE visualization mode."""
         panel, extensions_dict, cleanup = panel_fixture
-        
+
         try:
             # Create mock Data2D
             from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-            
+
             polygons = [
                 PolygonElement(
                     exterior_polygon=PolygonCoords(
@@ -413,16 +415,17 @@ class TestSetColorsList:
                 )
                 for i in range(3)
             ]
-            
+
             data = Data2D.from_polygon_list(polygons)
             data.cell_values = [0.0, 0.0, 0.0]
-            
+
             # Set coloring mode to NONE
             def mock_get_coloring_mode(label):
+                """Return the NONE coloring mode for any label."""
                 return VisualizationMode.NONE
-            
+
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
-            
+
             # Call set_colors_list
             set_colors_list(
                 data,
@@ -432,12 +435,12 @@ class TestSetColorsList:
                 False,       # center_colormap_on_zero (should be ignored in NONE mode)
                 {}           # options
             )
-            
+
             # Check that cell_colors was set to transparent gray
             assert hasattr(data, 'cell_colors')
             assert data.cell_colors is not None
             assert len(data.cell_colors) == 3
-            
+
             # In NONE mode, all colors should be (200, 200, 200, 0)
             expected_color = (200, 200, 200, 0)
             for i in range(3):
@@ -481,6 +484,7 @@ class TestSetColorsList:
 
             # Set coloring mode to FROM_STRING
             def mock_get_coloring_mode(label):
+                """Return the FROM_STRING coloring mode for any label."""
                 return VisualizationMode.FROM_STRING
 
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
@@ -507,11 +511,11 @@ class TestSetColorsList:
     def test_set_colors_list_with_nan_values(self, panel_fixture):
         """Test set_colors_list handles NaN values correctly."""
         panel, extensions_dict, cleanup = panel_fixture
-        
+
         try:
             # Create mock Data2D with NaN values
             from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
-            
+
             polygons = [
                 PolygonElement(
                     exterior_polygon=PolygonCoords(
@@ -523,16 +527,17 @@ class TestSetColorsList:
                 )
                 for i in range(3)
             ]
-            
+
             data = Data2D.from_polygon_list(polygons)
             data.cell_values = [1.0, float('nan'), 3.0]
-            
+
             # Set coloring mode to FROM_VALUE
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
-            
+
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
-            
+
             # Call set_colors_list - should not raise
             set_colors_list(
                 data,
@@ -542,7 +547,7 @@ class TestSetColorsList:
                 False,       # center_colormap_on_zero
                 {}           # options
             )
-            
+
             # Check that cell_colors was set
             assert hasattr(data, 'cell_colors')
             assert data.cell_colors is not None
@@ -704,6 +709,7 @@ class TestForceRangeFeature:
 
             # Set coloring mode to FROM_VALUE
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
 
@@ -717,14 +723,14 @@ class TestForceRangeFeature:
             field_sel.on_updated_data(data)
 
             assert np.array_equal(
-                data.cell_colors, 
+                data.cell_colors,
                 [
                     [  5,  48,  97, 255],
                     [247, 246, 246, 255],
                     [103,   0,  31, 255],
                 ]
             )
-            
+
 
             # The data should have been processed with the forced range
             assert hasattr(data, 'cell_colors')
@@ -824,6 +830,7 @@ class TestEdgeOffsetFeature:
 
             # Set coloring mode to FROM_VALUE
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
 
@@ -833,14 +840,14 @@ class TestEdgeOffsetFeature:
             edge_colors = data.cell_edge_colors
 
             assert np.array_equal(
-                edge_colors, 
+                edge_colors,
                 [
                     [  0,  28,  77, 255],
                     [227, 226, 226, 255],
                     [83,   0,  11, 255],
                 ]
             )
-            
+
         finally:
             cleanup()
 
@@ -860,9 +867,11 @@ class TestFieldSelectorJSONSerialization:
             expected_keys = {
                 "field",
                 "colormap",
+                'coloring_seed',
                 "center_colormap_on_zero",
                 "min_value",
                 "max_value",
+                'log_scale',
                 "min_activated",
                 "max_activated",
                 "edge_offset",

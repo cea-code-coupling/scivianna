@@ -1,3 +1,5 @@
+"""Matplotlib-based 2D polygon plotter (used by the public plotting API)."""
+
 from typing import IO, Any, Dict, List, Tuple, Union
 
 import geopandas as gpd
@@ -14,8 +16,7 @@ from shapely import Polygon
 from scivianna.constants import CELL_NAMES, CELL_VALUES, COLORS, EDGE_COLORS, POLYGONS
 from scivianna.data.data2d import Data2D
 from scivianna.plotter_2d.generic_plotter import Plotter2D
-from scivianna.utils.color_tools import beautiful_color_maps, get_edges_colors
-from scivianna.utils.polygonize_tools import PolygonElement
+from scivianna.utils.color_tools import beautiful_color_maps
 
 
 class Matplotlib2DPolygonPlotter(Plotter2D):

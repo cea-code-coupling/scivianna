@@ -1,3 +1,5 @@
+"""Extension to manage the layout: switch frames and change the code interface."""
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class LayoutExtension(Extension):
-    """Extension to load files and send them to the slave."""
+    """Extension to manage the layout: select the edited frame and change its code interface."""
 
     def __init__(
         self,
@@ -62,7 +64,7 @@ You can use the following drop box to change the currently edited panel. Otherwi
             self.layout.visualisation_panels[self.layout.current_frame].slave.code_interface
             in list(self.layout.available_interfaces.values())
         ):
-            raise RuntimeError(f"Interface {self.layout.visualisation_panels[self.layout.current_frame].slave.code_interface} is not registered. Please register it using scivianna.interface.register_interface.")
+            raise RuntimeError(f"Interface {self.layout.visualisation_panels[self.layout.current_frame].slave.code_interface.__name__} is not registered. Please register it using scivianna.interface.register_interface.")
 
         self.interface_selector = pn.widgets.Select(
             label="Code",
@@ -155,6 +157,7 @@ You can use the following drop box to change the currently edited panel. Otherwi
         )
 
     def add_widget(self, widget: pn.widgets.Widget):
+        """Append a widget to the layout parameter card in the sidebar."""
         self.layout_param_card.append(widget)
 
     def make_gui(
@@ -173,13 +176,16 @@ You can use the following drop box to change the currently edited panel. Otherwi
         )
 
     def change_code_interface(self, *args, **kwargs):
+        """Relay the interface selector change to the layout."""
         self.layout.change_code_interface()
 
     def set_to_frame(self, *args, **kwargs):
+        """Make the selected frame the currently edited one."""
         self.layout.set_to_frame(self.frame_selector.value)
 
     @pn.io.hold()
     def change_to_frame(self, frame_name: str):
+        """Refresh the selectors so they point at the given frame."""
         self.frame_selector.options = list(self.layout.visualisation_panels.keys())
 
         if frame_name != self.frame_selector.value:

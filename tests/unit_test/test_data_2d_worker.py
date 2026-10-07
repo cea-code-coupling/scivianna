@@ -1,3 +1,4 @@
+"""Unit tests for the Data2D worker (change detection and copy semantics)."""
 
 from typing import TYPE_CHECKING
 
@@ -13,6 +14,7 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 @pytest.fixture
 def data2d():
+    """A small Data2D built from a single polygon."""
     data2d = Data2D.from_polygon_list(
         [
             PolygonElement(
@@ -35,6 +37,7 @@ def data2d():
 
 @pytest.fixture
 def worker_cls(request):
+    """The worker class under test (plain or agent, depending on the marker)."""
     if request.node.get_closest_marker("agent"):
         from scivianna.agent.data_2d_worker import Data2DWorker
     else:
@@ -43,6 +46,7 @@ def worker_cls(request):
 
 @pytest.fixture
 def worker(worker_cls, data2d):
+    """A worker instance built over the fixture Data2D."""
     return worker_cls(data2d)
 
 @pytest.mark.default

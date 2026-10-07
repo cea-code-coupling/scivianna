@@ -1,3 +1,5 @@
+"""Utility functions and shared flags for scivianna."""
+
 _testing: bool = False
 """If True, scivianna is being used in a testing context, callbacks are immediatly called.
 

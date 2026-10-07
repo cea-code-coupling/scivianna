@@ -1,3 +1,5 @@
+"""GUI tests for the 2D panel keyboard shortcuts (axis changes and flip)."""
+
 import pytest
 
 from scivianna_example.med.single_med import get_panel
@@ -5,6 +7,7 @@ from scivianna_example.med.single_med import get_panel
 
 @pytest.mark.medcoupling
 def test_press_z():
+    """Pressing z moves the axes to the XY plane."""
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]
     panel.figure.key = "x"
@@ -23,6 +26,7 @@ def test_press_z():
 
 @pytest.mark.medcoupling
 def test_press_x():
+    """Pressing x moves the axes to the YZ plane (and flips on repeat)."""
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]
     panel.figure.key = "x"
@@ -40,6 +44,7 @@ def test_press_x():
 
 @pytest.mark.medcoupling
 def test_press_y():
+    """Pressing y moves the axes to the XZ plane (and flips on repeat)."""
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]
     panel.figure.key = "y"
@@ -57,6 +62,7 @@ def test_press_y():
 
 @pytest.mark.medcoupling
 def test_press_f():
+    """Pressing f flips the horizontal axis."""
     layout, slaves = get_panel(None, return_slaves=True)
     panel = layout.visualisation_panels["MEDCoupling visualizer XY"]
     panel.figure.key = "f"

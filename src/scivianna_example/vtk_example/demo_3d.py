@@ -1,3 +1,5 @@
+"""VTK 3D example: a VTK mesh interacting with a 2D plot."""
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 

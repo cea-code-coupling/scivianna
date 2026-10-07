@@ -1,3 +1,9 @@
+"""Abstract base classes for all code interfaces.
+
+Defines the interface hierarchy (GenericInterface and its 2D/3D/graph/value/coupling
+specializations) that every concrete code adapter must implement.
+"""
+
 import multiprocessing as mp
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
@@ -11,6 +17,7 @@ from scivianna.enums import DataType, GeometryType, VisualizationMode
 #   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
 if TYPE_CHECKING:
     import medcoupling
+    from scivianna.data.data_graph import DataGraph
 
 from scivianna.constants import MATERIAL, MESH
 
@@ -141,6 +148,7 @@ class GenericInterface:
 
     @classmethod
     def get_slave(cls):
+        """Returns a ComputeSlave instance running this interface class in a worker process."""
         from scivianna.slave import ComputeSlave
 
         return ComputeSlave(cls)
@@ -254,6 +262,82 @@ class Geometry2DGrid(Geometry2D):
 
     rasterized: bool = True
     """Boolean telling if the geometry is made by rasterizing a 2D grid (displays the line count in the GUI)."""
+
+
+class GraphInterface(GenericInterface):
+    """Interface parent class for classes that can compute a graph of 2D plots connected by directed links."""
+
+    def compute_graph(
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
+        q_tasks: mp.Queue,
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Tuple["DataGraph", bool]:
+        """Returns a graph of 2D plots connected by directed links to display
+
+        Parameters
+        ----------
+        u : Tuple[float, float, float]
+            Horizontal coordinate director vector
+        v : Tuple[float, float, float]
+            Vertical coordinate director vector
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        q_tasks : mp.Queue
+            Queue from which get orders from the master.
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        DataGraph
+            Graph to display
+        bool
+            Were the graph nodes updated compared to the past call
+
+        Raises
+        ------
+        NotImplementedError
+            Function to override in the code interfaces
+        """
+        raise NotImplementedError(f"Function compute_graph not implemented for class {self.__class__.__name__}.")
+
+    def get_graph_value_dict(
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+
+        Raises
+        ------
+        NotImplementedError
+            Function to override in the code interfaces
+        """
+        raise NotImplementedError(f"Function get_graph_value_dict not implemented for class {self.__class__.__name__}.")
 
 
 class Geometry3D(GenericInterface):

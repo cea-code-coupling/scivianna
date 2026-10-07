@@ -1,3 +1,5 @@
+"""Fake C3PO driver: a decreasing field problem used to demo coupling without a real code."""
+
 import os
 from typing import Tuple
 
@@ -7,7 +9,10 @@ from icoco.problem import Problem, ValueType
 
 
 class DecreasingFieldProblem(Problem):
+    """ICoCo problem whose field decreases over time, read from a MED file."""
+
     def __init__(self, file_path: str):
+        """Read the mesh and field names from the MED file."""
         if not os.path.isfile(file_path):
             raise ValueError(f"Provided file name does not exist {file_path}")
 
@@ -256,6 +261,7 @@ class DecreasingFieldProblem(Problem):
             self._up_skipped += 1
 
     def abortTimeStep(self):
+        """Reset the current time step state."""
         self._dt = None
 
     def setStationaryMode(self, stationaryMode: bool) -> None:
@@ -305,6 +311,7 @@ class DecreasingFieldProblem(Problem):
         return self.stationary
 
     def getValueType(self, name: str) -> ValueType:
+        """Return the value type of a named output (delegated to the base class)."""
 
         super().getValueType(name=name)
 
@@ -352,6 +359,7 @@ class DecreasingFieldProblem(Problem):
         return mcfield
 
     def getOutputDoubleValue(self, name):
+        """Return a scalar output (MAX, MIN or AVERAGE) of the current field."""
         if name == "MAX":
             return self.field.getMaxValue()
         if name == "MIN":
@@ -361,6 +369,7 @@ class DecreasingFieldProblem(Problem):
         return 0.0
 
     def getOutputMEDDoubleField(self, name):
+        """Return the current field as a MED double field (only VALUE is available)."""
         if name == "VALUE":
             return self.field
         raise ValueError(f"Requested field {name}, only VALUE is available.")
@@ -368,4 +377,5 @@ class DecreasingFieldProblem(Problem):
     def getSolveStatus(
         self,
     ):
+        """The fake driver always reports a successful solve."""
         return True

@@ -1,5 +1,7 @@
+"""Matplotlib plotting of the Europe grid example via the public API."""
+
 import matplotlib.pyplot as plt
-from europe_grid import EuropeGridInterface
+from scivianna_example.europe_grid.europe_grid import EuropeGridInterface
 
 from scivianna.constants import X, Y
 from scivianna.plotter_2d.api import plot_frame_in_axes

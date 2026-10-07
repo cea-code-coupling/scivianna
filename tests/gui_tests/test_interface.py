@@ -1,3 +1,5 @@
+"""GUI tests for the 2D panel built over a dummy test interface."""
+
 import multiprocessing as mp
 import tempfile
 import zipfile
@@ -212,10 +214,13 @@ This extension allows defining the medcoupling field display parameters.
 
 
 class DummyTestInterface(Geometry2DPolygon):
+    """In-memory test interface serving a fixed set of polygons."""
+
     geometry_type: GeometryType = GeometryType._3D_INFINITE
     extensions = [DummyTestExtension]
 
     def __init__(self):
+        """Store the in-memory test data."""
         self.data: Dict[str, Data2D] = {}
         self.file_path: Dict[str, str] = {}
         self.current_field = None
@@ -374,6 +379,7 @@ class DummyTestInterface(Geometry2DPolygon):
         return [(GEOMETRY, "MED file."), (CSV, "CSV result file.")]
     
     def get_info(self,):
+        """Return the interface state as a tuple."""
         return self.data, self.last_computed_frame, self.file_path, self.current_field
 
     def save(self, file_path: str, include_files: bool = True):
@@ -428,6 +434,7 @@ def make_panel_2d():
     panel = Panel2D(slave)
 
     def cleanup():
+        """Terminate the slave process."""
         slave.terminate()
 
     return panel, {
@@ -494,6 +501,7 @@ def panel_fixture(request) -> Generator[Tuple[Panel2D, Dict[type, Extension], ca
             extensions_dict = {e.__class__: e for e in panel.extensions}
             
             def cleanup():
+                """Terminate the slave and remove the zip file."""
                 panel.get_slave().terminate()
                 if zip_path.exists():
                     zip_path.unlink()
@@ -512,6 +520,7 @@ def panel_fixture(request) -> Generator[Tuple[Panel2D, Dict[type, Extension], ca
 
 
 def get_polygons(panel: Panel2D):
+    """Return the x and y polygon coordinates from the panel plotter."""
     return [
         panel.plotter.source_polygons.data[XS],
         panel.plotter.source_polygons.data[YS],
@@ -519,22 +528,27 @@ def get_polygons(panel: Panel2D):
 
 
 def get_colors(panel: Panel2D):
+    """Return the cell fill colors from the panel plotter."""
     return panel.plotter.source_polygons.data[COLORS]
 
 
 def get_edge_colors(panel: Panel2D):
+    """Return the cell edge colors from the panel plotter."""
     return panel.plotter.source_polygons.data[EDGE_COLORS]
 
 
 def get_cell_ids(panel: Panel2D):
+    """Return the cell ids from the panel plotter."""
     return panel.plotter.source_polygons.data[CELL_NAMES]
 
 
 def get_cell_values(panel: Panel2D):
+    """Return the cell values from the panel plotter."""
     return panel.plotter.source_polygons.data[CELL_VALUES]
 
 @pytest.mark.default
 def test_build_panel():
+    """Building a 2D panel over the dummy interface succeeds."""
     make_panel_2d()
     assert True
 
@@ -563,6 +577,7 @@ class TestMouseMoveCallbacks:
         callback_invocations = []
         
         def on_mouse_move(screen_location, space_location, cell_id):
+            """Record the mouse move event."""
             callback_invocations.append({
                 'screen_location': screen_location,
                 'space_location': space_location,
@@ -583,6 +598,7 @@ class TestMouseMoveCallbacks:
         callback_calls = []
         
         def mock_callback(screen_location, space_location, cell_id):
+            """Record the callback invocation."""
             callback_calls.append({
                 'screen_location': screen_location,
                 'space_location': space_location,
@@ -620,6 +636,7 @@ class TestMouseMoveCallbacks:
         callback_calls = []
         
         def mock_callback(screen_location, space_location, cell_id):
+            """Record the callback invocation."""
             callback_calls.append(cell_id)
         
         panel.plotter.provide_on_mouse_move_callback(mock_callback)
@@ -640,6 +657,7 @@ class TestMouseMoveCallbacks:
         callback_calls = []
         
         def mock_callback(screen_location, space_location, cell_id):
+            """Record the callback invocation."""
             callback_calls.append(cell_id)
         
         panel.plotter.provide_on_mouse_move_callback(mock_callback)
@@ -671,6 +689,7 @@ class TestMouseMoveCallbacks:
         received_data = {}
         
         def on_mouse_move(screen_location, space_location, cell_id):
+            """Store the received mouse move data."""
             received_data['screen'] = screen_location
             received_data['space'] = space_location
             received_data['cell'] = cell_id
@@ -721,6 +740,7 @@ class TestClickCallbacks:
         callback_invocations = []
         
         def on_mouse_click(screen_location, space_location, cell_id):
+            """Record the mouse click event."""
             callback_invocations.append({
                 'screen_location': screen_location,
                 'space_location': space_location,
@@ -741,6 +761,7 @@ class TestClickCallbacks:
         callback_calls = []
         
         def mock_callback(screen_location, space_location, cell_id):
+            """Record the callback invocation."""
             callback_calls.append({
                 'screen_location': screen_location,
                 'space_location': space_location,
@@ -775,6 +796,7 @@ class TestClickCallbacks:
         callback_calls = []
         
         def mock_callback(screen_location, space_location, cell_id):
+            """Record the callback invocation."""
             callback_calls.append(cell_id)
         
         panel.plotter.provide_on_clic_callback(mock_callback)
@@ -805,6 +827,7 @@ class TestClickCallbacks:
         received_data = {}
         
         def on_mouse_click(screen_location, space_location, cell_id):
+            """Store the received mouse click data."""
             received_data['screen'] = screen_location
             received_data['space'] = space_location
             received_data['cell'] = cell_id
@@ -852,9 +875,11 @@ class TestClickCallbacks:
         click_calls = []
         
         def on_mouse_move(screen_location, space_location, cell_id):
+            """Record the hovered cell id."""
             mouse_calls.append(cell_id)
         
         def on_click(screen_location, space_location, cell_id):
+            """Record the clicked cell id."""
             click_calls.append(cell_id)
         
         panel.provide_on_mouse_move_callback(on_mouse_move)

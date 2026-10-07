@@ -46,8 +46,7 @@ split_panel = SplitLayout(
         map_panel,
         line_panel,
         SplitDirection.VERTICAL
-    ),
-    additional_interfaces={"EuropeGrid": EuropeGridInterface, "TimeSeries": CountryTimeSeriesInterface},
+    )
 )
 
 ```

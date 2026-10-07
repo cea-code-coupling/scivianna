@@ -1,3 +1,5 @@
+"""Bokeh-based 2D polygon plotter with colorbar and hover support."""
+
 import functools
 import os
 from typing import IO, Callable, List, Tuple, Union
@@ -48,6 +50,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self,
     ):
         """Creates the bokeh Figure and ColumnDataSources"""
+        self._mouse_inside = False
         self.source_polygons = ColumnDataSource(
             {
                 XS: [],
@@ -185,6 +188,15 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.figure.yaxis.visible = False
 
         self.figure.add_tools(self.hover_tool)
+
+        def _on_enter(_):
+            self._mouse_inside = True
+
+        def _on_leave(_):
+            self._mouse_inside = False
+
+        self.figure.on_event(bokeh.events.MouseEnter, _on_enter)
+        self.figure.on_event(bokeh.events.MouseLeave, _on_leave)
 
         self.figure.js_on_event(
             MouseMove,
@@ -505,6 +517,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         )
 
     def update_range(self, event: events.RangesUpdate):
+        """Forward the figure range change to the registered callback."""
         self.range_callback(event.x0, event.x1, event.y0, event.y1)
 
     def _set_callback_on_range_update(self, callback: IO):
@@ -610,6 +623,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
     def _polygons_to_coords(
         self, polygons: List[PolygonElement]
     ) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
+        """Convert polygon elements into the nested xs/ys lists Bokeh patches expect."""
         xs_dict = [
             [
                 {
@@ -640,6 +654,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         return xs, ys
 
     def send_event(self, callback):
+        """Call the mouse callback with the current hover position and cell."""
         # If the mouse is hovered while a range update triggered update is done, the self.source_polygons.data length is updated faster than the data coming from the mouse.
         #   The value of self.source_mouse.data["index"][0] will be greater than the polygon length. In this case, the callback is not called.
         if (
@@ -735,3 +750,26 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             self.permanent_source_mouse.data["y"][0],
             self.permanent_source_mouse.data["z"][0],
         )
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value).
+
+        Returns an empty string when the mouse is not over this figure.
+        """
+        if not self._mouse_inside:
+            return ""
+        x = self.source_mouse.data["x"][0]
+        y = self.source_mouse.data["y"][0]
+        z = self.source_mouse.data["z"][0]
+        info = f"({x:.3f}, {y:.3f}, {z:.3f})"
+        idx = int(self.source_mouse.data.get("index", [0])[0])
+        if CELL_NAMES in self.source_polygons.data:
+            names = self.source_polygons.data[CELL_NAMES]
+            if 0 <= idx < len(names):
+                cell_id = names[idx]
+                info += f" | Cell: {cell_id}"
+                if CELL_VALUES in self.source_polygons.data:
+                    values = self.source_polygons.data[CELL_VALUES]
+                    if 0 <= idx < len(values):
+                        info += f" | Value: {values[idx]}"
+        return info

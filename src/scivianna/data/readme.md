@@ -11,6 +11,7 @@ The `data` module provides core data structures and workers for managing simulat
 | `data1d.py` | Data structures for 1D plot data (line charts, time series) |
 | `data2d.py` | Data structures for 2D geometry data (meshes, fields, polygons) |
 | `data3d.py` | Data structures for 3D geometry data (VTK polydata or unstructured mesh, cell values) |
+| `data_graph.py` | Data structures for graph data (a set of 2D nodes connected by directed links) |
 | `data_2d_worker.py` | Worker process for handling 2D data operations asynchronously |
 
 ## Data Types
@@ -34,6 +35,13 @@ Handles three-dimensional VTK-based geometry data:
 - Built from `pv.PolyData` or `pv.UnstructuredGrid` objects via `from_vtk()` class method
 - Supports deep copy and cell data updates
 
+### DataGraph
+Handles a graph of 2D plots connected by directed links (coupling topology):
+- `datas`: mapping of node key to its `Data2D` payload (polygons only)
+- `locations`: mapping of node key to its `(x, y)` layout position
+- `links`: list of `Link` objects connecting nodes, each specifying the side
+  (`top`/`bottom`/`left`/`right`) where it attaches to each endpoint
+
 ### DataContainer
 Base container that manages visualization data properties:
 - Stores current field values
@@ -51,5 +59,5 @@ Base container that manages visualization data properties:
 
 The data module integrates with:
 - **Interfaces**: Data is loaded via interface modules (MED, VTK, CSV, structured mesh)
-- **Plotters**: Data is rendered by 1D, 2D, and 3D plotter backends
+- **Plotters**: Data is rendered by 1D, 2D, 3D and graph plotter backends
 - **Agents**: AI agent can manipulate Data2D properties programmatically

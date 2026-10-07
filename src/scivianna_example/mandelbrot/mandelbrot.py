@@ -1,3 +1,5 @@
+"""Mandelbrot set example: computed on a grid and shown as polygons."""
+
 import multiprocessing as mp
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
@@ -10,6 +12,7 @@ from scivianna.constants import MATERIAL, MESH
 from scivianna.data.data2d import Data2D
 from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
 from scivianna.extension.extension import Extension
+from scivianna.interface import register_interface
 from scivianna.interface.generic_interface import Geometry2DGrid
 from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
 from scivianna.panel.panel_2d import Panel2D
@@ -83,6 +86,7 @@ This extension allows defining the medcoupling field display parameters.
         self.panel.recompute()
 
     def provide_options(self):
+        """Return the current grid resolution and iteration limit as compute options."""
         return {
             "u_steps": self.u_step_input.value,
             "v_steps": self.v_step_input.value,
@@ -148,6 +152,8 @@ This extension allows defining the medcoupling field display parameters.
 
 
 class MandelBrotInterface(Geometry2DGrid):
+    """Computes the Mandelbrot set on a 2D grid as a rasterized field."""
+
     geometry_type: GeometryType = GeometryType._2D
     extensions = [MandelbrotExtension]
 
@@ -250,6 +256,7 @@ class MandelBrotInterface(Geometry2DGrid):
         maxiter = options["Max iter"] if "Max iter" in options else 10
 
         def mandelbrot(z, maxiter):
+            """Number of iterations before the orbit of z escapes (or maxiter)."""
             c = z
             for n in range(maxiter):
                 if abs(z) > 2:
@@ -258,6 +265,7 @@ class MandelBrotInterface(Geometry2DGrid):
             return maxiter
 
         def mandelbrot_set(xmin, xmax, ymin, ymax, width, height, maxiter):
+            """Evaluate the Mandelbrot iteration count on a width x height grid."""
             r1 = np.linspace(xmin, xmax, width)
             r2 = np.linspace(ymin, ymax, height)
             return (
@@ -369,9 +377,12 @@ class MandelBrotInterface(Geometry2DGrid):
             "max_iter": self.last_computed_frame[-1] if self.last_computed_frame != {} else 10
         }
 
+register_interface("MandelBrotInterface", MandelBrotInterface)
+
 def make_panel(
     _, return_slaves=False
 ) -> Union[SplitLayout, Tuple[SplitLayout, List[ComputeSlave]]]:
+    """Build the Mandelbrot demo panel."""
     slave = ComputeSlave(MandelBrotInterface)
     panel = Panel2D(slave, name="Mandelbrot polygons")
     panel.update_event = UpdateEvent.RANGE_CHANGE
@@ -385,8 +396,7 @@ def make_panel(
     panel_2.set_colormap("BuRd")
 
     layout = SplitLayout(
-        SplitItem(panel, panel_2, SplitDirection.VERTICAL),
-        additional_interfaces={"Mandelbrot": MandelBrotInterface},
+        SplitItem(panel, panel_2, SplitDirection.VERTICAL)
     )
 
     if return_slaves:

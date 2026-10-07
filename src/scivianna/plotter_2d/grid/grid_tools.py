@@ -1,3 +1,5 @@
+"""Helpers to build and manipulate 2D grid (rasterized) data."""
+
 from typing import Tuple
 
 import numpy as np

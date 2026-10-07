@@ -704,6 +704,7 @@ class ExtrudedStructuredMesh(Geometry2DPolygon, Geometry3D):
             polygons_to_union[polygon.cell_id].append(polygon)
 
         def union_to_polygons(geometries):
+            """Unions the given geometries and returns the resulting polygons as a list."""
             union = shapely.union_all(geometries)
 
             if union.geom_type == "MultiPolygon":

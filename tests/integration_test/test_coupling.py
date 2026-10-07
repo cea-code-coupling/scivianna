@@ -1,3 +1,5 @@
+"""Integration tests for the C3PO coupling example (run and reload)."""
+
 import shutil
 from pathlib import Path
 
@@ -21,23 +23,27 @@ def cleanup():
 # 1. Define the fixture with params
 @pytest.fixture(params=[True, False])
 def grid(request):
+    """Parametrize the coupling tests with and without a grid."""
     # Return True or False based on the parameter
     return request.param
  
 @pytest.mark.coupling
 def test_run_coupling(cleanup, grid):
+    """Run the coupling example without a server and clean up afterwards."""
     from scivianna_example.c3po_coupling.coupling import get_panel
     get_panel(computation_time = 0.001, use_server = False, grid = grid)
 
 
 @pytest.mark.coupling
 def test_run_coupling_with_server(cleanup, grid):
+    """Run the coupling example with a server and clean up afterwards."""
     from scivianna_example.c3po_coupling.coupling import get_panel
     get_panel(computation_time = 0.001, grid = grid)
 
 
 @pytest.mark.coupling
 def test_reload_coupling(cleanup, grid):
+    """Run the coupling example and reload its saved layout."""
     from scivianna_example.c3po_coupling.coupling import get_panel
     scivianna.utils._testing = True
     get_panel(
@@ -78,6 +84,7 @@ if __name__ == "__main__":
     )
 
     def load_layout(*args, **kwargs):
+        """Reload the saved gridstack layout from the zip file."""
         layout = load_gridstack_from_zip(
             working_directory / "save_layout.zip"
         )

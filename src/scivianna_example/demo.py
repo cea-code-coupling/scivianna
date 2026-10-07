@@ -1,3 +1,5 @@
+"""Main demo page: builds a tabbed Panel application with one tab per example app."""
+
 import scivianna_example
 import scivianna_example.europe_grid.europe_grid as europe_grid
 from scivianna.icon import get_icon
@@ -55,6 +57,15 @@ except ImportError as e:
     logger.info(f"Could not import VTK app, {e}, skipping demo VTK build")
     has_vtk = False
 
+try:
+    import scivianna_example.graph.heat_network as heat_network
+    from scivianna_example.graph.heat_network import make_graph_panel as heat_network_example
+
+    has_heat_network = True
+except ImportError as e:
+    logger.info(f"Could not import heat network app, {e}, skipping demo heat network build")
+    has_heat_network = False
+
 
 from pathlib import Path
 
@@ -64,6 +75,11 @@ import panel_material_ui as pmui
 
 # download at https://composables.com/icons/icon-libraries/material-symbols?q=dashboard
 def make_demo(return_slaves=False) -> pmui.Page:
+    """Build the demo page with one tab per available example app.
+
+    Each example is only included if its optional dependencies import cleanly;
+    every tab pairs the panel's main frame with its description text.
+    """
     icons = {
         "Help": get_icon("question_mark"),
         "Europe example": get_icon("line_axis"),
@@ -72,6 +88,7 @@ def make_demo(return_slaves=False) -> pmui.Page:
         "Coupling example": get_icon("player-play"),
         "Medcoupling 3D example": get_icon("view_in_ar"),
         "VTK 3D example": get_icon("vtk"),
+        "Heat network example": get_icon("flow_graph"),
     }
 
     if return_slaves:
@@ -112,6 +129,12 @@ def make_demo(return_slaves=False) -> pmui.Page:
         else:
             slaves_vtk_3d = []
 
+        if has_heat_network:
+            heat_network_panel = heat_network_example()
+            slaves_heat_network = [heat_network_panel.slave]
+        else:
+            slaves_heat_network = []
+
     else:
         europe_panel = europe_example(None)
 
@@ -129,6 +152,9 @@ def make_demo(return_slaves=False) -> pmui.Page:
 
         if has_vtk:
             vtk_3d_panel = vtk_3d_example(None)
+
+        if has_heat_network:
+            heat_network_panel = heat_network_example()
 
     with open(Path(europe_grid.__file__).parent / "description.md", "r") as f:
         europe_with_description = pmui.Row(
@@ -165,6 +191,12 @@ def make_demo(return_slaves=False) -> pmui.Page:
                 vtk_3d_panel.main_frame, pmui.Typography(f.read(), width=300)
             )
 
+    if has_heat_network:
+        with open(Path(heat_network.__file__).parent / "description.md", "r") as f:
+            heat_network_with_description = pmui.Row(
+                heat_network_panel.main_frame, pmui.Typography(f.read(), width=300)
+            )
+
     description_file = Path(scivianna_example.__file__).parent / "demo_description.md"
 
     image = pn.pane.Image(
@@ -189,6 +221,8 @@ def make_demo(return_slaves=False) -> pmui.Page:
         guis["Medcoupling 3D example"] = medcoupling_3d_with_description
     if has_vtk:
         guis["VTK 3D example"] = vtk_3d_with_description
+    if has_heat_network:
+        guis["Heat network example"] = heat_network_with_description
 
     demo = Demonstrator(guis, icons)
 
@@ -200,7 +234,8 @@ def make_demo(return_slaves=False) -> pmui.Page:
             + slaves_mandelbrot
             + slaves_coupling
             + slaves_medcoupling_3d
-            + slaves_vtk_3d,
+            + slaves_vtk_3d
+            + slaves_heat_network,
         )
     else:
         return demo

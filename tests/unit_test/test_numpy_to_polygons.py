@@ -1,4 +1,4 @@
-# tests/test_polygonize_tools.py
+"""Unit tests for converting numpy arrays to polygons."""
 
 import numpy as np
 import pytest

@@ -1,3 +1,5 @@
+"""Abstract interface for 2D geometry plotters."""
+
 from typing import IO, Callable, Tuple
 
 import panel as pn
@@ -179,5 +181,15 @@ class Plotter2D:
         -------
         Tuple[float, float, float]
             Mouse location
+        """
+        raise NotImplementedError()
+
+    def get_mouse_info(self) -> str:
+        """Returns the information on mouse location
+
+        Returns
+        -------
+        str
+            Information on mouse hovered location
         """
         raise NotImplementedError()
