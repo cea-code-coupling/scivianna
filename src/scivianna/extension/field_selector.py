@@ -4,8 +4,10 @@ FieldSelector extension for Scivianna.
 This module provides field selection and colormap configuration for visualization panels.
 """
 
+import hashlib
 import time
 from typing import TYPE_CHECKING, Any, Dict
+from random import randint
 
 import numpy as np
 import panel as pn
@@ -33,6 +35,10 @@ if TYPE_CHECKING:
 profile_time = False
 
 
+def hash_string(s: str, seed: int = 42):
+    data = f"{seed}:{s}".encode("utf-8")
+    return int.from_bytes(hashlib.sha256(data).digest(), "big")
+
 def set_colors_list(
     data: Data2D,
     slave: "ComputeSlave",
@@ -43,6 +49,7 @@ def set_colors_list(
     min_value: float = None,
     max_value: float = None,
     offset: int = -20,
+    seed: int = 42
 ):
     """Sets in a Data2D the list of colors for a field per polygon.
 
@@ -79,7 +86,7 @@ def set_colors_list(
     coloring_mode = slave.get_label_coloring_mode(coloring_label)
 
     cell_values = data.cell_values
-    
+
     min_val = None
     minmax = None
 
@@ -92,7 +99,7 @@ def set_colors_list(
         A random color is given for each string value.
         """
         sorted_values = np.sort(np.unique(list(cell_values)))
-        map_to = np.array([hash(c) % 255 for c in sorted_values]) / 255
+        map_to = np.array([hash_string(c, seed) % 255 for c in sorted_values]) / 255
 
         value_list = np.array(cell_values)
 
@@ -230,6 +237,14 @@ If a color bar is used, you can decide to center it on zero.
             options=beautiful_color_maps, swatch_width=60, width_policy="max"
         )
 
+        self.coloring_seed = pmui.widgets.IntInput(
+            name='Coloring seed', value=randint(0, 1000000), start=0, end=1000000,
+            width=280,
+            visible=slave.get_label_coloring_mode(self.field_color_selector.value)
+                                    == VisualizationMode.FROM_STRING
+        )
+        self.coloring_seed.param.watch(self.trigger_update, "value")
+
         self.color_map_selector.width = self.color_map_selector.height
         self.center_colormap_on_zero_tick = pn.widgets.Checkbox(
             label="Center color map on zero.",
@@ -302,6 +317,10 @@ If a color bar is used, you can decide to center it on zero.
             self.slave.get_label_coloring_mode(self.field_color_selector.value)
             == VisualizationMode.FROM_VALUE
         )
+        self.coloring_seed.visible = (
+            self.slave.get_label_coloring_mode(self.field_color_selector.value)
+            == VisualizationMode.FROM_STRING
+        )
         self.panel.set_field(self.field_color_selector.value)
 
     def receive_colormap_change(self, *args, **kwargs):
@@ -358,6 +377,7 @@ If a color bar is used, you can decide to center it on zero.
             min_value=self.min_value.value if self.min_activated.value else None,
             max_value=self.max_value.value if self.max_activated.value else None,
             offset=self.edge_offset.value,
+            seed=self.coloring_seed.value
         )
         if min_val is not None and minmax is not None:
             self.panel.plotter.update_colorbar(True, value_range=(min_val, min_val + minmax))
@@ -382,6 +402,7 @@ If a color bar is used, you can decide to center it on zero.
         return pn.Column(
             self.field_color_selector,
             self.color_map_selector,
+            self.coloring_seed,
             self.center_colormap_on_zero_tick,
             self.force_range_column,
             self.edge_offset_column,
@@ -415,6 +436,7 @@ If a color bar is used, you can decide to center it on zero.
             "min_activated": self.min_activated.value,
             "max_activated": self.max_activated.value,
             "edge_offset": self.edge_offset.value,
+            "coloring_seed": self.coloring_seed.value
         }
 
     @classmethod
@@ -457,6 +479,9 @@ If a color bar is used, you can decide to center it on zero.
             # Restore edge offset
             if "edge_offset" in info_dict:
                 extension.edge_offset.value = info_dict["edge_offset"]
+
+            if "coloring_seed" in info_dict:
+                extension.coloring_seed.value = info_dict["coloring_seed"]
 
             # Update UI state for bounds enabled/disabled
             extension.enable_disable_bounds()
