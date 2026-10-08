@@ -160,9 +160,13 @@ class Panel1D(VisualizationPanel):
 
             if isinstance(series, list):
                 for serie in series:
+                    if series is None:
+                        continue
                     self.series[serie.name] = serie
                     self.visible_series_list.append(serie.name)
             else:
+                if series is None:
+                    continue
                 self.series[series.name] = series
                 self.visible_series_list.append(series.name)
 
