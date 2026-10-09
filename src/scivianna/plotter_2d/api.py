@@ -157,7 +157,11 @@ def plot_frame_in_axes(
             values = np.array(compo_list).astype(float)
 
             plotter.set_color_map(color_map)
-            plotter.update_colorbar(True, (np.nanmin(values), np.nanmax(values)))
+            if np.isnan(values).all():
+                plotter.update_colorbar(False, (np.nan, np.nan))
+            else:
+                plotter.update_colorbar(True, (np.nanmin(values), np.nanmax(values)))
+
         elif slave.get_label_coloring_mode(coloring_label) == VisualizationMode.FROM_STRING:
             compos = np.unique(compo_list)
             cell_color_list = np.array(cell_color_list).astype(float)
