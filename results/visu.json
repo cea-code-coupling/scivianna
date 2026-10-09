@@ -1,0 +1,49 @@
+{
+    "split": [
+        {
+            "name": "Field",
+            "update_policy": 1,
+            "interface": "MED",
+            "template": [
+                [
+                    "Field value",
+                    "/volatile/catA/tmoulignier/Workspace/visualizer/scivianna/src/scivianna/input_file/power.med"
+                ]
+            ],
+            "u": [
+                1.0,
+                0.0,
+                0.0
+            ],
+            "v": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "origin": null,
+            "size_u": null,
+            "size_v": null,
+            "color_map": null,
+            "displayed_field": "Field value"
+        },
+        {
+            "name": "Temperature",
+            "update_policy": 1,
+            "interface": "TimeDataFrame",
+            "template": null,
+            "min_time": null,
+            "max_time": null,
+            "min_value": null,
+            "max_value": null,
+            "x_scale": "lin",
+            "y_scale": "lin",
+            "displayed_fields": [
+                "MIN",
+                "AVERAGE",
+                "MAX"
+            ]
+        }
+    ],
+    "vertical_cut": true,
+    "name": "C3PO coupling demo"
+}
