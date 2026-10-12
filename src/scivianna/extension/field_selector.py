@@ -35,7 +35,21 @@ if TYPE_CHECKING:
 profile_time = False
 
 
-def hash_string(s: str, seed: int = 42):
+def hash_string(s: str, seed: int = 42) -> int:
+    """Hashes the string using a given seed for reproductibility
+
+    Parameters
+    ----------
+    s : str
+        String to hash
+    seed : int, optional
+        Random seed, by default 42
+
+    Returns
+    -------
+    int
+        Hashed string
+    """
     data = f"{seed}:{s}".encode("utf-8")
     return int.from_bytes(hashlib.sha256(data).digest(), "big")
 
@@ -73,7 +87,8 @@ def set_colors_list(
         Force scale maximum value
     offset : int
         The colors are defined in RGB with colors from 0 to 255, this offset tells how many decrease the edge color
-
+    seed : int
+        String hasing seed for FROM_STRING display mode
 
     Raises
     ------
@@ -241,7 +256,8 @@ If a color bar is used, you can decide to center it on zero.
             name='Coloring seed', value=randint(0, 1000000), start=0, end=1000000,
             width=280,
             visible=slave.get_label_coloring_mode(self.field_color_selector.value)
-                                    == VisualizationMode.FROM_STRING
+                                    == VisualizationMode.FROM_STRING,
+            description="Seed used to hash strings to colors, change to get different colors."
         )
         self.coloring_seed.param.watch(self.trigger_update, "value")
 
