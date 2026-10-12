@@ -1,3 +1,4 @@
+from random import randint
 from typing import Any, Dict, Tuple, Union
 
 import matplotlib.axes
@@ -36,6 +37,7 @@ def plot_frame_in_axes(
     legend_options: Dict[str, Any] = {},
     polygonize: bool = True,
     caller: str = "MatplotlibAPI",
+    color_seed: int = randint(0, 1000),
 ):
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -83,6 +85,8 @@ def plot_frame_in_axes(
         Dictionnary of options provided when creating the legend
     polygonize : bool
         Plot the geometry as polygons
+    color_seed : int
+        Seed used to randomize the colors in FROM_STRING display mode. By default randomized from 0 to 1000.
 
     Returns
     ----------
@@ -108,12 +112,13 @@ def plot_frame_in_axes(
     )
 
     set_colors_list(
-        data,
-        slave,
-        coloring_label,
-        color_map,
-        False,
-        options,
+        data=data,
+        slave=slave,
+        coloring_label=coloring_label,
+        color_map=color_map,
+        center_colormap_on_zero=False,
+        options=options,
+        seed = color_seed
     )
 
     pw = PolygonSorter()
@@ -224,6 +229,7 @@ def plot_frame(
     legend_options: Dict[str, Any] = {},
     polygonize: bool = True,
     caller: str = "MatplotlibAPI",
+    color_seed: int = randint(0, 1000),
 ) -> Tuple[plt.Figure, matplotlib.axes.Axes]:
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -269,6 +275,8 @@ def plot_frame(
         Dictionnary of options provided when creating the legend
     polygonize : bool
         Plot the geometry as polygons
+    color_seed : int
+        Seed used to randomize the colors in FROM_STRING display mode. By default randomized from 0 to 1000.
 
     Returns
     ----------
@@ -297,5 +305,6 @@ def plot_frame(
         legend_options=legend_options,
         polygonize=polygonize,
         caller=caller,
+        color_seed=color_seed,
     )
     return fig, axes
