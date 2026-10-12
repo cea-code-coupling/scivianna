@@ -208,6 +208,25 @@ def test_color_list_str():
         data2D.cell_edge_colors, get_edges_colors(np.array(data2D.cell_colors))
     )
 
+@pytest.mark.default
+def test_color_list_seed_0():
+    interface = ColorTestInterface()
+    data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
+    set_colors_list(data2D, interface, "str", "gray", False, {}, seed=0)
+
+    np.testing.assert_equal(
+        np.array(data2D.cell_colors), [[109, 109, 109, 255]]*len(data2D.cell_colors)
+    )
+
+@pytest.mark.default
+def test_color_list_seed_1():
+    interface = ColorTestInterface()
+    data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
+    set_colors_list(data2D, interface, "str", "gray", False, {}, seed=1)
+
+    np.testing.assert_equal(
+        np.array(data2D.cell_colors), [[12, 12, 12, 255]]*len(data2D.cell_colors)
+    )
 
 @pytest.mark.default
 def test_color_list_float():
