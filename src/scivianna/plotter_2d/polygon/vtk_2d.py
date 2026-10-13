@@ -96,18 +96,25 @@ class VTK2DPolygonPlotter(Plotter2D):
         # Could potentially show axes or grid if needed
         pass
 
-    def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
-        """
-        Display or hide the color bar, update its range if provided.
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float], log_scale: bool = None):
+        """Displays or hide the color bar, if display, updates its range
 
         Parameters
         ----------
         display : bool
-            Display or hide the color bar.
+            Display or hides the color bar
         value_range : Tuple[float, float]
-            New colormap range (min, max).
+            New colormap range
+        log_scale : bool
+            Use logarithmic scale. If None, recovers the last used log_scale value.
         """
         self._colorbar_visible = display
+
+        if log_scale:
+            if pn.state.notifications is None:
+                raise NotImplementedError("Log scale not implemented for VTK plotter")
+            else:
+                pn.state.notifications.error("Log scale not implemented for VTK plotter")
 
         if display and value_range is not None and value_range[0] is not None and value_range[1] is not None:
             self._colorbar_min = value_range[0]
