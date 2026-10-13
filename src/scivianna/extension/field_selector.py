@@ -276,7 +276,7 @@ If a color bar is used, you can decide to center it on zero.
         )
 
         self.coloring_seed = pmui.widgets.IntInput(
-            name='Coloring seed', value=randint(0, 1000000), start=0, end=1000000,
+            label='Coloring seed', value=randint(0, 1000000), start=0, end=1000000,
             width=280,
             visible=slave.get_label_coloring_mode(self.field_color_selector.value)
                                     == VisualizationMode.FROM_STRING,
@@ -391,6 +391,7 @@ If a color bar is used, you can decide to center it on zero.
         if self._restoring:
             return
         self.panel.set_colormap(self.color_map_selector.value_name)
+        self.plotter.set_color_map(self.color_map_selector.value_name)
         self.panel.recompute()
 
     def trigger_update(self, *args, **kwargs):
