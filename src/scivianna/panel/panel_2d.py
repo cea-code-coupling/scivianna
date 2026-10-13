@@ -213,17 +213,6 @@ class Panel2D(VisualizationPanel):
 
         self.current_data = data_
 
-        if slave.get_label_coloring_mode(self.displayed_field) == VisualizationMode.FROM_VALUE:
-            self.plotter.update_colorbar(
-                True,
-                (
-                    min([float(e) for e in data_.cell_values]),
-                    max([float(e) for e in data_.cell_values]),
-                ),
-            )
-        else:
-            self.plotter.update_colorbar(False, (None, None))
-
         # Attach the range update callback to the event
         self.plotter._set_callback_on_range_update(self.ranges_callback)
 
@@ -295,17 +284,6 @@ class Panel2D(VisualizationPanel):
         """
         if profile_time:
             st = time.time()
-
-        # Update colorbar if needed
-        if "display_colorbar" in self._pending_updates:
-            if self._pending_updates["display_colorbar"]:
-                if not "colorbar" in self._pending_updates:
-                    raise ValueError("colorbar must be in self._pending_updates if display_colorbar is.")
-                cb = self._pending_updates["colorbar"]
-                self.plotter.update_colorbar(True, (cb["new_low"], cb["new_high"]))
-                self.plotter.set_color_map(self.colormap)
-            else:
-                self.plotter.update_colorbar(False, (None, None))
 
         # Update data visualization if needed
         if self._pending_updates.get("data"):
@@ -385,17 +363,17 @@ class Panel2D(VisualizationPanel):
             # Build pending updates directly
             self._pending_updates = {"data": data}
 
-            if (
-                self.slave.get_label_coloring_mode(self.displayed_field)
-                == VisualizationMode.FROM_VALUE
-            ):
-                self._pending_updates["colorbar"] = {
-                    "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
-                    "new_high": np.nanmax(np.array(data.cell_values).astype(float)),
-                }
-                self._pending_updates["display_colorbar"] = True
-            else:
-                self._pending_updates["display_colorbar"] = False
+            # if (
+            #     self.slave.get_label_coloring_mode(self.displayed_field)
+            #     == VisualizationMode.FROM_VALUE
+            # ):
+            #     self._pending_updates["colorbar"] = {
+            #         "new_low": np.nanmin(np.array(data.cell_values).astype(float)),
+            #         "new_high": np.nanmax(np.array(data.cell_values).astype(float)),
+            #     }
+            #     self._pending_updates["display_colorbar"] = True
+            # else:
+            #     self._pending_updates["display_colorbar"] = False
 
             if profile_time:
                 logger.debug("Plot panel preparing data: %.3fs", time.time() - st)

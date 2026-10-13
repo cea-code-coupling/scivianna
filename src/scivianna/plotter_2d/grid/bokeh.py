@@ -18,6 +18,7 @@ from bokeh.models import (
     CustomJSHover,
     HoverTool,
     LinearColorMapper,
+    LogColorMapper,
     Range1d
 )
 from bokeh.plotting import figure as Figure
@@ -283,22 +284,38 @@ class Bokeh2DGridPlotter(Plotter2D):
             self.figure.xaxis.visible = False
             self.figure.yaxis.visible = False
 
-    def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float], log_scale: bool = None):
         """Displays or hide the color bar, if display, updates its range
 
         Parameters
         ----------
         display : bool
             Display or hides the color bar
-        range : Tuple[float, float]
+        value_range : Tuple[float, float]
             New colormap range
+        log_scale : bool
+            Use logarithmic scale. If None, recovers the last used log_scale value.
         """
-        self.figure_color_bar.visible = display
-        if display:
-            self.figure_color_bar.color_mapper.low = value_range[0]
-            self.figure_color_bar.color_mapper.high = value_range[1]
+        if (value_range[0] is not None) and any(np.isnan(value_range)):
+            self.figure_color_bar.visible = False
+            return
 
-        self.figure_color_bar.color_mapper.update(low=value_range[0], high=value_range[1])
+        if display:
+            if log_scale is None:
+                log_scale = isinstance(self.color_mapper, LogColorMapper)
+
+            palette = self.__get_color_mapper_from_string(self.colormap)
+            mapper_class = LogColorMapper if log_scale else LinearColorMapper
+
+            self.color_mapper = mapper_class(
+                palette=palette,
+                low=value_range[0],
+                high=value_range[1],
+            )
+
+            self.figure_color_bar.color_mapper = self.color_mapper
+
+        self.figure_color_bar.visible = display
 
     def set_color_map(self, color_map_name: str):
         """Sets the colorbar color map name

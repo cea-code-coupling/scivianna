@@ -16,7 +16,7 @@ from bokeh.models import (
     CustomJSHover,
     HoverTool,
     LinearColorMapper,
-    TapTool,
+    LogColorMapper
 )
 from bokeh.plotting import figure as Figure
 from bokeh.plotting import output_file, save
@@ -227,6 +227,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.color_mapper = LinearColorMapper(
             palette=self.__get_color_mapper_from_string("BuRd"), low=0.0, high=1.0
         )
+        self.colormap = "BuRd"
 
         self.figure_color_bar = ColorBar(
             color_mapper=self.color_mapper,
@@ -263,7 +264,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             self.figure.yaxis.visible = False
 
     # @pn.io.hold()
-    def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float], log_scale: bool = None):
         """Displays or hide the color bar, if display, updates its range
 
         Parameters
@@ -272,14 +273,28 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             Display or hides the color bar
         value_range : Tuple[float, float]
             New colormap range
-        """
+        log_scale : bool
+            Use logarithmic scale. If None, recovers the last used log_scale value.
+    """
         if (value_range[0] is not None) and any(np.isnan(value_range)):
             self.figure_color_bar.visible = False
             return
 
         if display:
-            self.color_mapper.update(low=value_range[0], high=value_range[1])
+            if log_scale is None:
+                log_scale = isinstance(self.color_mapper, LogColorMapper)
+
+            palette = self.__get_color_mapper_from_string(self.colormap)
+            mapper_class = LogColorMapper if log_scale else LinearColorMapper
+
+            self.color_mapper = mapper_class(
+                palette=palette,
+                low=value_range[0],
+                high=value_range[1],
+            )
+
             self.figure_color_bar.color_mapper = self.color_mapper
+
         self.figure_color_bar.visible = display
 
     def set_color_map(self, color_map_name: str):

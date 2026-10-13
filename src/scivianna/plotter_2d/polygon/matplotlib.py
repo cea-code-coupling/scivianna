@@ -36,6 +36,7 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
         self.colormap_name = "BuRd"
         self.display_colorbar = False
         self.colorbar_range = (0.0, 1.0)
+        self.colorbar_scale = "lin"
 
     def display_borders(self, display: bool):
         """Display or hides the figure borders and axis
@@ -50,7 +51,7 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
         else:
             plt.axis("off")  # Hide the axis
 
-    def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float], log_scale: bool = None):
         """Displays or hide the color bar, if display, updates its range
 
         Parameters
@@ -59,9 +60,12 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
             Display or hides the color bar
         value_range : Tuple[float, float]
             New colormap range
+        log_scale : bool
+            Use logarithmic scale. If None, recovers the last used log_scale value.
         """
         self.display_colorbar = display
         self.colorbar_range = value_range
+        self.colorbar_scale = "log" if log_scale else "lin"
 
     def set_color_map(self, color_map_name: str):
         """Sets the colorbar color map name
@@ -140,15 +144,25 @@ class Matplotlib2DPolygonPlotter(Plotter2D):
         )
 
         if self.display_colorbar:
+            if self.colorbar_scale == "lin":
+                norm = plt_colors.Normalize(
+                    vmin=self.colorbar_range[0],
+                    vmax=self.colorbar_range[1],
+                )
+            else:  # log
+                norm = plt_colors.LogNorm(
+                    vmin=self.colorbar_range[0],
+                    vmax=self.colorbar_range[1],
+                )
+
+            cmap = LinearSegmentedColormap.from_list(
+                self.colormap_name,
+                (np.array(beautiful_color_maps[self.colormap_name]) / 255).tolist(),
+                N=len(beautiful_color_maps[self.colormap_name]),
+            )
+
             plt.colorbar(
-                cm.ScalarMappable(
-                    norm=plt_colors.Normalize(self.colorbar_range[0], self.colorbar_range[1]),
-                    cmap=LinearSegmentedColormap.from_list(
-                        self.colormap_name,
-                        (np.array(beautiful_color_maps[self.colormap_name]) / 255).tolist(),
-                        N=len(beautiful_color_maps[self.colormap_name]),
-                    ),
-                ),
+                cm.ScalarMappable(norm=norm, cmap=cmap),
                 ax=axes,
             )
 
