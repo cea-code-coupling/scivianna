@@ -60,7 +60,7 @@ class Plotter3D(Plotter3D):
         """
         return self.plotter
 
-    def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float], log_scale: bool = False):
         """Displays or hide the color bar, if display, updates its range
 
         Parameters
@@ -69,6 +69,8 @@ class Plotter3D(Plotter3D):
             Display or hides the color bar
         value_range : Tuple[float, float]
             New colormap range
+        log_scale : bool
+            Use logarithmic scale
         """
         pass
 
