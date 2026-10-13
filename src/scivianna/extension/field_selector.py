@@ -63,7 +63,8 @@ def set_colors_list(
     min_value: float = None,
     max_value: float = None,
     offset: int = -20,
-    seed: int = 42
+    seed: int = 42,
+    log_scale: bool = False
 ):
     """Sets in a Data2D the list of colors for a field per polygon.
 
@@ -89,6 +90,8 @@ def set_colors_list(
         The colors are defined in RGB with colors from 0 to 255, this offset tells how many decrease the edge color
     seed : int
         String hasing seed for FROM_STRING display mode
+    log_scale : int
+        Sets colors from values logarithmic in FROM_VALUE display mode, by default False
 
     Raises
     ------
@@ -103,7 +106,7 @@ def set_colors_list(
     cell_values = data.cell_values
 
     min_val = None
-    minmax = None
+    min_max = None
 
     if profile_time:
         logger.debug("get color list prepare time: %.3fs", time.time() - start_time)
@@ -139,37 +142,57 @@ def set_colors_list(
 
         if center_colormap_on_zero:
             if len(no_nan_values) == 0 or max(abs(no_nan_values.min()), no_nan_values.max()) == 0.0:
-                minmax = 1.0
+                min_max = 1.0
+                min_val = -1.0
             else:
-                minmax = max(abs(no_nan_values.min()), no_nan_values.max())
+                min_max = 2*max(abs(no_nan_values.min()), no_nan_values.max())
+                min_val = -min_max / 2
+            interpolate_cell_values = (normalized_cell_values - min_val) / min_max
 
-            normalized_cell_values = (normalized_cell_values + minmax) / (2 * minmax)
         else:
             if len(no_nan_values) == 0 or max(abs(no_nan_values.min()), no_nan_values.max()) == 0.0:
-                minmax = 1.0
+                min_max = 1.0
                 min_val = 0.0
             elif no_nan_values.min() == no_nan_values.max():
-                minmax = 1.0
+                min_max = 1.0
                 min_val = no_nan_values.min()
             else:
-                minmax = no_nan_values.max() - no_nan_values.min()
+                min_max = no_nan_values.max() - no_nan_values.min()
                 min_val = no_nan_values.min()
 
             if min_value is not None:
                 min_val = min_value
             if max_value is not None:
-                minmax = max_value - min_val
+                min_max = max_value - min_val
 
-            if minmax == 0:
-                minmax = 1
+            if min_max == 0:
+                min_max = 1
 
-            normalized_cell_values = (normalized_cell_values - min_val) / minmax
+            if log_scale:
+                if min_val <= 0:
+                    if pn.state.notifications is not None:
+                        pn.state.notifications.error(
+                            "Zero or negative values detected. Log transformation is undefined.",
+                            duration=5000,
+                        )
+                        interpolate_cell_values = (normalized_cell_values - min_val) / min_max
+                    else:
+                        raise ValueError(
+                            "Can't use a logarithmic scale if any value is 0 or below."
+                        )
+                else:
+                    interpolate_cell_values = np.log(normalized_cell_values + min_val)
+                    interpolate_cell_values -= np.nanmin(interpolate_cell_values)
+                    if not np.nanmax(interpolate_cell_values) == 0:
+                        interpolate_cell_values /= np.nanmax(interpolate_cell_values)
+            else:
+                interpolate_cell_values = (normalized_cell_values - min_val) / min_max
 
         if profile_time:
             logger.debug("Rescaling data: %.3fs", time.time() - start_time)
             start_time = time.time()
 
-        cell_colors = interpolate_cmap_at_values(color_map, normalized_cell_values)
+        cell_colors = interpolate_cmap_at_values(color_map, interpolate_cell_values)
 
         if profile_time:
             logger.debug("Extracting colors: %.3fs", time.time() - start_time)
@@ -204,7 +227,7 @@ def set_colors_list(
 
     data.cell_edge_colors = edge_colors
 
-    return min_val, minmax
+    return min_val, min_max
 
 
 class FieldSelector(Extension):
@@ -262,8 +285,14 @@ If a color bar is used, you can decide to center it on zero.
         self.coloring_seed.param.watch(self.trigger_update, "value")
 
         self.color_map_selector.width = self.color_map_selector.height
-        self.center_colormap_on_zero_tick = pn.widgets.Checkbox(
+        self.center_colormap_on_zero_tick = pmui.widgets.Checkbox(
             label="Center color map on zero.",
+            value=False,
+            visible=slave.get_label_coloring_mode(self.field_color_selector.value)
+            == VisualizationMode.FROM_VALUE,
+        )
+        self.log_scale = pmui.widgets.Checkbox(
+            label="Logarithmic scale",
             value=False,
             visible=slave.get_label_coloring_mode(self.field_color_selector.value)
             == VisualizationMode.FROM_VALUE,
@@ -274,6 +303,8 @@ If a color bar is used, you can decide to center it on zero.
 
         self.color_map_selector.param.watch(self.trigger_colormap_change, "value")
         self.center_colormap_on_zero_tick.param.watch(self.trigger_update, "value")
+        self.center_colormap_on_zero_tick.param.watch(self.update_widget_visibility, "value")
+        self.log_scale.param.watch(self.trigger_update, "value")
 
         self.min_value = pmui.FloatInput(label="Min value", width=220, disabled=True)
         self.max_value = pmui.FloatInput(label="Max value", width=220, disabled=True)
@@ -329,15 +360,24 @@ If a color bar is used, you can decide to center it on zero.
         """Trigger a field change in the visualization panel"""
         if self._restoring:
             return
+        self.update_widget_visibility()
+        self.panel.set_field(self.field_color_selector.value)
+
+    def update_widget_visibility(self, *args, **kwargs):
         self.center_colormap_on_zero_tick.visible = (
             self.slave.get_label_coloring_mode(self.field_color_selector.value)
             == VisualizationMode.FROM_VALUE
+        )
+        self.log_scale.visible = (
+            (self.slave.get_label_coloring_mode(self.field_color_selector.value)
+            == VisualizationMode.FROM_VALUE)
+            and
+            (not self.center_colormap_on_zero_tick.value)
         )
         self.coloring_seed.visible = (
             self.slave.get_label_coloring_mode(self.field_color_selector.value)
             == VisualizationMode.FROM_STRING
         )
-        self.panel.set_field(self.field_color_selector.value)
 
     def receive_colormap_change(self, *args, **kwargs):
         """Receive a field change from the visualization panel"""
@@ -381,7 +421,7 @@ If a color bar is used, you can decide to center it on zero.
         data : Data2D
             Data to display
         """
-        min_val, minmax = set_colors_list(
+        min_val, min_max = set_colors_list(
             data,
             self.slave,
             self.field_color_selector.value,
@@ -393,17 +433,32 @@ If a color bar is used, you can decide to center it on zero.
             min_value=self.min_value.value if self.min_activated.value else None,
             max_value=self.max_value.value if self.max_activated.value else None,
             offset=self.edge_offset.value,
-            seed=self.coloring_seed.value
+            seed=self.coloring_seed.value,
+            log_scale=self.log_scale.value
         )
-        if min_val is not None and minmax is not None:
-            self.panel.plotter.update_colorbar(True, value_range=(min_val, min_val + minmax))
+
+        if min_val is not None and min_max is not None:
+            if self.center_colormap_on_zero_tick.value:
+                max_value = max(abs(min_val), abs(min_val + min_max))
+                min_value = -max_value
+            else:
+                max_value = min_val + min_max
+                min_value = min_val
+
+            self.panel.plotter.update_colorbar(
+                display=True,
+                value_range=(min_value, max_value),
+                log_scale=self.log_scale.value
+            )
 
             self._restoring = True
             if not self.min_activated.value:
-                self.min_value.value = min_val
+                self.min_value.value = min_value
             if not self.max_activated.value:
-                self.max_value.value = min_val + minmax
+                self.max_value.value = max_value
             self._restoring = False
+        else:
+            self.plotter.update_colorbar(False, (None, None))
 
     def make_gui(
         self,
@@ -420,6 +475,7 @@ If a color bar is used, you can decide to center it on zero.
             self.color_map_selector,
             self.coloring_seed,
             self.center_colormap_on_zero_tick,
+            self.log_scale,
             self.force_range_column,
             self.edge_offset_column,
         )
@@ -452,7 +508,8 @@ If a color bar is used, you can decide to center it on zero.
             "min_activated": self.min_activated.value,
             "max_activated": self.max_activated.value,
             "edge_offset": self.edge_offset.value,
-            "coloring_seed": self.coloring_seed.value
+            "coloring_seed": self.coloring_seed.value,
+            "log_scale": self.log_scale.value
         }
 
     @classmethod
@@ -498,6 +555,8 @@ If a color bar is used, you can decide to center it on zero.
 
             if "coloring_seed" in info_dict:
                 extension.coloring_seed.value = info_dict["coloring_seed"]
+            if "log_scale" in info_dict:
+                extension.log_scale.value = info_dict["log_scale"]
 
             # Update UI state for bounds enabled/disabled
             extension.enable_disable_bounds()

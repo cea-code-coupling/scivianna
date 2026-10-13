@@ -121,17 +121,6 @@ class Panel3D(VisualizationPanel):
 
         self.current_data = data_
 
-        if slave.get_label_coloring_mode(self.displayed_field) == VisualizationMode.FROM_VALUE:
-            self.plotter.update_colorbar(
-                True,
-                (
-                    min([float(e) for e in data_.cell_values]),
-                    max([float(e) for e in data_.cell_values]),
-                ),
-            )
-        else:
-            self.plotter.update_colorbar(False, (None, None))
-
         self.w_inp = 0.0
         self.origin = tuple(DEFAULT_ORIGIN)
         self.u = X
@@ -155,12 +144,6 @@ class Panel3D(VisualizationPanel):
         """
         if profile_time:
             st = time.time()
-
-        # Update colorbar if needed
-        if self._pending_updates.get("colorbar"):
-            cb = self._pending_updates["colorbar"]
-            self.plotter.update_colorbar(True, (cb["new_low"], cb["new_high"]))
-            self.plotter.set_color_map(self.colormap)
 
         # Update data visualization if needed
         if self._pending_updates.get("data"):

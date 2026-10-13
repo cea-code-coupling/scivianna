@@ -38,6 +38,7 @@ def plot_frame_in_axes(
     polygonize: bool = True,
     caller: str = "MatplotlibAPI",
     color_seed: int = randint(0, 1000),
+    log_scale: bool = False,
 ):
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -87,6 +88,8 @@ def plot_frame_in_axes(
         Plot the geometry as polygons
     color_seed : int
         Seed used to randomize the colors in FROM_STRING display mode. By default randomized from 0 to 1000.
+    log_scale : bool
+        Use logarithmic scale. By default False.
 
     Returns
     ----------
@@ -118,7 +121,8 @@ def plot_frame_in_axes(
         color_map=color_map,
         center_colormap_on_zero=False,
         options=options,
-        seed = color_seed
+        seed = color_seed,
+        log_scale=log_scale
     )
 
     pw = PolygonSorter()
@@ -163,9 +167,9 @@ def plot_frame_in_axes(
 
             plotter.set_color_map(color_map)
             if np.isnan(values).all():
-                plotter.update_colorbar(False, (np.nan, np.nan))
+                plotter.update_colorbar(False, (np.nan, np.nan), log_scale=log_scale)
             else:
-                plotter.update_colorbar(True, (np.nanmin(values), np.nanmax(values)))
+                plotter.update_colorbar(True, (np.nanmin(values), np.nanmax(values)), log_scale=log_scale)
 
         elif slave.get_label_coloring_mode(coloring_label) == VisualizationMode.FROM_STRING:
             compos = np.unique(compo_list)
@@ -230,6 +234,7 @@ def plot_frame(
     polygonize: bool = True,
     caller: str = "MatplotlibAPI",
     color_seed: int = randint(0, 1000),
+    log_scale: bool = False,
 ) -> Tuple[plt.Figure, matplotlib.axes.Axes]:
     """Creates a figure and plots a geometry in it from an already initialized compute slave
 
@@ -277,6 +282,8 @@ def plot_frame(
         Plot the geometry as polygons
     color_seed : int
         Seed used to randomize the colors in FROM_STRING display mode. By default randomized from 0 to 1000.
+    log_scale : bool
+        Use logarithmic scale. By default False.
 
     Returns
     ----------
@@ -306,5 +313,6 @@ def plot_frame(
         polygonize=polygonize,
         caller=caller,
         color_seed=color_seed,
+        log_scale=log_scale
     )
     return fig, axes

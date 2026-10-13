@@ -1,6 +1,7 @@
 import multiprocessing as mp
 from typing import Any, Dict, List, Tuple, Union
 
+from matplotlib import pyplot as plt
 import numpy as np
 import pytest
 
@@ -9,6 +10,8 @@ from scivianna.data.data2d import Data2D
 from scivianna.enums import VisualizationMode
 from scivianna.extension.field_selector import set_colors_list
 from scivianna.interface.generic_interface import Geometry2DPolygon
+from scivianna.plotter_2d.api import plot_frame_in_axes
+from scivianna.slave import ComputeSlave
 from scivianna.utils.color_tools import get_edges_colors, interpolate_cmap_at_values
 from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
@@ -73,7 +76,11 @@ class ColorTestInterface(Geometry2DPolygon):
             Data2D.from_polygon_list(
                 [
                     PolygonElement(
-                        exterior_polygon=PolygonCoords(x_coords=[], y_coords=[]),
+                        exterior_polygon=PolygonCoords(x_coords=[
+                            0, 0, 1, 1
+                        ], y_coords=[
+                            0 + i, 1 + i, 1 + i, 0 + i
+                        ]),
                         holes=[],
                         cell_id=i,
                     )
@@ -93,7 +100,7 @@ class ColorTestInterface(Geometry2DPolygon):
         List[str]
             List of fields names
         """
-        return [MESH, "str", "float"]
+        return [MESH, "str", "float", "log_float"]
 
     def get_value_dict(
         self, value_label: str, cells: List[Union[int, str]], options: Dict[str, Any], caller: str = "API"
@@ -120,6 +127,8 @@ class ColorTestInterface(Geometry2DPolygon):
             return {v: str(v) for v in cells}
         elif value_label == "float":
             return {v: float(v) if v < 2 else np.nan for v in cells}
+        elif value_label == "log_float":
+            return {v: float(v + 1) for v in cells}
         else:
             raise ValueError(
                 f"Value label {value_label} not implemented. Keys available : MESH, str, and float."
@@ -142,11 +151,11 @@ class ColorTestInterface(Geometry2DPolygon):
             return VisualizationMode.NONE
         elif label == "str":
             return VisualizationMode.FROM_STRING
-        elif label == "float":
+        elif label in ["float", "log_float"]:
             return VisualizationMode.FROM_VALUE
         else:
             raise ValueError(
-                f"Label {label} not implemented. Keys available : MESH, str, and float."
+                f"Label {label} not implemented. Keys available : MESH, str, float and log_float."
             )
 
     def get_file_input_list(self) -> List[Tuple[str, str]]:
@@ -256,3 +265,46 @@ def test_color_list_float():
             [180, 180, 180, 255],
         ],
     )
+
+@pytest.mark.default
+def test_color_list_float_log():
+    interface = ColorTestInterface()
+    data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
+
+    data2D.cell_values = [i + 1 for i in range(len(data2D.cell_ids))]
+
+    set_colors_list(data2D, interface, "float", "gray", False, {}, log_scale=False)
+
+    np.testing.assert_equal(
+        np.array(data2D.cell_colors)[:, 0], [0,  63, 128, 191, 255]
+    )
+
+    set_colors_list(data2D, interface, "float", "gray", False, {}, log_scale=True)
+
+    np.testing.assert_equal(
+        np.array(data2D.cell_colors)[:, 0], [0, 93, 161, 212, 255]
+    )
+
+
+@pytest.mark.default
+def test_log_plot():
+    slave = ComputeSlave(ColorTestInterface)
+    fig, axs = plt.subplots(1, 2)
+
+    plot_frame_in_axes(
+        slave,
+        "log_float",
+        axs[0],
+        log_scale = False,
+        display_colorbar=True
+    )
+
+    plot_frame_in_axes(
+        slave,
+        "log_float",
+        axs[1],
+        log_scale = True,
+        display_colorbar=True
+    )
+
+    fig.savefig("lin_log_comparison.png")

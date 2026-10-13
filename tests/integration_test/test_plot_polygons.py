@@ -1,12 +1,17 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pytest
 
 import scivianna
 from scivianna.constants import GEOMETRY, X, Y
+from scivianna.extension.field_selector import set_colors_list
 from scivianna.plotter_2d.api import plot_frame_in_axes
+from scivianna.plotter_2d.polygon.matplotlib import Matplotlib2DPolygonPlotter
 from scivianna.slave import ComputeSlave
+
+from test_plt_plotters import build_data_polygon
 
 
 @pytest.mark.medcoupling
