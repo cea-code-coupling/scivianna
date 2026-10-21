@@ -40,6 +40,7 @@ scivianna/
 │   ├── data/
 │   │   ├── data2d.py             # Data2D: geometry + cell values for 2D plotting
 │   │   ├── data3d.py             # Data3D: 3D geometry container
+│   │   ├── data_graph.py         # DataGraph + Link: graph of 2D nodes with directed links
 │   │   └── ...
 │   │
 │   ├── plotter_2d/
@@ -56,10 +57,15 @@ scivianna/
 │   ├── plotter_3d/
 │   │   └── vtk_3d_plotter.py     # VTK-based 3D plotter
 │   │
+│   ├── plotter_graph/            # Work in progress: graph rendering backend
+│   │   ├── generic_plotter.py    # Abstract PlotterGraph interface (nodes + links)
+│   │   └── vtk_3d_plotter.py     # VTK-based 3D plotter for node preview
+│   │
 │   ├── panel/
 │   │   ├── visualisation_panel.py  # Abstract VisualizationPanel base class
 │   │   ├── panel_2d.py             # 2D panel implementation (recompute, layout)
 │   │   ├── panel_3d.py             # 3D panel implementation
+│   │   ├── panel_graph.py          # Graph panel (work in progress, empty file)
 │   │   └── gui.py                  # GUI builder for extensions
 │   │
 │   ├── extension/
@@ -211,6 +217,30 @@ class Plotter2D:
 
 **Implementation:** `BokehPlotter` (`plotter_2d/polygon/bokeh.py`) uses Bokeh's `QuadContourFormatter` or `Patch` glyphs to render polygon geometries with color mapping. It manages a `ColumnDataSource` for efficient data updates.
 
+### 4b. PlotterGraph (Graph Rendering, work in progress)
+
+The `PlotterGraph` abstract class (`plotter_graph/generic_plotter.py`) defines the rendering interface for a graph of 2D nodes connected by directed links (coupling topology). It mirrors `Plotter2D`/`Plotter3D` but operates on a `DataGraph`:
+
+```python
+class PlotterGraph:
+    def plot(self, data: DataGraph): ...                 # Initial render
+    def update_plot(self, data: DataGraph): ...          # In-place refresh
+    def make_panel(self) -> pn.viewable.Viewable: ...    # Returns Panel widget
+    def update_colorbar(self, display: bool, value_range: Tuple[float, float]): ...
+    def set_color_map(self, color_map_name: str): ...
+    def provide_on_mouse_move_callback(self, callback): ...
+    def provide_on_clic_callback(self, callback): ...
+    def provide_on_axes_change_callback(self, callback): ...
+    # Per-node slice access (plot_name = node key in the graph)
+    def move_slice_to(self, plot_name: str, u=None, v=None, origin=None): ...
+    def get_slice_normal(self, plot_name: str) -> np.ndarray: ...
+    def set_slice_origin(self, plot_name: str, origin: Tuple[float, float, float]): ...
+    def get_slice_origin(self, plot_name: str) -> np.ndarray: ...
+    def get_uv(self, plot_name: str) -> Tuple[np.ndarray, np.ndarray]: ...
+```
+
+All methods currently raise `NotImplementedError` — concrete backends are still being implemented to get the coupling demo working end-to-end.
+
 ### 5. VisualizationPanel (UI Container)
 
 The `VisualizationPanel` (`panel/visualisation_panel.py`) is the main UI component:
@@ -237,6 +267,11 @@ Key methods: `recompute()`, `set_field()`, `set_colormap()`, `outline_color()`, 
 - `cell_ids`: List of cell identifiers (strings)
 - `cell_values`: List of numeric/string values per cell
 - `polygons`: List of `PolygonElement` objects (exterior + holes with x/y coords)
+
+**DataGraph** (`data/data_graph.py`, work in progress): Holds a graph of 2D plots connected by directed links, used to visualize the topology of coupled simulations:
+- `datas`: Dict mapping node key → `Data2D` payload (polygons only, asserted at construction)
+- `locations`: Dict mapping node key → `(x, y)` layout position (must share keys with `datas`)
+- `links`: List of `Link` objects; each link references source/target node keys and the side (`top`/`bottom`/`left`/`right`) where it attaches to each endpoint
 
 **PolygonElement** (`utils/polygonize_tools.py`): Represents a single polygon:
 ```python
@@ -466,5 +501,7 @@ panel.show()  # or use _show_panel from scivianna.notebook_tools
 | `src/scivianna/plotter_2d/polygon/bokeh.py` | Bokeh polygon renderer |
 | `src/scivianna/plotter_2d/api.py` | Public matplotlib plotting API |
 | `src/scivianna/data/data2d.py` | Data2D container for geometry+values |
+| `src/scivianna/data/data_graph.py` | DataGraph + Link: graph of 2D nodes with directed links (WIP) |
+| `src/scivianna/plotter_graph/generic_plotter.py` | PlotterGraph abstract interface (WIP) |
 | `src/scivianna/enums.py` | GeometryType, VisualizationMode, UpdateEvent |
 | `src/scivianna/constants.py` | Global string constants |
