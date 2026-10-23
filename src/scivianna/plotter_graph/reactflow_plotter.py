@@ -8,7 +8,8 @@ hover-only, fitted to its content with an equal aspect ratio.
 Extra features provided by ``scivianna-graph`` (see its README):
 
 * nodes can be plugged on any side (link directions top/bottom/left/right);
-* each node can be rotated (``DataGraph.rotations``), figure included;
+* each node can be rotated (``DataGraph.rotations``), figure included, about an
+  optional fixed pivot (``rotation_origin`` flow option);
 * dragging an empty area selects several nodes at once so they can be moved
   together.
 """
@@ -51,11 +52,13 @@ class ReactFlowPlotter(PlotterGraph):
         fitted to ``max_size``.
     pad_px : int, default 2
         Pixel margin around the content so polygon edge lines are not clipped.
-    color_map_name : str, default "viridis"
-        Color map used to shade the cells of every node.
+    color_map_name : str, default "BuRd"
+        Color map used to shade the cells of every node (see
+        ``scivianna.utils.color_tools.color_maps``). All nodes share one global
+        value range so their colors are comparable.
     **flow_kwargs
-        Forwarded to ``scivianna_graph.SciviannaGraph`` (and on to
-        ``panel_reactflow.ReactFlow``), e.g. ``show_minimap=True``.
+        Forwarded to ``scivianna_graph.SciviannaGraph`` as display options, e.g.
+        ``show_minimap=True``, ``rotation_origin=(0.5, 1.0)``.
     """
 
     def __init__(
@@ -322,8 +325,6 @@ class ReactFlowPlotter(PlotterGraph):
             normalized = np.where(np.isfinite(values), 0.5, np.nan)
         else:
             normalized = (values - vmin) / (vmax - vmin)
-        print(values, vmin, vmax)
-        print(normalized)
         data.cell_colors = interpolate_cmap_at_values(self.color_map_name, normalized).astype(np.int16)
 
     @staticmethod
