@@ -72,15 +72,29 @@ demo.show()
 
 Visualize line plots, 2D geometries, 3D VTK-based plots, and pandas DataFrames together in an integrated dashboard with inter-plot interactions.
 
-![Demonstration 2D - 3D interaction](gifs/3d_demo.gif)
+#### 1D plot - 2D plot - Table interactions
+![1D plot - 2D plot - Table interactions](https://github.com/user-attachments/assets/0c150034-2f1f-4d76-aebd-a5e9f26d92a1)
+
+#### 2D plot - 3D plot interactions
+![2D plot - 3D plot interactions](https://github.com/user-attachments/assets/38b839a0-ca65-4bf3-a3ad-d75e3a762aed)
+
+#### Multiple 2D plots interactions
+![Multiple 2D plots interactions](https://github.com/user-attachments/assets/eb046d71-2ab0-48fa-93a8-09657baf9edc)
+
+#### Grid based 2D plot
+![Grid based 2D plot](https://github.com/user-attachments/assets/66716616-872d-493c-9b77-b9640345cfdf)
+
 
 ### 2. Real-Time Code Coupling
 Connect to simulations in real-time using the C3PO coupling platform and ICOCO interface. The visualizer can receive field updates during simulation execution.
+
+![Grid based 2D plot](https://github.com/user-attachments/assets/3095596e-78e6-4836-91a7-f135ddedd874)
 
 ### 3. Generic Data Interfaces
 Scivianna provides flexible interfaces to read various data formats:
 - **MED** (Salome MED file format)
 - **VTK** (Visualization Toolkit files)
+- **GMSH** (.msh file format)
 - **CSV** (Structured time-series data)
 - **Custom interfaces** via `GenericInterface` base class
 
