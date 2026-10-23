@@ -10,4 +10,4 @@ to visualize the topology of coupled simulations.
 |------|-------------|
 | `__init__.py` | Package initialization file |
 | `generic_plotter.py` | Abstract base class `PlotterGraph` defining the graph rendering interface |
-| `reactflow_plotter.py` | Reactflow-based plotter used by the graph panel for node preview (work in progress) |
+| `reactflow_plotter.py` | ReactFlow-based plotter (via the `scivianna-graph` module) used by the graph panel: one Bokeh figure per node, hover-only, fitted to its content; supports 4-side plugs, node rotation and drag-select |

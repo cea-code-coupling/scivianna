@@ -1,5 +1,5 @@
 
-from typing import Literal
+from typing import Literal, Optional
 
 from scivianna.data.data_container import DataContainer
 from scivianna.data.data2d import Data2D
@@ -25,6 +25,8 @@ class Link(BaseModel):
         Side of the source node where the link attaches.
     target_direction : {'top', 'bottom', 'left', 'right'}
         Side of the target node where the link attaches.
+    label : str, optional
+        Optional label displayed on the link.
     """
 
     source_data: str
@@ -32,6 +34,7 @@ class Link(BaseModel):
 
     source_direction: Literal["top", "bottom", "left", "right"]
     target_direction: Literal["top", "bottom", "left", "right"]
+    label: Optional[str] = None
 
 
 class DataGraph(DataContainer):
@@ -54,9 +57,22 @@ class DataGraph(DataContainer):
     links : list[Link]
         Directed connections between nodes; both endpoints must exist in
         ``datas``.
+    labels : dict[str, str], optional
+        Mapping of node key to a display label. Nodes without an entry fall
+        back to their key.
+    rotations : dict[str, float], optional
+        Mapping of node key to a rotation angle in degrees applied to the
+        whole node (figure included). Defaults to 0 for every node.
     """
 
-    def __init__(self, datas: dict[str, Data2D], locations: dict[str, tuple[float, float]], links: list[Link]) -> None:
+    def __init__(
+        self,
+        datas: dict[str, Data2D],
+        locations: dict[str, tuple[float, float]],
+        links: list[Link],
+        labels: Optional[dict[str, str]] = None,
+        rotations: Optional[dict[str, float]] = None,
+    ) -> None:
         """Initializer of DataGraph
 
         Parameters
@@ -67,6 +83,10 @@ class DataGraph(DataContainer):
             Dictionary of node layout positions, same keys as ``datas``
         links : list[Link]
             Directed links between nodes
+        labels : dict[str, str], optional
+            Display label per node key.
+        rotations : dict[str, float], optional
+            Rotation angle (degrees) per node key.
 
         Raises
         ------
@@ -89,3 +109,5 @@ class DataGraph(DataContainer):
         self.locations = locations
         self.links = links
         self.datas = datas
+        self.labels = labels or {}
+        self.rotations = rotations or {}

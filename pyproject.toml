@@ -61,6 +61,12 @@ grid = [
     "pyvista",
     "scivianna-vtk>=0.1.11"
 ]
+graph = [
+    "pydantic",
+    # scivianna-graph is a local, self-contained package (see the
+    # scivianna-graph/ directory); install it with
+    # `pip install -e path/to/scivianna-graph`. It needs no panel-reactflow.
+]
 test = [
     "pytest-xdist",
     "flake8",
