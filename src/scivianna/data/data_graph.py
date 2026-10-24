@@ -1,4 +1,3 @@
-
 from typing import Literal, Optional
 
 from scivianna.data.data_container import DataContainer
@@ -57,9 +56,9 @@ class DataGraph(DataContainer):
     links : list[Link]
         Directed connections between nodes; both endpoints must exist in
         ``datas``.
-    labels : dict[str, str], optional
+    labels : dict[str, str | None], optional
         Mapping of node key to a display label. Nodes without an entry fall
-        back to their key.
+        back to their key; a node mapped to ``None`` (or ``""``) has no label.
     rotations : dict[str, float], optional
         Mapping of node key to a rotation angle in degrees applied to the
         whole node (figure included). Defaults to 0 for every node.
@@ -70,7 +69,7 @@ class DataGraph(DataContainer):
         datas: dict[str, Data2D],
         locations: dict[str, tuple[float, float]],
         links: list[Link],
-        labels: Optional[dict[str, str]] = None,
+        labels: Optional[dict[str, Optional[str]]] = None,
         rotations: Optional[dict[str, float]] = None,
     ) -> None:
         """Initializer of DataGraph
@@ -83,8 +82,8 @@ class DataGraph(DataContainer):
             Dictionary of node layout positions, same keys as ``datas``
         links : list[Link]
             Directed links between nodes
-        labels : dict[str, str], optional
-            Display label per node key.
+        labels : dict[str, str | None], optional
+            Display label per node key (``None``: no label).
         rotations : dict[str, float], optional
             Rotation angle (degrees) per node key.
 

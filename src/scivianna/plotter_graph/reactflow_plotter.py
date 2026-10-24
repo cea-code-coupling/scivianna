@@ -44,14 +44,20 @@ class ReactFlowPlotter(PlotterGraph):
     Parameters
     ----------
     max_size : int, default 320
-        Pixel size of the longest side of each figure content (ignored if
-        ``scale`` is given).
+        Pixel size of the longest side of the largest figure content. With the
+        default shared scale (see ``scale``), every other figure is drawn at the
+        same pixels-per-unit, so a 5x5 polygon is smaller than a 1x50 one.
     scale : float, optional
-        Pixels per data unit, shared by all figures so that relative sizes are
-        kept when the Data2D are in the same unit. If None, each figure is
-        fitted to ``max_size``.
+        Pixels per data unit, shared by all figures. If None (default), the scale
+        is chosen so that the longest content side among all nodes is ``max_size``
+        pixels: relative sizes are kept when the Data2D are in the same unit.
+    fit_each : bool, default False
+        If True and ``scale`` is None, each figure is instead fitted to
+        ``max_size`` on its own (a 5x5 and a 1x50 polygon then share the same
+        longest side). Relative sizes are lost.
     pad_px : int, default 2
-        Pixel margin around the content so polygon edge lines are not clipped.
+        Pixel margin around the content (on each side, whatever the content size)
+        so polygon edge lines are not clipped.
     color_map_name : str, default "BuRd"
         Color map used to shade the cells of every node (see
         ``scivianna.utils.color_tools.color_maps``). All nodes share one global
@@ -67,13 +73,17 @@ class ReactFlowPlotter(PlotterGraph):
         scale: Optional[float] = None,
         pad_px: int = 2,
         color_map_name: str = "BuRd",
+        fit_each: bool = False,
         **flow_kwargs,
     ):
         super().__init__()
         self.max_size = max_size
         self.scale = scale
         self.pad_px = pad_px
+        self.fit_each = fit_each
         self.color_map_name = color_map_name
+        self._scale: float = 1.0
+        """Pixels per data unit used for the current graph (see ``scale``)."""
 
         self.on_mouse_move_callback = None
         self.on_clic_callback = None
@@ -100,6 +110,7 @@ class ReactFlowPlotter(PlotterGraph):
             DataGraph object containing the node geometries and links to plot
         """
         self.graph = data
+        self._scale = self._graph_scale(data)
         model = GraphModel()
         for key in data.datas:
             node = self._make_node(key, data)
@@ -131,17 +142,28 @@ class ReactFlowPlotter(PlotterGraph):
             self.plot(data)
             return
 
+        # The shared scale depends on every node: when one geometry changes it can
+        # change the size of all the others.
+        old_scale = self._scale
+        self._scale = self._graph_scale(data)
+        scale_changed = not np.isclose(old_scale, self._scale)
+
         for key in new_keys:
             plotter = self.plotters[key]
             old_data = self.graph.datas[key]
             new_data = data.datas[key]
             if self._same_geometry(old_data, new_data):
                 plotter.update_colors(new_data)
+                if not scale_changed:
+                    continue
             else:
                 plotter.update_2d_frame(new_data)
-                self._fit_figure(plotter, new_data)
-                pane = self.panes[key]
-                pane.param.update(width=int(plotter.figure.width), height=int(plotter.figure.height))
+            self._fit_figure(plotter, new_data)
+            pane = self.panes[key]
+            pane.param.update(width=int(plotter.figure.width), height=int(plotter.figure.height))
+
+        # Nodes are sized from their figures: tell the canvas about the new sizes.
+        self.graph_builder.update_view_sizes()
 
         self.graph = data
 
@@ -340,8 +362,8 @@ class ReactFlowPlotter(PlotterGraph):
     def _fit_figure(self, plotter: Bokeh2DPolygonPlotter, data: Data2D) -> None:
         """Sets the figure ranges and pixel size so that the frame is exactly the content.
 
-        The ranges are set to the data bounds themselves (no padding), so the
-        plotted polygons fill the whole frame edge to edge. A single
+        The ranges are the data bounds plus ``pad_px`` pixels on each side, so the
+        plotted polygons fill the frame (edge lines included). A single
         pixels-per-unit scale is used for both axes, keeping the data's aspect
         ratio. ``match_aspect`` is disabled: with the frame already matching the
         content it would only re-size the frame on every render (the source of
@@ -352,12 +374,12 @@ class ReactFlowPlotter(PlotterGraph):
         dx = max(x1 - x0, 1e-12)
         dy = max(y1 - y0, 1e-12)
 
-        scale = self.scale if self.scale is not None else self.max_size / max(dx, dy)
+        scale = self._figure_scale(dx, dy)
 
-        # A small data-space padding keeps polygon edge lines from being clipped
-        # at the frame border while keeping the content filling the frame.
-        pad_x = dx * (self.pad_px / max(scale, 1e-9))
-        pad_y = dy * (self.pad_px / max(scale, 1e-9))
+        # ``pad_px`` pixels of padding on each side, converted to data units. (It is
+        # a fixed number of pixels: it must not grow with the extent of the content,
+        # or large/thin polygons end up with big blank bands.)
+        pad_x = pad_y = self.pad_px / max(scale, 1e-9)
 
         width = max(int(round((dx + 2 * pad_x) * scale)), 1)
         height = max(int(round((dy + 2 * pad_y) * scale)), 1)
@@ -378,6 +400,28 @@ class ReactFlowPlotter(PlotterGraph):
         fig.height = height
 
     # ------------------------------------------------------------------ helpers
+    def _graph_scale(self, graph: DataGraph) -> float:
+        """Pixels per data unit shared by every figure of the graph.
+
+        The given ``scale`` if any, else the one for which the longest content side
+        over all nodes is ``max_size`` pixels.
+        """
+        if self.scale is not None:
+            return float(self.scale)
+        extents = []
+        for data in graph.datas.values():
+            x0, x1, y0, y1 = self._data_bounds(data)
+            extents.append(max(x1 - x0, y1 - y0))
+        return self.max_size / max(max(extents, default=1.0), 1e-12)
+
+    def _figure_scale(self, dx: float, dy: float) -> float:
+        """Pixels per data unit of one figure whose content is dx x dy."""
+        if self.scale is not None:
+            return float(self.scale)
+        if self.fit_each:
+            return self.max_size / max(dx, dy)
+        return self._scale
+
     @staticmethod
     def _links_signature(links: List) -> str:
         return repr([(l.source_data, l.target_data, l.source_direction, l.target_direction) for l in links])
