@@ -302,6 +302,29 @@ class ReactFlowPlotter(PlotterGraph):
         """
         self.on_axes_change_callback = callback
 
+    def provide_on_node_selection_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the selection of nodes changes on the canvas.
+        Functions arguments are the ids of the selected nodes (empty list when
+        nothing is selected).
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.graph_builder.provide_on_selection_change_callback(callback)
+
+    def provide_on_nodes_moved_callback(self, callback: Callable):
+        """Stores a function to call everytime one or several nodes are moved on the canvas.
+        Functions arguments are a list of {"id", "x", "y"} dicts, one per moved node.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.graph_builder.provide_on_nodes_moved_callback(callback)
+
     # Per-node slice access (the graph plotter keeps each node fitted to its
     # own content, so these are no-ops kept for interface compatibility).
     def move_slice_to(self, plot_name: str, u=None, v=None, origin=None):

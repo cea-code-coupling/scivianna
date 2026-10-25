@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
 import panel as pn
 
@@ -161,6 +161,26 @@ class Extension:
             Mouse targeted location in space
         cell_id : Union[str, int]
             Currently hovered cell
+        """
+        pass
+
+    def on_node_selection_change(self, selected_nodes: List[str]):
+        """Function called when the selection of nodes changes on a graph plot.
+
+        Parameters
+        ----------
+        selected_nodes : List[str]
+            Ids of the currently selected nodes (empty list when nothing is selected).
+        """
+        pass
+
+    def on_nodes_moved(self, moved_nodes: List[Dict[str, float]]):
+        """Function called when one or several nodes are moved on a graph plot.
+
+        Parameters
+        ----------
+        moved_nodes : List[Dict[str, float]]
+            One entry per moved node: {"id": node key, "x": new x position, "y": new y position}.
         """
         pass
 

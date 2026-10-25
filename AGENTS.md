@@ -57,15 +57,15 @@ scivianna/
 │   ├── plotter_3d/
 │   │   └── vtk_3d_plotter.py     # VTK-based 3D plotter
 │   │
-│   ├── plotter_graph/            # Work in progress: graph rendering backend
+│   ├── plotter_graph/            # Graph rendering backend
 │   │   ├── generic_plotter.py    # Abstract PlotterGraph interface (nodes + links)
-│   │   └── vtk_3d_plotter.py     # VTK-based 3D plotter for node preview
+│   │   └── reactflow_plotter.py  # ReactFlow canvas renderer (scivianna-graph)
 │   │
 │   ├── panel/
 │   │   ├── visualisation_panel.py  # Abstract VisualizationPanel base class
 │   │   ├── panel_2d.py             # 2D panel implementation (recompute, layout)
 │   │   ├── panel_3d.py             # 3D panel implementation
-│   │   ├── panel_graph.py          # Graph panel (work in progress, empty file)
+│   │   ├── panel_graph.py          # Graph panel (slave-based, like Panel2D)
 │   │   └── gui.py                  # GUI builder for extensions
 │   │
 │   ├── extension/
@@ -73,6 +73,7 @@ scivianna/
 │   │   ├── axes.py                 # Axes customization extension
 │   │   ├── field_selector.py       # Field selection extension
 │   │   ├── file_loader.py          # File loading extension
+│   │   ├── graph.py                # Graph canvas extension (node padding, labels)
 │   │   ├── save_load_extension.py  # Save/load session state extension
 │   │   └── ...
 │   │
@@ -181,6 +182,8 @@ class Extension:
     def on_frame_change(self, u_vector, v_vector): ...
     def on_mouse_move(self, screen_loc, space_loc, cell_id): ...
     def on_mouse_clic(self, screen_loc, space_loc, cell_id): ...
+    def on_node_selection_change(self, selected_nodes: List[str]): ...   # graph panels only
+    def on_nodes_moved(self, moved_nodes: List[Dict[str, float]]): ...  # graph panels only
     def provide_options(self) -> Dict[str, Any]: ...
     def make_gui(self) -> pn.viewable.Viewable: ...
     def to_json(self) -> dict: ...
@@ -217,7 +220,7 @@ class Plotter2D:
 
 **Implementation:** `BokehPlotter` (`plotter_2d/polygon/bokeh.py`) uses Bokeh's `QuadContourFormatter` or `Patch` glyphs to render polygon geometries with color mapping. It manages a `ColumnDataSource` for efficient data updates.
 
-### 4b. PlotterGraph (Graph Rendering, work in progress)
+### 4b. PlotterGraph (Graph Rendering)
 
 The `PlotterGraph` abstract class (`plotter_graph/generic_plotter.py`) defines the rendering interface for a graph of 2D nodes connected by directed links (coupling topology). It mirrors `Plotter2D`/`Plotter3D` but operates on a `DataGraph`:
 
@@ -231,6 +234,8 @@ class PlotterGraph:
     def provide_on_mouse_move_callback(self, callback): ...
     def provide_on_clic_callback(self, callback): ...
     def provide_on_axes_change_callback(self, callback): ...
+    def provide_on_node_selection_change_callback(self, callback): ...  # selected node ids
+    def provide_on_nodes_moved_callback(self, callback): ...            # [{"id","x","y"}, ...]
     # Per-node slice access (plot_name = node key in the graph)
     def move_slice_to(self, plot_name: str, u=None, v=None, origin=None): ...
     def get_slice_normal(self, plot_name: str) -> np.ndarray: ...
@@ -239,7 +244,7 @@ class PlotterGraph:
     def get_uv(self, plot_name: str) -> Tuple[np.ndarray, np.ndarray]: ...
 ```
 
-All methods currently raise `NotImplementedError` — concrete backends are still being implemented to get the coupling demo working end-to-end.
+**Implementation:** `ReactFlowPlotter` (`plotter_graph/reactflow_plotter.py`) renders the graph on a ReactFlow canvas built by the `scivianna-graph` package: every node is a Bokeh figure filled with scivianna's `Bokeh2DPolygonPlotter`, hover-only, fitted to its content with an equal aspect ratio. Node selection changes and node drags are reported back from the frontend (`selection_changed` / `nodes_moved` messages) and dispatched through the two `provide_on_..._callback` methods above.
 
 ### 5. VisualizationPanel (UI Container)
 
@@ -494,14 +499,17 @@ panel.show()  # or use _show_panel from scivianna.notebook_tools
 | `src/scivianna/interface/vtk_interface.py` | VTK/VTU file adapter |
 | `src/scivianna/panel/panel_2d.py` | 2D visualization panel implementation |
 | `src/scivianna/panel/panel_3d.py` | 3D visualization panel implementation |
+| `src/scivianna/panel/panel_graph.py` | Graph visualization panel (slave-based) |
 | `src/scivianna/panel/visualisation_panel.py` | Abstract panel base class |
 | `src/scivianna/extension/extension.py` | Extension base class with hooks |
 | `src/scivianna/extension/axes.py` | Axes customization extension |
+| `src/scivianna/extension/graph.py` | Graph canvas extension (node padding, label visibility) |
 | `src/scivianna/plotter_2d/generic_plotter.py` | Plotter2D abstract interface |
 | `src/scivianna/plotter_2d/polygon/bokeh.py` | Bokeh polygon renderer |
 | `src/scivianna/plotter_2d/api.py` | Public matplotlib plotting API |
 | `src/scivianna/data/data2d.py` | Data2D container for geometry+values |
-| `src/scivianna/data/data_graph.py` | DataGraph + Link: graph of 2D nodes with directed links (WIP) |
-| `src/scivianna/plotter_graph/generic_plotter.py` | PlotterGraph abstract interface (WIP) |
+| `src/scivianna/data/data_graph.py` | DataGraph + Link: graph of 2D nodes with directed links |
+| `src/scivianna/plotter_graph/generic_plotter.py` | PlotterGraph abstract interface |
+| `src/scivianna/plotter_graph/reactflow_plotter.py` | ReactFlow graph renderer (scivianna-graph) |
 | `src/scivianna/enums.py` | GeometryType, VisualizationMode, UpdateEvent |
 | `src/scivianna/constants.py` | Global string constants |

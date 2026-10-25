@@ -114,3 +114,26 @@ class PlotterGraph:
             Function to call.
         """
         raise NotImplementedError()
+
+    def provide_on_node_selection_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the selection of nodes changes.
+        Functions arguments are the ids of the selected nodes (empty list when
+        nothing is selected).
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        raise NotImplementedError()
+
+    def provide_on_nodes_moved_callback(self, callback: Callable):
+        """Stores a function to call everytime one or several nodes are moved on the canvas.
+        Functions arguments are a list of {"id", "x", "y"} dicts, one per moved node.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        raise NotImplementedError()

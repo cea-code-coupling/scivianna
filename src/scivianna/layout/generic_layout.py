@@ -117,6 +117,14 @@ class GenericLayout:
             panel.provide_on_mouse_move_callback(self.mouse_move_callback)
             panel.provide_field_change_callback(self.field_change_callback)
             panel.provide_on_axes_change_callback(self.on_axes_change_callback)
+            if hasattr(panel, "provide_on_node_selection_change_callback"):
+                panel.provide_on_node_selection_change_callback(
+                    functools.partial(self.on_node_selection_change_callback, panel_name=panel.panel_name)
+                )
+            if hasattr(panel, "provide_on_nodes_moved_callback"):
+                panel.provide_on_nodes_moved_callback(
+                    functools.partial(self.on_nodes_moved_callback, panel_name=panel.panel_name)
+                )
 
             # 2: assuming the two first are the button to open and close the tab
             self.button_columns[panel.panel_name] = [b[0] for b in panel.gui.buttons]
@@ -422,6 +430,55 @@ class GenericLayout:
         for panel in self.visualisation_panels.values():
             if panel.sync_field:
                 panel.set_field(new_field)
+
+    def on_node_selection_change_callback(
+        self,
+        selected_nodes: List[str],
+        panel_name: str,
+    ):
+        """Function called when the selection of nodes changes on a graph panel.
+
+        It notifies every extension of the panel that owns the graph plot.
+
+        Parameters
+        ----------
+        selected_nodes : List[str]
+            Ids of the currently selected nodes (empty list when nothing is selected).
+        panel_name : str
+            Name of the panel the selection happened on.
+        """
+        for name, panel in self.visualisation_panels.items():
+            if name != panel_name:
+                continue
+            for extension in panel.extensions:
+                extension.on_node_selection_change(selected_nodes)
+
+    def on_nodes_moved_callback(
+        self,
+        moved_nodes: List[Dict[str, float]],
+        panel_name: str,
+    ):
+        """Function called when one or several nodes are moved on a graph panel.
+
+        It notifies every extension of the panel that owns the graph plot and
+        stores the new positions in the displayed graph.
+
+        Parameters
+        ----------
+        moved_nodes : List[Dict[str, float]]
+            One entry per moved node: {"id": node key, "x": new x position, "y": new y position}.
+        panel_name : str
+            Name of the panel the nodes were moved on.
+        """
+        for name, panel in self.visualisation_panels.items():
+            if name != panel_name:
+                continue
+            if panel.current_data is not None:
+                for node in moved_nodes:
+                    if node["id"] in panel.current_data.locations:
+                        panel.current_data.locations[node["id"]] = (node["x"], node["y"])
+            for extension in panel.extensions:
+                extension.on_nodes_moved(moved_nodes)
 
     def on_axes_change_callback(
         self,

@@ -428,6 +428,29 @@ class PanelGraph(VisualizationPanel):
         self.on_axes_change_callback = callback
         self.plotter.provide_on_axes_change_callback(callback)
 
+    def provide_on_node_selection_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the selection of nodes changes on the graph.
+        Functions arguments are the ids of the selected nodes (empty list when nothing
+        is selected).
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.plotter.provide_on_node_selection_change_callback(callback)
+
+    def provide_on_nodes_moved_callback(self, callback: Callable):
+        """Stores a function to call everytime one or several nodes are moved on the graph.
+        Functions arguments are a list of {"id", "x", "y"} dicts, one per moved node.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.plotter.provide_on_nodes_moved_callback(callback)
+
     def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
         """A graph has no slice location: nothing to recompute. Kept for interface compatibility.
 
