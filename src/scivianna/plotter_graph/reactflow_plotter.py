@@ -62,6 +62,22 @@ class ReactFlowPlotter(PlotterGraph):
         Color map used to shade the cells of every node (see
         ``scivianna.utils.color_tools.color_maps``). All nodes share one global
         value range so their colors are comparable.
+    color_scale : {"linear", "log"}, default "linear"
+        How values are mapped onto the color map. With "log", values <= 0 have no
+        color (they are drawn as missing values).
+    show_colorbar : bool, default False
+        Displays a colorbar over the canvas (global value range, current color
+        map and color scale).
+    colorbar_title : str, optional
+        Title of the colorbar.
+    colorbar_position : str, default "bottom-right"
+        Where the colorbar is placed (``top-left``, ``top-center``, ``top-right``,
+        ``bottom-left``, ``bottom-center``, ``bottom-right``, ``center-left``,
+        ``center-right``).
+    colorbar_orientation : {"vertical", "horizontal"}, default "vertical"
+        Orientation of the colorbar.
+    colorbar_bins : int, default 64
+        Number of color bins drawn in the colorbar.
     **flow_kwargs
         Forwarded to ``scivianna_graph.SciviannaGraph`` as display options, e.g.
         ``show_minimap=True``, ``rotation_origin=(0.5, 1.0)``.
@@ -74,6 +90,12 @@ class ReactFlowPlotter(PlotterGraph):
         pad_px: int = 2,
         color_map_name: str = "BuRd",
         fit_each: bool = False,
+        color_scale: str = "linear",
+        show_colorbar: bool = False,
+        colorbar_title: Optional[str] = None,
+        colorbar_position: str = "bottom-right",
+        colorbar_orientation: str = "vertical",
+        colorbar_bins: int = 64,
         **flow_kwargs,
     ):
         super().__init__()
@@ -81,6 +103,13 @@ class ReactFlowPlotter(PlotterGraph):
         self.scale = scale
         self.pad_px = pad_px
         self.fit_each = fit_each
+        assert color_scale in ("linear", "log"), f"color_scale must be 'linear' or 'log', found {color_scale!r}"
+        self.color_scale = color_scale
+        self.show_colorbar = show_colorbar
+        self.colorbar_title = colorbar_title
+        self.colorbar_position = colorbar_position
+        self.colorbar_orientation = colorbar_orientation
+        self.colorbar_bins = colorbar_bins
         self.color_map_name = color_map_name
         self._scale: float = 1.0
         """Pixels per data unit used for the current graph (see ``scale``)."""
@@ -118,6 +147,7 @@ class ReactFlowPlotter(PlotterGraph):
         for i, link in enumerate(data.links):
             model.add_edge(self._make_edge(link))
         self.graph_builder.set_model(model)
+        self._update_colorbar()
 
     def update_plot(self, data: DataGraph):
         """Updates the displayed graph in place.
@@ -152,6 +182,7 @@ class ReactFlowPlotter(PlotterGraph):
             plotter = self.plotters[key]
             old_data = self.graph.datas[key]
             new_data = data.datas[key]
+            self._apply_colors(new_data, data)  # shaded with the range of the new graph
             if self._same_geometry(old_data, new_data):
                 plotter.update_colors(new_data)
                 if not scale_changed:
@@ -166,17 +197,29 @@ class ReactFlowPlotter(PlotterGraph):
         self.graph_builder.update_view_sizes()
 
         self.graph = data
+        self._update_colorbar()
 
     def make_panel(self):
         """Returns the ReactFlow viewable."""
         return self.canvas
 
     def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
-        """Colorbars are not displayed in graph nodes (they would break the
-        frame == content fit). This method is a no-op kept for interface
-        compatibility.
+        """Shows or hides the canvas colorbar.
+
+        The bar always covers the global value range of the graph (all nodes share
+        it), so ``value_range`` is ignored; it is kept for interface compatibility.
+        The colorbar is drawn over the canvas, not inside the nodes, so it does not
+        change the figure sizes.
+
+        Parameters
+        ----------
+        display : bool
+            Whether the colorbar is displayed.
+        value_range : Tuple[float, float]
+            Ignored.
         """
-        pass
+        self.show_colorbar = display
+        self._update_colorbar()
 
     def set_color_map(self, color_map_name: str):
         """Re-shades every node with a new color map.
@@ -193,6 +236,7 @@ class ReactFlowPlotter(PlotterGraph):
             plotter = self.plotters[key]
             self._apply_colors(data)
             plotter.update_colors(data)
+        self._update_colorbar()
 
     def provide_on_mouse_move_callback(self, callback: Callable):
         """Stores a function to call everytime the user moves the mouse on a node.
@@ -328,26 +372,62 @@ class ReactFlowPlotter(PlotterGraph):
         self._fit_figure(plotter, data)
         return plotter
 
-    def _apply_colors(self, data: Data2D) -> None:
-        """Shades the cells of ``data`` with the current color map (in place)."""
-        min_value = np.nanmin([
-            np.asarray(d.cell_values, dtype=float).min() for d in self.graph.datas.values()
-        ])
-        max_value = np.nanmax([
-            np.asarray(d.cell_values, dtype=float).max() for d in self.graph.datas.values()
-        ])
+    def _value_range(self, graph: Optional[DataGraph] = None) -> Optional[Tuple[float, float]]:
+        """Global (min, max) of the cell values of the graph, or None if there are none.
 
+        With the log color scale, only values > 0 count.
+        """
+        graph = graph if graph is not None else self.graph
+        values = np.concatenate([np.asarray(d.cell_values, dtype=float).ravel() for d in graph.datas.values()])
+        values = values[np.isfinite(values)]
+        if self.color_scale == "log":
+            values = values[values > 0]
+        if len(values) == 0:
+            return None
+        return float(values.min()), float(values.max())
+
+    def _normalize(self, values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
+        """Position of the values in [0, 1] on the color map (NaN for missing values)."""
+        values = np.asarray(values, dtype=float)
+        if self.color_scale == "log":
+            with np.errstate(divide="ignore", invalid="ignore"):
+                values = np.where(values > 0, np.log10(values), np.nan)
+            vmin, vmax = np.log10(vmin), np.log10(vmax)
+        if vmax - vmin < 1e-12:
+            return np.where(np.isfinite(values), 0.5, np.nan)
+        return (values - vmin) / (vmax - vmin)
+
+    def _apply_colors(self, data: Data2D, graph: Optional[DataGraph] = None) -> None:
+        """Shades the cells of ``data`` with the current color map and color scale (in place).
+
+        The color range is the global one of ``graph`` (default: the displayed graph).
+        """
         values = np.asarray(data.cell_values, dtype=float)
-        finite = values[np.isfinite(values)]
-        if len(finite) == 0:
+        value_range = self._value_range(graph)
+        if value_range is None or not np.isfinite(values).any():
             data.cell_colors = np.zeros((len(values), 4)) + 255
             return
-        vmin, vmax = min_value, max_value
-        if vmax - vmin < 1e-12:
-            normalized = np.where(np.isfinite(values), 0.5, np.nan)
-        else:
-            normalized = (values - vmin) / (vmax - vmin)
+        normalized = self._normalize(values, *value_range)
         data.cell_colors = interpolate_cmap_at_values(self.color_map_name, normalized).astype(np.int16)
+
+    def _update_colorbar(self) -> None:
+        """Shows, updates or removes the canvas colorbar from the current graph and options."""
+        value_range = self._value_range() if (self.show_colorbar and self.graph is not None) else None
+        if value_range is None or not value_range[1] > value_range[0]:
+            self.graph_builder.clear_colorbar()
+            return
+        # Colors of the bin centers, in the normalized (linear or log) space.
+        centers = (np.arange(self.colorbar_bins) + 0.5) / self.colorbar_bins
+        rgba = interpolate_cmap_at_values(self.color_map_name, centers)
+        self.graph_builder.set_colorbar(
+            value_range[0],
+            value_range[1],
+            [tuple(int(round(c)) for c in row) for row in rgba],
+            scale=self.color_scale,
+            title=self.colorbar_title,
+            position=self.colorbar_position,
+            orientation=self.colorbar_orientation,
+        )
 
     @staticmethod
     def _data_bounds(data: Data2D) -> Tuple[float, float, float, float]:
