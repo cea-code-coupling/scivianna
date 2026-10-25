@@ -111,6 +111,8 @@ class ReactFlowPlotter(PlotterGraph):
         self.colorbar_orientation = colorbar_orientation
         self.colorbar_bins = colorbar_bins
         self.color_map_name = color_map_name
+        self.labels_hidden = False
+        """Whether the node labels are hidden (see :meth:`set_labels_visible`)."""
         self._scale: float = 1.0
         """Pixels per data unit used for the current graph (see ``scale``)."""
 
@@ -147,6 +149,10 @@ class ReactFlowPlotter(PlotterGraph):
         for i, link in enumerate(data.links):
             model.add_edge(self._make_edge(link))
         self.graph_builder.set_model(model)
+        if self.labels_hidden:
+            # The rebuild above reset the labels: hide them again.
+            for key in data.datas:
+                self.graph_builder.set_node_label(key, "")
         self._update_colorbar()
 
     def update_plot(self, data: DataGraph):
@@ -237,6 +243,24 @@ class ReactFlowPlotter(PlotterGraph):
             self._apply_colors(data)
             plotter.update_colors(data)
         self._update_colorbar()
+
+    def set_labels_visible(self, visible: bool):
+        """Shows or hides the label of every node.
+
+        The state is kept (``labels_hidden``) so that a later canvas rebuild
+        (:meth:`plot`) applies it again.
+
+        Parameters
+        ----------
+        visible : bool
+            Whether the node labels are displayed.
+        """
+        self.labels_hidden = not visible
+        if self.graph is None:
+            return
+        for key in self.graph.datas:
+            label = self.graph.labels.get(key, key)
+            self.graph_builder.set_node_label(key, "" if (self.labels_hidden or not label) else label)
 
     def provide_on_mouse_move_callback(self, callback: Callable):
         """Stores a function to call everytime the user moves the mouse on a node.

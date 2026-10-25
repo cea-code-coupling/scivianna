@@ -40,7 +40,8 @@ class Graph(Extension):
         self.description = """
 The graph extension allows you to customize the canvas layout.
 
-You can change the padding between a node's border and its content (label and figure).
+You can change the padding between a node's border and its content (label and figure),
+and hide all the node labels at once.
 """
 
         self.iconsize = "1.0em"
@@ -56,6 +57,12 @@ You can change the padding between a node's border and its content (label and fi
             align="center",
         )
 
+        self.hide_labels_chk = pmui.Checkbox(
+            label="Hide node labels",
+            value=False,
+            margin=5,
+        )
+
         def update_node_padding(*args, **kwargs):
             if self._restoring:
                 return
@@ -64,7 +71,13 @@ You can change the padding between a node's border and its content (label and fi
             # figures sizes so the nodes follow.
             self.plotter.graph_builder.update_view_sizes()
 
+        def update_hide_labels(*args, **kwargs):
+            if self._restoring:
+                return
+            self.plotter.set_labels_visible(not self.hide_labels_chk.value)
+
         self.node_padding_inp.param.watch(update_node_padding, "value")
+        self.hide_labels_chk.param.watch(update_hide_labels, "value")
 
     def make_gui(self) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
@@ -77,6 +90,7 @@ You can change the padding between a node's border and its content (label and fi
         return pmui.Column(
             pmui.Typography("Node padding (px)"),
             self.node_padding_inp,
+            self.hide_labels_chk,
             margin=0,
         )
 
@@ -90,6 +104,7 @@ You can change the padding between a node's border and its content (label and fi
         """
         return {
             "node_padding": self.node_padding_inp.value,
+            "hide_labels": self.hide_labels_chk.value,
         }
 
     @classmethod
@@ -111,5 +126,6 @@ You can change the padding between a node's border and its content (label and fi
         extension._restoring = True
         extension.node_padding_inp.value = info_dict.get("node_padding", 0)
         extension.plotter.canvas.node_padding = extension.node_padding_inp.value
+        extension.hide_labels_chk.value = info_dict.get("hide_labels", False)
         extension._restoring = False
         return extension
