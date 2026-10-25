@@ -6,6 +6,7 @@ import pandas as pd
 
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
+from scivianna.data.data_graph import DataGraph
 from scivianna.enums import DataType, GeometryType, VisualizationMode
 
 #   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
@@ -254,6 +255,82 @@ class Geometry2DGrid(Geometry2D):
 
     rasterized: bool = True
     """Boolean telling if the geometry is made by rasterizing a 2D grid (displays the line count in the GUI)."""
+
+
+class GraphInterface(GenericInterface):
+    """Interface parent class for classes that can compute a graph of 2D plots connected by directed links."""
+
+    def compute_graph(
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
+        q_tasks: mp.Queue,
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Tuple[DataGraph, bool]:
+        """Returns a graph of 2D plots connected by directed links to display
+
+        Parameters
+        ----------
+        u : Tuple[float, float, float]
+            Horizontal coordinate director vector
+        v : Tuple[float, float, float]
+            Vertical coordinate director vector
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        q_tasks : mp.Queue
+            Queue from which get orders from the master.
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        DataGraph
+            Graph to display
+        bool
+            Were the graph nodes updated compared to the past call
+
+        Raises
+        ------
+        NotImplementedError
+            Function to override in the code interfaces
+        """
+        raise NotImplementedError(f"Function compute_graph not implemented for class {self.__class__.__name__}.")
+
+    def get_graph_value_dict(
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+
+        Raises
+        ------
+        NotImplementedError
+            Function to override in the code interfaces
+        """
+        raise NotImplementedError(f"Function get_graph_value_dict not implemented for class {self.__class__.__name__}.")
 
 
 class Geometry3D(GenericInterface):

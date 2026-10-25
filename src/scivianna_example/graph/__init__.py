@@ -1,4 +1,4 @@
-from scivianna_example.graph.graph import make_graph
-from scivianna_example.graph.graph_example import make_graph_panel
+from scivianna_example.graph.heat_network import build_graph, make_graph_panel
+from scivianna_example.graph.heat_network_interface import HeatNetworkInterface
 
-__all__ = ["make_graph", "make_graph_panel"]
+__all__ = ["build_graph", "make_graph_panel", "HeatNetworkInterface"]

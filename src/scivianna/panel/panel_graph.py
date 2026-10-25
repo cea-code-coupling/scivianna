@@ -9,20 +9,23 @@ dragged, rotated and selected in groups.
 Like :class:`Panel2D`, it is a :class:`VisualizationPanel`: the figure sits in an
 :class:`Overlay`, extensions can be attached, updates are applied on the next UI
 tick, and the panel can be duplicated and saved to / restored from a json dict.
-Unlike :class:`Panel2D`, it is not bound to a compute slave (``slave`` is None): the
-graph (node geometries, links and layout) is provided directly, at construction
-time or with :meth:`set_graph`.
+The graph (node geometries, links and layout) is requested to a
+:class:`~scivianna.slave.ComputeSlave` whose code interface implements
+:class:`~scivianna.interface.generic_interface.GraphInterface`, in the same way
+:class:`Panel2D` uses a :class:`Geometry2D` interface.
 """
 
 import copy
 from typing import Callable, Dict, List, Optional, Tuple, Type
 
+import numpy as np
 import panel as pn
 import param
 
 from scivianna.data.data_graph import DataGraph
-from scivianna.enums import UpdateEvent
+from scivianna.enums import UpdateEvent, VisualizationMode
 from scivianna.extension.extension import Extension
+from scivianna.interface.generic_interface import GraphInterface
 from scivianna.logging_config import get_logger
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.plotter_graph.generic_plotter import PlotterGraph
@@ -30,15 +33,15 @@ from scivianna.plotter_graph.reactflow_plotter import ReactFlowPlotter
 from scivianna.extension.field_selector import FieldSelector
 from scivianna.extension.file_loader import FileLoader
 from scivianna.extension.ai_assistant import AIAssistant
-from scivianna.extension.axes import Axes
+from scivianna.extension.graph import Graph
 from scivianna.slave import ComputeSlave
 
 logger = get_logger(__name__)
 
 pn.config.inline = True
 
-# Base default extensions: a graph has no field, slice or file to select, so none of the
-# ComputeSlave based extensions of Panel2D apply.
+# Base default extensions: a graph has no slice to select, so the Slice3D
+# extension of Panel2D does not apply.
 default_extensions_graph: List[Type[Extension]] = []
 
 PLOTTER_OPTIONS = (
@@ -55,10 +58,13 @@ PLOTTER_OPTIONS = (
 )
 """ReactFlowPlotter constructor options saved by :meth:`PanelGraph.to_json`."""
 
-default_extensions_bokeh = [FileLoader, Axes, AIAssistant]
+# The graph panel has no 2D slice: the Axes extension (built for a Plotter2D)
+# does not apply.
+default_extensions_bokeh = [FileLoader, FieldSelector, Graph, AIAssistant]
+
 
 class PanelGraph(VisualizationPanel):
-    """Graph visualisation panel associated to a :class:`DataGraph`."""
+    """Graph visualisation panel associated to a code."""
 
     plotter: PlotterGraph
     """ Graph plotter displaying and updating the graph
@@ -70,10 +76,12 @@ class PanelGraph(VisualizationPanel):
 
     def __init__(
         self,
+        slave: ComputeSlave,
         name: str = "",
-        graph: Optional[DataGraph] = None,
         extensions: Optional[List[Type[Extension]]] = None,
         extension_jsons: Optional[Dict[Type[Extension], dict]] = None,
+        data: Optional[DataGraph] = None,
+        displayed_field: Optional[str] = None,
         colormap: str = "BuRd",
         **plotter_kwargs,
     ):
@@ -81,14 +89,21 @@ class PanelGraph(VisualizationPanel):
 
         Parameters
         ----------
+        slave : ComputeSlave
+            ComputeSlave object to which request the plots. Its code interface
+            must implement :class:`GraphInterface`.
         name : str
             Name of the panel.
-        graph : DataGraph, optional
-            Graph to display. Can be given later with :meth:`set_graph`.
         extensions : List[Type[Extension]], optional
             Extensions to add to the panel. None: no extension.
         extension_jsons : dict[Type[Extension], dict], optional
             Panel extensions initial options
+        data : DataGraph, optional
+            Graph with which the panel is initialized. If not given, it is
+            computed from the slave.
+        displayed_field : str, optional
+            Name of the field to display initially. None: the first label of
+            the interface.
         colormap : str
             Colormap name for coloring the nodes, defaults to "BuRd". (``color_map_name``
             is accepted as an alias, for backward compatibility.)
@@ -96,13 +111,18 @@ class PanelGraph(VisualizationPanel):
             Forwarded to :class:`ReactFlowPlotter` (e.g. ``max_size``, ``scale``,
             ``color_scale``, ``show_colorbar``, ``node_padding``, ``rotation_origin``).
         """
+        code_interface: Type[GraphInterface] = slave.code_interface
+        assert issubclass(
+            code_interface, GraphInterface
+        ), f"A PanelGraph can only be given a GraphInterface slave, received {code_interface}."
+
         colormap = plotter_kwargs.pop("color_map_name", colormap)
 
         #
         #   Initializing attributes
         #
         self.field_change_callback: Callable = None
-        """Function to call when the field is changed (never triggered: a graph has no field)"""
+        """Function to call when the field is changed"""
 
         self.on_axes_change_callback: Callable = None
         """Function to call when the axes are changed (never triggered: axes are fixed per node)"""
@@ -116,25 +136,41 @@ class PanelGraph(VisualizationPanel):
         #   Plotter creation
         #
         self.plotter = ReactFlowPlotter(color_map_name=colormap, **plotter_kwargs)
-        
+
         if extensions is None:
             extensions = default_extensions_bokeh
 
         super().__init__(
-            None,
+            slave,
             name,
             list(default_extensions_graph if extensions is None else extensions),
             extension_jsons or {},
         )
 
-        self.colormap = colormap
-
         #
         #   First plot
         #
-        if graph is not None:
-            self.plotter.plot(graph)
-            self.current_data = graph
+        if displayed_field is None:
+            labels = self.slave.get_labels()
+            displayed_field = labels[0] if labels else ""
+        self.displayed_field = displayed_field
+        for extension in self.extensions:
+            extension.on_field_change(displayed_field)
+
+        self.colormap = colormap
+
+        if data is None:
+            data_ = self.compute_fn()
+        else:
+            logger.info(
+                "PanelGraph %s initialized with DataGraph object, restoring %d nodes",
+                self.panel_name,
+                len(data.datas),
+            )
+            data_ = data
+
+        self.plotter.plot(data_)
+        self.current_data = data_
 
         try:
             pn.state.on_session_created(self.recompute)
@@ -189,6 +225,76 @@ class PanelGraph(VisualizationPanel):
             # No running session (script, notebook, tests): nothing to be thread safe with.
             self._apply_update()
 
+    def _do_recompute(self):
+        """Perform the actual recompute and schedule visual update."""
+        if not self.marked_to_recompute:
+            return
+
+        logger.info(
+            "%s - Recomputing graph, field: %s",
+            self.panel_name,
+            self.displayed_field,
+        )
+
+        data = self.compute_fn()
+
+        if data is not None:
+            # Build pending updates directly
+            self._pending_updates = {"data": data}
+
+            # Schedule visual update
+            self._schedule_update()
+
+    def compute_fn(self) -> DataGraph:
+        """Request the slave to compute a new graph, and updates the data to display
+
+        Returns
+        -------
+        DataGraph
+            Graph data.
+        """
+        options = {}
+        for extension in self.extensions:
+            ext_options = extension.provide_options()
+            options.update(ext_options)
+
+        if self.panel_coupling_extension is not None:
+            coupling_options = self.panel_coupling_extension.provide_options()
+            for key, value in coupling_options.items():
+                options[key] = value
+
+        computed_data = self.slave.compute_graph(
+            (1.0, 0.0, 0.0),
+            (0.0, 1.0, 0.0),
+            (0.0, 0.0, 0.0),
+            None,
+            self.displayed_field,
+            options,
+            caller=self.panel_name,
+        )
+
+        if computed_data is None:
+            logger.error(
+                "Got None from computed data on %s, returning past values", self.panel_name
+            )
+            return None
+
+        computed_data, graph_updated = computed_data
+
+        # The extensions color the data on their way to the plotter. A DataGraph
+        # holds one Data2D per node: each node is passed through the hook (the
+        # ReactFlowPlotter colors the nodes itself from the global value range).
+        for data in computed_data.datas.values():
+            for extension in self.extensions:
+                extension.on_updated_data(data)
+
+        # The hooks may have left cell_values as a plain list: the plotters expect arrays.
+        for data in computed_data.datas.values():
+            if not isinstance(data.cell_values, np.ndarray):
+                data.cell_values = np.array(data.cell_values)
+
+        return computed_data
+
     def set_graph(self, graph: DataGraph):
         """Displays a new graph in the panel.
 
@@ -204,11 +310,16 @@ class PanelGraph(VisualizationPanel):
         self._schedule_update()
 
     def recompute(self, *args, **kwargs):
-        """Re-applies the current graph to the plotter (e.g. when a session is created)."""
+        """Recomputes the figure based on the new parameters.
+        Public method that triggers the recompute pipeline.
+        """
         if self.current_data is None:
             return
-        self._pending_updates.setdefault("data", self.current_data)
-        self._schedule_update()
+        self.marked_to_recompute = True
+        if pn.state.curdoc is not None:
+            pn.state.curdoc.add_next_tick_callback(self._do_recompute)
+        else:
+            self._do_recompute()
 
     def set_colormap(self, colormap: str):
         """Sets the current color map
@@ -243,9 +354,11 @@ class PanelGraph(VisualizationPanel):
             Copy of the graph panel
         """
         new_panel = PanelGraph(
+            slave=self.slave.duplicate(),
             name=self.panel_name if keep_name else self.get_new_name(),
-            graph=copy.deepcopy(self.current_data) if self.current_data is not None else None,
+            data=copy.deepcopy(self.current_data) if self.current_data is not None else None,
             extensions=[e for e in self.extension_classes],
+            displayed_field=self.displayed_field,
             colormap=self.colormap,
             **self._plotter_kwargs(),
         )
@@ -259,15 +372,48 @@ class PanelGraph(VisualizationPanel):
 
         return new_panel
 
-    def get_slave(self) -> Optional[ComputeSlave]:
-        """Returns the current panel code slave: a graph panel has none.
+    def get_slave(self) -> ComputeSlave:
+        """Returns the current panel code slave.
 
         Returns
         -------
-        Optional[ComputeSlave]
-            None
+        ComputeSlave
+            Panel slave
         """
         return self.slave
+
+    def provide_on_mouse_move_callback(self, callback: Callable):
+        """Stores a function to call everytime the user moves the mouse on a node.
+        Functions arguments are location, cell_id.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.plotter.provide_on_mouse_move_callback(callback)
+
+    def provide_on_clic_callback(self, callback: Callable):
+        """Stores a function to call everytime the user clics on a node.
+        Functions arguments are location, cell_id.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.plotter.provide_on_clic_callback(callback)
+
+    def provide_field_change_callback(self, callback: Callable):
+        """Stores a function to call everytime the displayed field is changed.
+        The functions takes a string as argument.
+
+        Parameters
+        ----------
+        callback : Callable
+            Function to call.
+        """
+        self.field_change_callback = callback
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the axes are changed.
@@ -295,14 +441,31 @@ class PanelGraph(VisualizationPanel):
         pass
 
     def set_field(self, field_name: str):
-        """A graph has no field to select. Kept for interface compatibility.
+        """Updates the plotted field
 
         Parameters
         ----------
         field_name : str
-            Ignored
+            New field to display
         """
-        logger.debug("%s - A graph panel has no field to select (requested %s).", self.panel_name, field_name)
+        if self.displayed_field != field_name:
+            self.displayed_field = field_name
+
+            if field_name not in self.slave.get_labels():
+                logger.warning(
+                    f"\n\nRequested field {field_name} : field unavailable, available values : {self.slave.get_labels()}.\n\n"
+                )
+            else:
+                for extension in self.extensions:
+                    extension.on_field_change(field_name)
+
+                if pn.state.curdoc is not None:
+                    pn.state.curdoc.add_next_tick_callback(self.recompute)
+                else:
+                    self.recompute()
+
+                if self.field_change_callback is not None:
+                    self.field_change_callback(field_name)
 
     def set_coordinates(self, *args, **kwargs):
         """Axes are fixed per node in a graph plot. Kept for interface compatibility."""
@@ -333,6 +496,7 @@ class PanelGraph(VisualizationPanel):
         """
         return {
             "name": self.panel_name,
+            "displayed_field": self.displayed_field,
             "colormap": self.colormap,
             "plotter_kwargs": self._plotter_kwargs(),
             "sync_field": self.sync_field,
@@ -354,8 +518,8 @@ class PanelGraph(VisualizationPanel):
         ----------
         info_dict : Dict
             Dictionnary containing all required information to restore the panel
-        slave : ComputeSlave, optional
-            Ignored, a graph panel has no slave (kept for the signature shared with Panel2D)
+        slave : ComputeSlave
+            Panel associated slave (its code interface must implement GraphInterface)
         data : DataGraph, optional
             Initial state graph
         extensions : List[Type[Extension]], optional
@@ -369,10 +533,12 @@ class PanelGraph(VisualizationPanel):
             Restored panel
         """
         panel = PanelGraph(
+            slave=slave,
             name=info_dict["name"],
-            graph=data,
+            data=data,
             extensions=extensions,
             extension_jsons=extension_jsons,
+            displayed_field=info_dict.get("displayed_field"),
             colormap=info_dict.get("colormap", "BuRd"),
             **info_dict.get("plotter_kwargs", {}),
         )
