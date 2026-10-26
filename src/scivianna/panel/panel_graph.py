@@ -240,7 +240,7 @@ class PanelGraph(VisualizationPanel):
 
         if data is not None:
             # Build pending updates directly
-            self._pending_updates = {"data": data}
+            self._pending_updates["data"] = data
 
             # Schedule visual update
             self._schedule_update()
@@ -254,6 +254,7 @@ class PanelGraph(VisualizationPanel):
             Graph data.
         """
         options = {}
+
         for extension in self.extensions:
             ext_options = extension.provide_options()
             options.update(ext_options)
@@ -263,7 +264,7 @@ class PanelGraph(VisualizationPanel):
             for key, value in coupling_options.items():
                 options[key] = value
 
-        computed_data = self.slave.compute_graph(
+        computed_data, _ = self.slave.compute_graph(
             (1.0, 0.0, 0.0),
             (0.0, 1.0, 0.0),
             (0.0, 0.0, 0.0),
@@ -273,13 +274,14 @@ class PanelGraph(VisualizationPanel):
             caller=self.panel_name,
         )
 
+        assert isinstance(computed_data, DataGraph), \
+            f"compute_graph must return tuple[DataGraph, bool], first return of {self.slave.code_interface} was {type(computed_data)}"
+
         if computed_data is None:
             logger.error(
                 "Got None from computed data on %s, returning past values", self.panel_name
             )
             return None
-
-        computed_data, graph_updated = computed_data
 
         # The extensions color the data on their way to the plotter. The whole
         # DataGraph is passed through the hook so that the value range (min/max)
@@ -331,7 +333,7 @@ class PanelGraph(VisualizationPanel):
         if colormap != self.colormap:
             self.colormap = colormap
             self._pending_updates["colormap"] = colormap
-            self._schedule_update()
+            self.recompute()
 
     #
     # #

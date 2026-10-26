@@ -190,6 +190,9 @@ def set_graph_colors_list(
     graph: "DataGraph",
     color_map: str,
     color_scale: str = "linear",
+    center_colormap_on_zero: bool = False,
+    min_value: float = None,
+    max_value: float = None,
     offset: int = -20,
 ) -> Tuple[Optional[float], Optional[float]]:
     """Sets the colors of every node of a DataGraph.
@@ -206,6 +209,13 @@ def set_graph_colors_list(
         Colormap in which to select the colors.
     color_scale : {"linear", "log"}
         How the values are mapped onto the colormap.
+    center_colormap_on_zero : bool
+        Center the color map on zero, as in :func:`set_colors_list`. Ignored when
+        ``color_scale`` is "log" (a log scale cannot span zero).
+    min_value : float
+        Force the global scale minimum value.
+    max_value : float
+        Force the global scale maximum value.
     offset : int
         Offset added to the edge colors, as in :func:`set_colors_list`.
 
@@ -226,11 +236,27 @@ def set_graph_colors_list(
 
     vmin_global, vmax_global = float(values.min()), float(values.max())
 
+    if center_colormap_on_zero and color_scale != "log":
+        # Same symmetric range as in set_colors_list: (-minmax, minmax).
+        minmax = max(abs(vmin_global), abs(vmax_global))
+        if minmax == 0.0:
+            minmax = 1.0
+        vmin_global, vmax_global = -minmax, minmax
+
+    if min_value is not None:
+        vmin_global = float(min_value)
+    if max_value is not None:
+        vmax_global = float(max_value)
+    if vmax_global - vmin_global < 1e-12:
+        # Degenerate range (single value): keep a unit range so normalization stays finite.
+        mid = 0.5 * (vmin_global + vmax_global)
+        vmin_global, vmax_global = mid - 0.5, mid + 0.5
+
     for data in graph.datas.values():
         cell_values = np.asarray(data.cell_values, dtype=float)
 
-        if not np.isfinite(cell_values).any() or vmax_global - vmin_global < 1e-12:
-            # No value to color (or a single value): gray cells, no edges.
+        if not np.isfinite(cell_values).any():
+            # No value to color: gray cells, no edges.
             data.cell_colors = np.full((len(cell_values), 4), (200, 200, 200, 0))
             data.cell_edge_colors = np.full((len(cell_values), 4), (200, 200, 200, 0))
             continue
@@ -420,6 +446,9 @@ If a color bar is used, you can decide to center it on zero.
                         data,
                         self.color_map_selector.value_name,
                         color_scale=color_scale,
+                        center_colormap_on_zero=self.center_colormap_on_zero_tick.value,
+                        min_value=self.min_value.value if self.min_activated.value else None,
+                        max_value=self.max_value.value if self.max_activated.value else None,
                         offset=self.edge_offset.value,
                     )
                     if vmin is not None and vmax is not None:

@@ -113,6 +113,8 @@ class ReactFlowPlotter(PlotterGraph):
         self.color_map_name = color_map_name
         self.labels_hidden = False
         """Whether the node labels are hidden (see :meth:`set_labels_visible`)."""
+        self._forced_value_range: Optional[Tuple[float, float]] = None
+        """Value range forced on the colorbar by :meth:`update_colorbar`, or None."""
         self._scale: float = 1.0
         """Pixels per data unit used for the current graph (see ``scale``)."""
 
@@ -211,19 +213,24 @@ class ReactFlowPlotter(PlotterGraph):
     def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
         """Shows or hides the canvas colorbar.
 
-        The bar always covers the global value range of the graph (all nodes share
-        it), so ``value_range`` is ignored; it is kept for interface compatibility.
-        The colorbar is drawn over the canvas, not inside the nodes, so it does not
-        change the figure sizes.
+        The bar covers the global value range of the graph (all nodes share it),
+        so by default it is computed from the current graph values; a non-None
+        ``value_range`` overrides it (e.g. when the user forces min/max bounds).
+        The colorbar is drawn over the canvas, not inside the nodes, so it does
+        not change the figure sizes.
 
         Parameters
         ----------
         display : bool
             Whether the colorbar is displayed.
         value_range : Tuple[float, float]
-            Ignored.
+            Value range to display; None or (None, None) to use the graph values.
         """
         self.show_colorbar = display
+        if value_range is not None and all(v is not None for v in value_range):
+            self._forced_value_range = tuple(float(v) for v in value_range)
+        else:
+            self._forced_value_range = None
         self._update_colorbar()
 
     def set_color_map(self, color_map_name: str):
@@ -435,7 +442,12 @@ class ReactFlowPlotter(PlotterGraph):
 
     def _update_colorbar(self) -> None:
         """Shows, updates or removes the canvas colorbar from the current graph and options."""
-        value_range = self._value_range() if (self.show_colorbar and self.graph is not None) else None
+        if self.show_colorbar and self._forced_value_range is not None:
+            value_range = self._forced_value_range
+        elif self.show_colorbar and self.graph is not None:
+            value_range = self._value_range()
+        else:
+            value_range = None
         if value_range is None or not value_range[1] > value_range[0]:
             self.graph_builder.clear_colorbar()
             return

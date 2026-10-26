@@ -162,3 +162,40 @@ def test_heat_network_colors():
         dist_k = np.linalg.norm(np.asarray(pipe_1.cell_colors[k], dtype=float) - 255)
         dist_k1 = np.linalg.norm(np.asarray(pipe_1.cell_colors[k + 1], dtype=float) - 255)
         assert dist_k > dist_k1, "colors should move toward the white middle along the cooling pipe"
+
+
+@pytest.mark.graph
+def test_graph_colors_forced_range_and_centering():
+    """Forced min/max bounds and centering on zero change the global color range.
+
+    With a forced max below the data maximum, values above it saturate at the
+    top of the colormap; with a forced min only, the minimum stays at the data
+    value; centering on zero makes the range symmetric around 0.
+    """
+    from scivianna_example.graph import build_graph
+
+    # Global data range is [140, 190] (see test_heat_network_colors).
+    graph = build_graph()
+    set_graph_colors_list(graph, "BuRd")
+    color_default = tuple(int(c) for c in graph.datas["generator"].cell_colors[2])
+
+    # Force the max below the data maximum: the 190 value saturates at the top.
+    graph = build_graph()
+    vmin, vmax = set_graph_colors_list(graph, "BuRd", min_value=140.0, max_value=180.0)
+    assert (vmin, vmax) == (140.0, 180.0)
+    color_saturated = tuple(int(c) for c in graph.datas["generator"].cell_colors[2])
+    # The saturated color is the top of BuRd, not the default-range color.
+    from scivianna.utils.color_tools import interpolate_cmap_at_values
+
+    assert color_saturated == tuple(int(c) for c in interpolate_cmap_at_values("BuRd", 1.0))
+    assert color_saturated != color_default
+
+    # Force only the min: the max stays at the data maximum.
+    graph = build_graph()
+    vmin, vmax = set_graph_colors_list(graph, "BuRd", min_value=150.0)
+    assert (vmin, vmax) == (150.0, 190.0)
+
+    # Center on zero: the range is symmetric around 0, so it spans [-190, 190].
+    graph = build_graph()
+    vmin, vmax = set_graph_colors_list(graph, "BuRd", center_colormap_on_zero=True)
+    assert (vmin, vmax) == (-190.0, 190.0)

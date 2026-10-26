@@ -63,7 +63,7 @@ grid = [
 ]
 graph = [
     "pydantic",
-    "scivianna-graph"
+    "scivianna-graph>=0.1.1"
 ]
 test = [
     "pytest-xdist",
