@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from scivianna.panel.panel_2d import Panel2D
     from scivianna.panel.panel_1d import Panel1D
     from scivianna.panel.panel_dataframe import PanelDataFrame
+    from scivianna.panel.panel_graph import PanelGraph
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.layout.split import SplitLayout, SplitItem
     from scivianna.layout.gridstack import GridStackLayout

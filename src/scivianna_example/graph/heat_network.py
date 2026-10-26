@@ -189,7 +189,7 @@ def build_graph():
     
     pipe_1 = pipe_data(Pipe("pipe_1", 3., .15, 90, np.linspace(190, 170, 10)))
     pipe_2 = pipe_data(Pipe("pipe_2", 3., .15, 90, np.linspace(170, 150, 10)))
-    pipe_3 = pipe_data(Pipe("pipe_3", 3., .15, 90, np.linspace(170, 140, 10)))
+    pipe_3 = pipe_data(Pipe("pipe_3", 3., .15, 90, np.linspace(170, 150, 10)))
     pipe_4 = pipe_data(Pipe("pipe_4", 3., .15, 90, np.linspace(150, 140, 10)))
     
     factory_1 = make_factory("factory_1", 150)
@@ -205,7 +205,7 @@ def build_graph():
         "factory_2": factory_2,
     }
     locations = {
-        "generator": (0, 0),
+        "generator": (0, -130),
         "pipe_1": (150, -170),
         "pipe_2": (570, -250),
         "pipe_3": (650, -170),

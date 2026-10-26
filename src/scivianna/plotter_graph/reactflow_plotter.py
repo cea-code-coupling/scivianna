@@ -188,7 +188,6 @@ class ReactFlowPlotter(PlotterGraph):
             plotter = self.plotters[key]
             old_data = self.graph.datas[key]
             new_data = data.datas[key]
-            self._apply_colors(new_data, data)  # shaded with the range of the new graph
             if self._same_geometry(old_data, new_data):
                 plotter.update_colors(new_data)
                 if not scale_changed:
@@ -228,7 +227,11 @@ class ReactFlowPlotter(PlotterGraph):
         self._update_colorbar()
 
     def set_color_map(self, color_map_name: str):
-        """Re-shades every node with a new color map.
+        """Stores a new color map name and refreshes the colorbar.
+
+        The node colors themselves are computed by the FieldSelector extension
+        (``set_graph_colors_list``) on each data update, so this method only
+        updates the state used for the next coloring and for the colorbar.
 
         Parameters
         ----------
@@ -236,12 +239,6 @@ class ReactFlowPlotter(PlotterGraph):
             Color map name (see ``scivianna.utils.color_tools.color_maps``).
         """
         self.color_map_name = color_map_name
-        if self.graph is None:
-            return
-        for key, data in self.graph.datas.items():
-            plotter = self.plotters[key]
-            self._apply_colors(data)
-            plotter.update_colors(data)
         self._update_colorbar()
 
     def set_labels_visible(self, visible: bool):
@@ -382,9 +379,12 @@ class ReactFlowPlotter(PlotterGraph):
         )
 
     def _make_plotter(self, data: Data2D) -> Bokeh2DPolygonPlotter:
-        """Fills a scivianna Bokeh plotter with the data, then makes it hover-only and fitted."""
+        """Fills a scivianna Bokeh plotter with the data, then makes it hover-only and fitted.
+
+        The cell colors are already set on ``data`` by the FieldSelector extension
+        (``set_graph_colors_list``) before the panel plots the graph.
+        """
         plotter = Bokeh2DPolygonPlotter()
-        self._apply_colors(data)
         plotter.plot_2d_frame(data)
 
         fig = plotter.figure
@@ -432,30 +432,6 @@ class ReactFlowPlotter(PlotterGraph):
         if len(values) == 0:
             return None
         return float(values.min()), float(values.max())
-
-    def _normalize(self, values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
-        """Position of the values in [0, 1] on the color map (NaN for missing values)."""
-        values = np.asarray(values, dtype=float)
-        if self.color_scale == "log":
-            with np.errstate(divide="ignore", invalid="ignore"):
-                values = np.where(values > 0, np.log10(values), np.nan)
-            vmin, vmax = np.log10(vmin), np.log10(vmax)
-        if vmax - vmin < 1e-12:
-            return np.where(np.isfinite(values), 0.5, np.nan)
-        return (values - vmin) / (vmax - vmin)
-
-    def _apply_colors(self, data: Data2D, graph: Optional[DataGraph] = None) -> None:
-        """Shades the cells of ``data`` with the current color map and color scale (in place).
-
-        The color range is the global one of ``graph`` (default: the displayed graph).
-        """
-        values = np.asarray(data.cell_values, dtype=float)
-        value_range = self._value_range(graph)
-        if value_range is None or not np.isfinite(values).any():
-            data.cell_colors = np.zeros((len(values), 4)) + 255
-            return
-        normalized = self._normalize(values, *value_range)
-        data.cell_colors = interpolate_cmap_at_values(self.color_map_name, normalized).astype(np.int16)
 
     def _update_colorbar(self) -> None:
         """Shows, updates or removes the canvas colorbar from the current graph and options."""

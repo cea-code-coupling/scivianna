@@ -1,7 +1,8 @@
-"""Tests for the Graph extension (node padding, node labels)."""
+"""Tests for the Graph extension (node padding, node labels) and the graph coloring."""
 
 import copy
 
+import numpy as np
 import pytest
 pytest.importorskip("scivianna_graph")
 
@@ -11,6 +12,7 @@ scivianna.utils._testing = True
 
 from test_panel_graph import make_graph_panel
 
+from scivianna.extension.field_selector import set_graph_colors_list
 from scivianna.extension.graph import Graph
 
 
@@ -114,3 +116,49 @@ def test_extension_json_round_trip():
         assert panel.plotter.canvas.node_padding == 5
     finally:
         cleanup()
+
+
+@pytest.mark.graph
+def test_heat_network_colors():
+    """The heat network example is colored with a global value range, as expected.
+
+    The values span 140 (factory_2) to 190 (generator band 2 / pipe inlets). With
+    the default BuRd map: low values are blue, high values red, and every node of
+    the same value shares the exact same color.
+    """
+    from scivianna_example.graph import build_graph
+
+    graph = build_graph()
+    set_graph_colors_list(graph, "BuRd")
+
+    # Every node got colors (and edge colors) for all its cells.
+    for key, data in graph.datas.items():
+        assert len(data.cell_colors) == len(data.cell_ids)
+        assert len(data.cell_edge_colors) == len(data.cell_ids)
+
+    def color_of(node: str, index: int = 0):
+        return tuple(int(c) for c in graph.datas[node].cell_colors[index])
+
+    # The colormapped endpoints of BuRd.
+    low = color_of("factory_2")   # value 140 -> minimum of the range
+    high = color_of("generator", 2)  # value 190 -> maximum of the range
+    assert low[2] > low[0], f"the lowest value should be blue, found {low}"
+    assert high[0] > high[2], f"the highest value should be red, found {high}"
+
+    # Same value -> same color, across different nodes.
+    assert color_of("generator", 0) == color_of("factory_2")      # both 140
+    assert color_of("generator", 2) == color_of("pipe_1", 0)      # both 190
+
+    # A middle value is strictly between the two endpoints, on the same axis.
+    mid = color_of("factory_1")  # value 150
+    assert low[2] < mid[2] < high[2] or low[0] < mid[0] < high[0], \
+        f"the middle value should sit between the endpoints, found {mid}"
+
+    # The colors are monotonic along a pipe: values decrease from inlet to outlet
+    # (190 -> 170), all on the red side of BuRd, so each segment moves closer to
+    # the white middle.
+    pipe_1 = graph.datas["pipe_1"]
+    for k in range(len(pipe_1.cell_ids) - 1):
+        dist_k = np.linalg.norm(np.asarray(pipe_1.cell_colors[k], dtype=float) - 255)
+        dist_k1 = np.linalg.norm(np.asarray(pipe_1.cell_colors[k + 1], dtype=float) - 255)
+        assert dist_k > dist_k1, "colors should move toward the white middle along the cooling pipe"

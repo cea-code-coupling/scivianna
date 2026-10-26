@@ -281,12 +281,11 @@ class PanelGraph(VisualizationPanel):
 
         computed_data, graph_updated = computed_data
 
-        # The extensions color the data on their way to the plotter. A DataGraph
-        # holds one Data2D per node: each node is passed through the hook (the
-        # ReactFlowPlotter colors the nodes itself from the global value range).
-        for data in computed_data.datas.values():
-            for extension in self.extensions:
-                extension.on_updated_data(data)
+        # The extensions color the data on their way to the plotter. The whole
+        # DataGraph is passed through the hook so that the value range (min/max)
+        # is computed globally across all nodes, not per node.
+        for extension in self.extensions:
+            extension.on_updated_data(computed_data)
 
         # The hooks may have left cell_values as a plain list: the plotters expect arrays.
         for data in computed_data.datas.values():

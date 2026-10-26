@@ -5,7 +5,7 @@ This module provides field selection and colormap configuration for visualizatio
 """
 
 import time
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import panel as pn
@@ -13,6 +13,7 @@ import panel_material_ui as pmui
 
 from scivianna.constants import OUTSIDE
 from scivianna.data.data2d import Data2D
+from scivianna.data.data_graph import DataGraph
 from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
@@ -185,6 +186,69 @@ def set_colors_list(
     return min_val, minmax
 
 
+def set_graph_colors_list(
+    graph: DataGraph,
+    color_map: str,
+    color_scale: str = "linear",
+    offset: int = -20,
+) -> Tuple[Optional[float], Optional[float]]:
+    """Sets the colors of every node of a DataGraph.
+
+    All nodes share one global value range (the min/max over the whole graph),
+    so their colors are comparable between nodes. With ``color_scale="log"`` only
+    values > 0 are colored, the others are drawn as missing values.
+
+    Parameters
+    ----------
+    graph : DataGraph
+        Graph whose nodes are colored (in place).
+    color_map : str
+        Colormap in which to select the colors.
+    color_scale : {"linear", "log"}
+        How the values are mapped onto the colormap.
+    offset : int
+        Offset added to the edge colors, as in :func:`set_colors_list`.
+
+    Returns
+    -------
+    Tuple[Optional[float], Optional[float]]
+        The global (vmin, vmax) used for normalization, or (None, None) if no
+        finite value was found.
+    """
+    assert color_scale in ("linear", "log"), f"color_scale must be 'linear' or 'log', found {color_scale!r}"
+
+    values = np.concatenate([np.asarray(d.cell_values, dtype=float).ravel() for d in graph.datas.values()])
+    values = values[np.isfinite(values)]
+    if color_scale == "log":
+        values = values[values > 0]
+    if len(values) == 0:
+        return None, None
+
+    vmin_global, vmax_global = float(values.min()), float(values.max())
+
+    for data in graph.datas.values():
+        cell_values = np.asarray(data.cell_values, dtype=float)
+
+        if not np.isfinite(cell_values).any() or vmax_global - vmin_global < 1e-12:
+            # No value to color (or a single value): gray cells, no edges.
+            data.cell_colors = np.full((len(cell_values), 4), (200, 200, 200, 0))
+            data.cell_edge_colors = np.full((len(cell_values), 4), (200, 200, 200, 0))
+            continue
+
+        if color_scale == "log":
+            with np.errstate(divide="ignore", invalid="ignore"):
+                normalized = np.where(cell_values > 0, np.log10(cell_values), np.nan)
+            vmin, vmax = np.log10(vmin_global), np.log10(vmax_global)
+        else:
+            vmin, vmax = vmin_global, vmax_global
+
+        normalized = (cell_values - vmin) / (vmax - vmin)
+        data.cell_colors = interpolate_cmap_at_values(color_map, normalized).astype(np.int16)
+        data.cell_edge_colors = get_edges_colors(data.cell_colors, offset=offset)
+
+    return vmin_global, vmax_global
+
+
 class FieldSelector(Extension):
     """Extension used to select the displayed field and edit its colors."""
 
@@ -338,14 +402,33 @@ If a color bar is used, you can decide to center it on zero.
         self.field_color_selector.options = list(self.slave.get_labels())
         self.field_color_selector.value = self.field_color_selector.options[0]
 
-    def on_updated_data(self, data: Data2D):
+    def on_updated_data(self, data: Union[Data2D, DataGraph]):
         """Function called when the displayed data is being updated. Extension can edit the data on its way to the plotter.
 
         Parameters
         ----------
-        data : Data2D
-            Data to display
+        data : Data2D or DataGraph
+            Data to display. A DataGraph (graph panel) is colored node by node
+            with a global value range, see :func:`set_graph_colors_list`.
         """
+        if isinstance(data, DataGraph):
+            color_scale = getattr(self.plotter, "color_scale", "linear")
+            vmin, vmax = set_graph_colors_list(
+                data,
+                self.color_map_selector.value_name,
+                color_scale=color_scale,
+                offset=self.edge_offset.value,
+            )
+            if vmin is not None and vmax is not None:
+                self.panel.plotter.update_colorbar(True, value_range=(vmin, vmax))
+                self._restoring = True
+                if not self.min_activated.value:
+                    self.min_value.value = vmin
+                if not self.max_activated.value:
+                    self.max_value.value = vmax
+                self._restoring = False
+            return
+
         min_val, minmax = set_colors_list(
             data,
             self.slave,
