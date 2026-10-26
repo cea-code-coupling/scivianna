@@ -39,6 +39,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Type, Union
 
 import dill
+import numpy as np
 import pandas as pd
 import panel as pn
 
@@ -56,16 +57,17 @@ from scivianna.interface.generic_interface import (
     GenericInterface,
     Geometry2D,
     Geometry3D,
+    GraphInterface,
     Value1DAtLocation,
     ValueAtLocation,
 )
 from scivianna.logging_config import get_logger
 
-logger = get_logger(__name__)
-
-#   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
 if TYPE_CHECKING:
+    from scivianna.data.data_graph import DataGraph
     import medcoupling
+
+logger = get_logger(__name__)
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 
@@ -98,6 +100,12 @@ class SlaveCommand:
     """Returns the values of a field at cells"""
     GET_GEOMETRY_TYPE = "get_geometry_type"
     """Returns the geometry type"""
+
+    #   GraphInterface functions
+    COMPUTE_GRAPH = "compute_graph"
+    """Compute a graph of 2D plots connected by directed links"""
+    GET_GRAPH_VALUE_DICT = "get_graph_value_dict"
+    """Returns the values of a field at cells of a graph"""
 
     #   Geometry3D functions
     COMPUTE_3D_DATA = "compute_3d_data"
@@ -262,6 +270,58 @@ def worker(
 
             elif task == SlaveCommand.GET_GEOMETRY_TYPE:
                 q_returns.put(interface.geometry_type)
+
+            #
+            #   GraphInterface functions
+            elif task == SlaveCommand.COMPUTE_GRAPH:
+                u, v, origin, q_tasks_, coloring_label, options, caller = data
+
+                if not isinstance(interface, GraphInterface):
+                    raise TypeError(
+                        f"The requested panel is not associated to an GraphInterface, found class {type(interface)}."
+                    )
+                graph: "DataGraph"
+                graph, graph_updated = interface.compute_graph(
+                    u=u,
+                    v=v,
+                    origin=origin,
+                    q_tasks=q_tasks_,
+                    options=options,
+                    caller=caller,
+                )
+
+                cells = [cell for data in graph.datas.values() for cell in data.cell_ids]
+                dict_value_per_cell = interface.get_graph_value_dict(
+                    value_label=coloring_label,
+                    cells=list(cells),
+                    options=options,
+                    caller=caller,
+                )
+
+                for key in graph.datas:
+                    data_ = graph.datas[key]
+                    data_.cell_values = np.array([dict_value_per_cell[v] for v in data_.cell_ids])
+
+                q_returns.put(
+                    [
+                        graph,
+                        graph_updated,
+                    ]
+                )
+
+            elif task == SlaveCommand.GET_GRAPH_VALUE_DICT:
+                if not isinstance(interface, GraphInterface):
+                    raise TypeError(
+                        f"The requested panel is not associated to an GraphInterface, found class {type(interface)}."
+                    )
+                value_label, cells, options, caller = data
+                set_return = interface.get_graph_value_dict(
+                    value_label=value_label,
+                    cells=cells,
+                    options=options,
+                    caller=caller,
+                )
+                q_returns.put(set_return)
 
             #   Geometry3D functions
             elif task == SlaveCommand.COMPUTE_3D_DATA:
@@ -731,6 +791,85 @@ See https://docs.python.org/3/library/__main__.html for more information.
             Interface geometry type
         """
         return self.__get_function([SlaveCommand.GET_GEOMETRY_TYPE, []])
+
+    #   GraphInterface functions
+    def compute_graph(
+        self,
+        u: Tuple[float, float, float],
+        v: Tuple[float, float, float],
+        origin: Tuple[float, float, float],
+        q_tasks: mp.Queue,
+        coloring_label: str,
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Tuple["DataGraph", bool]:
+        """Get the graph from the interface
+
+        Parameters
+        ----------
+        u : Tuple[float, float, float]
+            Horizontal coordinate director vector
+        v : Tuple[float, float, float]
+            Vertical coordinate director vector
+        origin : Tuple[float, float, float]
+            Physical 3D position of the slice center
+        q_tasks : mp.Queue
+            Queue from which get orders from the master.
+        coloring_label : str
+            Field label to display
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Tuple[DataGraph, bool]
+            DataGraph object containing the graph, whether the nodes were updated
+        """
+        return self.__get_function(
+            [
+                SlaveCommand.COMPUTE_GRAPH,
+                [
+                    u,
+                    v,
+                    origin,
+                    q_tasks,
+                    coloring_label,
+                    options,
+                    caller,
+                ],
+            ]
+        )
+
+    def get_graph_value_dict(
+        self,
+        value_label: str,
+        cells: List[Union[int, str]],
+        options: Dict[str, Any],
+        caller: str = "API",
+    ) -> Dict[Union[int, str], str]:
+        """Returns a cell name - field value map for a given field name
+
+        Parameters
+        ----------
+        value_label : str
+            Field name to get values from
+        cells : List[Union[int,str]]
+            List of cells names
+        options : Dict[str, Any]
+            Additional options for frame computation.
+        caller : str
+            Identifier of the caller requesting the computation (default: "API")
+
+        Returns
+        -------
+        Dict[Union[int,str], str]
+            Field value for each requested cell names
+        """
+        return self.__get_function(
+            [SlaveCommand.GET_GRAPH_VALUE_DICT, [value_label, cells, options, caller]]
+        )
 
     #   Geometry3D functions
     def compute_3D_data(self, coloring_label: str, options: Dict[str, Any]) -> Tuple[Data3D, bool]:

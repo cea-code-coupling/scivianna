@@ -165,6 +165,10 @@ class VisualizationPanel(pn.viewable.Viewer):
         for extension in self.extensions:
             self.provide_on_clic_callback(extension.on_mouse_clic)
             self.provide_on_mouse_move_callback(extension.on_mouse_move)
+            if hasattr(self, "provide_on_node_selection_change_callback"):
+                self.provide_on_node_selection_change_callback(extension.on_node_selection_change)
+            if hasattr(self, "provide_on_nodes_moved_callback"):
+                self.provide_on_nodes_moved_callback(extension.on_nodes_moved)
 
         self.figure.param.watch(self.key_pressed, "key")
 

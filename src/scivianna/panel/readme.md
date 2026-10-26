@@ -11,6 +11,7 @@ The `panel` module provides the core visualization panel classes that display an
 | `panel_1d.py` | 1D plot panel for line charts and time series |
 | `panel_2d.py` | 2D plot panel for geometry visualization (polygons, grids) |
 | `panel_3d.py` | 3D plot panel for VTK-based volumetric visualization |
+| `panel_graph.py` | Graph plot panel displaying a set of 2D nodes connected by links (coupling topology) |
 | `panel_dataframe.py` | DataFrame panel for displaying pandas DataFrames |
 | `gui.py` | GUI manager for panel controls and sidebars |
 | `demo.py` | Demonstrator application with example panels |
@@ -68,6 +69,12 @@ Displays three-dimensional VTK-based geometry:
 - 3D camera controls (rotate, pan, zoom)
 - Color mapping on 3D cell values
 - Keyboard shortcuts: `C` (toggle clipping), `X`/`Y`/`Z` (clip axis)
+
+### PanelGraph
+Displays a graph of 2D plots connected by directed links (work in progress):
+- Each node renders a `Data2D` payload at its layout position
+- Directed links show how data flows between nodes (coupling topology)
+- Rendered by a `PlotterGraph` backend
 
 ### PanelDataFrame
 Displays pandas DataFrames in an interactive table view:

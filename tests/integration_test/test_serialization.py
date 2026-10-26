@@ -13,11 +13,13 @@ from scivianna.utils.serialization import (
     load_panel1d_from_file,
     load_panel2d_from_file,
     load_panel3d_from_file,
+    load_panelgraph_from_file,
     load_paneldatframe_from_file,
     load_slave_from_file,
     save_panel1d_to_file,
     save_panel2d_to_file,
     save_panel3d_to_file,
+    save_panelgraph_to_file,
     save_paneldatframe_to_file,
     save_slave_to_file,
 )
@@ -307,6 +309,59 @@ def test_serialize_demo_3d():
         if new_layout is not None:
             for panel in new_layout.visualisation_panels.values():
                 panel.get_slave().terminate()
+
+
+# =============================================================================
+# PANELGRAPH SERIALIZATION
+# =============================================================================
+
+@pytest.mark.graph
+def test_serialize_panelgraph():
+    """Serialize and restore the heat network graph panel, verify graph and state survive."""
+    from scivianna.interface import register_interface
+    from scivianna_example.graph.heat_network import make_graph_panel
+    from scivianna_example.graph.heat_network_interface import HeatNetworkInterface
+
+    slave = None
+    panel_loaded = None
+    try:
+        # Register the example interface so it can be looked up by name on load.
+        register_interface("HeatNetwork", HeatNetworkInterface)
+
+        panel = make_graph_panel()
+        slave = panel.get_slave()
+
+        # Exercise some state before saving.
+        panel.set_colormap("viridis")
+
+        zip_path = Path("panelgraph_test.zip")
+        save_panelgraph_to_file(panel, zip_path)
+        mark_for_deletion(zip_path)
+        slave.terminate()
+
+        panel_loaded = load_panelgraph_from_file(zip_path)
+        slave_loaded = panel_loaded.get_slave()
+
+        # Verify the panel state was restored.
+        assert panel_loaded.panel_name == "Graph example"
+        assert panel_loaded.displayed_field == "Temperature"
+        assert panel_loaded.colormap == "viridis"
+
+        # Verify the graph (nodes, links and values) survived the round trip.
+        assert len(panel_loaded.current_data.datas) == 7
+        assert len(panel_loaded.current_data.links) == 6
+        for key, data in panel_loaded.current_data.datas.items():
+            assert len(data.cell_values) == len(data.cell_ids)
+
+        # Verify the restored slave still serves values.
+        labels = slave_loaded.get_labels()
+        assert "Temperature" in labels
+
+    finally:
+        if slave is not None:
+            slave.terminate()
+        if panel_loaded is not None:
+            panel_loaded.get_slave().terminate()
 
 
 # =============================================================================

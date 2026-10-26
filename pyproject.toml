@@ -61,6 +61,10 @@ grid = [
     "pyvista",
     "scivianna-vtk>=0.1.11"
 ]
+graph = [
+    "pydantic",
+    "scivianna-graph"
+]
 test = [
     "pytest-xdist",
     "flake8",
@@ -128,6 +132,7 @@ markers = [
     "coupling: Coupling tests that require CP3O to be installed",
     "agent: Tests for the Data2DWorker",
     "grid: Tests related to rasterio",
+    "graph: Graph panel tests that require the graph dependencies (scivianna-graph)",
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
