@@ -63,9 +63,7 @@ grid = [
 ]
 graph = [
     "pydantic",
-    # scivianna-graph is a local, self-contained package (see the
-    # scivianna-graph/ directory); install it with
-    # `pip install -e path/to/scivianna-graph`. It needs no panel-reactflow.
+    "scivianna-graph"
 ]
 test = [
     "pytest-xdist",

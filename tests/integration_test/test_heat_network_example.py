@@ -6,12 +6,12 @@ import scivianna.utils
 
 scivianna.utils._testing = True
 
-from scivianna_example.graph import make_graph_panel
-
 
 @pytest.mark.graph
 def test_heat_network_example():
     """The example panel builds its graph through the slave and terminates cleanly."""
+    from scivianna_example.graph import make_graph_panel
+
     panel = make_graph_panel()
 
     try:
