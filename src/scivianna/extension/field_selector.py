@@ -13,7 +13,6 @@ import panel_material_ui as pmui
 
 from scivianna.constants import OUTSIDE
 from scivianna.data.data2d import Data2D
-from scivianna.data.data_graph import DataGraph
 from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
@@ -30,6 +29,7 @@ logger = get_logger(__name__)
 if TYPE_CHECKING:
     from scivianna.panel.visualisation_panel import VisualizationPanel
     from scivianna.slave import ComputeSlave
+    from scivianna.data.data_graph import DataGraph
 
 profile_time = False
 
@@ -187,7 +187,7 @@ def set_colors_list(
 
 
 def set_graph_colors_list(
-    graph: DataGraph,
+    graph: "DataGraph",
     color_map: str,
     color_scale: str = "linear",
     offset: int = -20,
@@ -402,7 +402,7 @@ If a color bar is used, you can decide to center it on zero.
         self.field_color_selector.options = list(self.slave.get_labels())
         self.field_color_selector.value = self.field_color_selector.options[0]
 
-    def on_updated_data(self, data: Union[Data2D, DataGraph]):
+    def on_updated_data(self, data: Union[Data2D, "DataGraph"]):
         """Function called when the displayed data is being updated. Extension can edit the data on its way to the plotter.
 
         Parameters
@@ -411,23 +411,31 @@ If a color bar is used, you can decide to center it on zero.
             Data to display. A DataGraph (graph panel) is colored node by node
             with a global value range, see :func:`set_graph_colors_list`.
         """
-        if isinstance(data, DataGraph):
-            color_scale = getattr(self.plotter, "color_scale", "linear")
-            vmin, vmax = set_graph_colors_list(
-                data,
-                self.color_map_selector.value_name,
-                color_scale=color_scale,
-                offset=self.edge_offset.value,
-            )
-            if vmin is not None and vmax is not None:
-                self.panel.plotter.update_colorbar(True, value_range=(vmin, vmax))
-                self._restoring = True
-                if not self.min_activated.value:
-                    self.min_value.value = vmin
-                if not self.max_activated.value:
-                    self.max_value.value = vmax
-                self._restoring = False
-            return
+        if not isinstance(data, Data2D):
+            try:
+                from scivianna.data.data_graph import DataGraph
+                if isinstance(data, DataGraph):
+                    color_scale = getattr(self.plotter, "color_scale", "linear")
+                    vmin, vmax = set_graph_colors_list(
+                        data,
+                        self.color_map_selector.value_name,
+                        color_scale=color_scale,
+                        offset=self.edge_offset.value,
+                    )
+                    if vmin is not None and vmax is not None:
+                        self.panel.plotter.update_colorbar(True, value_range=(vmin, vmax))
+                        self._restoring = True
+                        if not self.min_activated.value:
+                            self.min_value.value = vmin
+                        if not self.max_activated.value:
+                            self.max_value.value = vmax
+                        self._restoring = False
+                    return
+            except:
+                pass
+
+            else:
+                raise TypeError(f"Field selector received a data type {type(data)}, only Data2D and DataGraph are implemented")
 
         min_val, minmax = set_colors_list(
             data,
