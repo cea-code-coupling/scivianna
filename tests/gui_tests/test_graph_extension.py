@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+pytest.importorskip("scivianna_graph")
 
 import scivianna.utils
 

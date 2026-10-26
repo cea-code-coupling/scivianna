@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+pytest.importorskip("scivianna_graph")
 
 from scivianna.interface.csv_result import CSVInterface
 from scivianna.interface.generic_interface import GraphInterface

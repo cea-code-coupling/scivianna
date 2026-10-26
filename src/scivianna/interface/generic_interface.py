@@ -6,12 +6,12 @@ import pandas as pd
 
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
-from scivianna.data.data_graph import DataGraph
 from scivianna.enums import DataType, GeometryType, VisualizationMode
 
 #   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
 if TYPE_CHECKING:
     import medcoupling
+    from scivianna.data.data_graph import DataGraph
 
 from scivianna.constants import MATERIAL, MESH
 
@@ -268,7 +268,7 @@ class GraphInterface(GenericInterface):
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
-    ) -> Tuple[DataGraph, bool]:
+    ) -> Tuple["DataGraph", bool]:
         """Returns a graph of 2D plots connected by directed links to display
 
         Parameters

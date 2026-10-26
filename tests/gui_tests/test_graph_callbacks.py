@@ -6,6 +6,7 @@ to ``Bokeh2DPolygonPlotter.send_event``.
 """
 
 import pytest
+pytest.importorskip("scivianna_graph")
 
 import scivianna.utils
 

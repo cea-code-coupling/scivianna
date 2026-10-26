@@ -4,6 +4,7 @@ import copy
 
 import numpy as np
 import pytest
+pytest.importorskip("scivianna_graph")
 
 import scivianna.utils
 
