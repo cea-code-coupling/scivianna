@@ -119,17 +119,20 @@ def test_extension_json_round_trip():
 
 
 @pytest.mark.graph
-def test_heat_network_colors():
+@pytest.mark.parametrize("color_map", ["BuRd", "viridis"])
+def test_heat_network_colors(color_map):
     """The heat network example is colored with a global value range, as expected.
 
     The values span 140 (factory_2) to 190 (generator band 2 / pipe inlets). With
     the default BuRd map: low values are blue, high values red, and every node of
-    the same value shares the exact same color.
+    the same value shares the exact same color. viridis is checked too: it is a
+    sequential map (dark -> light), so the same-value / monotonicity properties
+    hold while the endpoint checks don't.
     """
     from scivianna_example.graph import build_graph
 
     graph = build_graph()
-    set_graph_colors_list(graph, "BuRd")
+    set_graph_colors_list(graph, color_map)
 
     # Every node got colors (and edge colors) for all its cells.
     for key, data in graph.datas.items():
@@ -139,33 +142,54 @@ def test_heat_network_colors():
     def color_of(node: str, index: int = 0):
         return tuple(int(c) for c in graph.datas[node].cell_colors[index])
 
-    # The colormapped endpoints of BuRd.
     low = color_of("factory_2")   # value 140 -> minimum of the range
     high = color_of("generator", 2)  # value 190 -> maximum of the range
-    assert low[2] > low[0], f"the lowest value should be blue, found {low}"
-    assert high[0] > high[2], f"the highest value should be red, found {high}"
+
+    if color_map == "BuRd":
+        # The colormapped endpoints of BuRd.
+        assert low[2] > low[0], f"the lowest value should be blue, found {low}"
+        assert high[0] > high[2], f"the highest value should be red, found {high}"
+
+        # A middle value is strictly between the two endpoints, on the same axis.
+        mid = color_of("factory_1")  # value 150
+        assert low[2] < mid[2] < high[2] or low[0] < mid[0] < high[0], \
+            f"the middle value should sit between the endpoints, found {mid}"
+
+    else:
+        # viridis is sequential: the minimum is dark, the maximum is light.
+        assert sum(low[:3]) < 3 * 120, f"the lowest value should be dark, found {low}"
+        assert sum(high[:3]) > 3 * 150, f"the highest value should be light, found {high}"
 
     # Same value -> same color, across different nodes.
     assert color_of("generator", 0) == color_of("factory_2")      # both 140
     assert color_of("generator", 2) == color_of("pipe_1", 0)      # both 190
 
-    # A middle value is strictly between the two endpoints, on the same axis.
-    mid = color_of("factory_1")  # value 150
-    assert low[2] < mid[2] < high[2] or low[0] < mid[0] < high[0], \
-        f"the middle value should sit between the endpoints, found {mid}"
-
     # The colors are monotonic along a pipe: values decrease from inlet to outlet
-    # (190 -> 170), all on the red side of BuRd, so each segment moves closer to
-    # the white middle.
+    # (190 -> 170). For BuRd the pipe sits on the red side of the diverging map,
+    # so each segment moves closer to the white middle. For viridis (sequential)
+    # the whole pipe is in the bright part of the map, where RGB distance to any
+    # fixed reference is not monotonic: check the value order directly instead.
     pipe_1 = graph.datas["pipe_1"]
-    for k in range(len(pipe_1.cell_ids) - 1):
-        dist_k = np.linalg.norm(np.asarray(pipe_1.cell_colors[k], dtype=float) - 255)
-        dist_k1 = np.linalg.norm(np.asarray(pipe_1.cell_colors[k + 1], dtype=float) - 255)
-        assert dist_k > dist_k1, "colors should move toward the white middle along the cooling pipe"
+    if color_map == "BuRd":
+        for k in range(len(pipe_1.cell_ids) - 1):
+            dist_k = np.linalg.norm(np.asarray(pipe_1.cell_colors[k], dtype=float) - 255)
+            dist_k1 = np.linalg.norm(np.asarray(pipe_1.cell_colors[k + 1], dtype=float) - 255)
+            assert dist_k > dist_k1, \
+                f"colors should move toward the white middle along the cooling pipe, " \
+                f"segment {k}: {dist_k:.1f} -> {dist_k1:.1f}"
+    else:
+        from scivianna.utils.color_tools import interpolate_cmap_at_values
+
+        # Each color is the colormap at that cell's normalized value.
+        t = (np.asarray(pipe_1.cell_values, dtype=float) - 140.0) / (190.0 - 140.0)
+        expected = np.asarray(interpolate_cmap_at_values(color_map, t), dtype=float)
+        got = np.asarray(pipe_1.cell_colors, dtype=float)
+        assert np.allclose(got, expected, atol=1), "pipe colors should follow the value order"
 
 
 @pytest.mark.graph
-def test_graph_colors_forced_range_and_centering():
+@pytest.mark.parametrize("color_map", ["BuRd", "viridis"])
+def test_graph_colors_forced_range_and_centering(color_map):
     """Forced min/max bounds and centering on zero change the global color range.
 
     With a forced max below the data maximum, values above it saturate at the
@@ -173,29 +197,29 @@ def test_graph_colors_forced_range_and_centering():
     value; centering on zero makes the range symmetric around 0.
     """
     from scivianna_example.graph import build_graph
+    from scivianna.utils.color_tools import interpolate_cmap_at_values
 
     # Global data range is [140, 190] (see test_heat_network_colors).
     graph = build_graph()
-    set_graph_colors_list(graph, "BuRd")
+    set_graph_colors_list(graph, color_map)
     color_default = tuple(int(c) for c in graph.datas["generator"].cell_colors[2])
 
-    # Force the max below the data maximum: the 190 value saturates at the top.
+    # Force the max below the data maximum: values above it saturate at the top.
     graph = build_graph()
-    vmin, vmax = set_graph_colors_list(graph, "BuRd", min_value=140.0, max_value=180.0)
+    vmin, vmax = set_graph_colors_list(graph, color_map, min_value=140.0, max_value=180.0)
     assert (vmin, vmax) == (140.0, 180.0)
-    color_saturated = tuple(int(c) for c in graph.datas["generator"].cell_colors[2])
-    # The saturated color is the top of BuRd, not the default-range color.
-    from scivianna.utils.color_tools import interpolate_cmap_at_values
-
-    assert color_saturated == tuple(int(c) for c in interpolate_cmap_at_values("BuRd", 1.0))
-    assert color_saturated != color_default
+    # The top of the colormap is not unique to the maximum: with BuRd every value
+    # >= 180 maps to it, so check saturation against the top color directly.
+    top_color = tuple(int(c) for c in interpolate_cmap_at_values(color_map, np.array([1.0]))[0])
+    assert tuple(int(c) for c in graph.datas["generator"].cell_colors[2]) == top_color  # 190 >= 180
+    assert tuple(int(c) for c in graph.datas["pipe_1"].cell_colors[0]) == top_color     # 190 >= 180
 
     # Force only the min: the max stays at the data maximum.
     graph = build_graph()
-    vmin, vmax = set_graph_colors_list(graph, "BuRd", min_value=150.0)
+    vmin, vmax = set_graph_colors_list(graph, color_map, min_value=150.0)
     assert (vmin, vmax) == (150.0, 190.0)
 
     # Center on zero: the range is symmetric around 0, so it spans [-190, 190].
     graph = build_graph()
-    vmin, vmax = set_graph_colors_list(graph, "BuRd", center_colormap_on_zero=True)
+    vmin, vmax = set_graph_colors_list(graph, color_map, center_colormap_on_zero=True)
     assert (vmin, vmax) == (-190.0, 190.0)

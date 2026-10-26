@@ -13,6 +13,7 @@ import panel_material_ui as pmui
 
 from scivianna.constants import OUTSIDE
 from scivianna.data.data2d import Data2D
+from scivianna.data.data3d import Data3D
 from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
@@ -437,7 +438,7 @@ If a color bar is used, you can decide to center it on zero.
             Data to display. A DataGraph (graph panel) is colored node by node
             with a global value range, see :func:`set_graph_colors_list`.
         """
-        if not isinstance(data, Data2D):
+        if not isinstance(data, (Data2D, Data3D)):
             try:
                 from scivianna.data.data_graph import DataGraph
                 if isinstance(data, DataGraph):
