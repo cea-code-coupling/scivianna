@@ -50,7 +50,6 @@ from scivianna.constants import (
 )
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
-from scivianna.data.data_graph import DataGraph
 from scivianna.enums import GeometryType, VisualizationMode
 from scivianna.interface.generic_interface import (
     CouplingInterface,
@@ -64,11 +63,11 @@ from scivianna.interface.generic_interface import (
 )
 from scivianna.logging_config import get_logger
 
-logger = get_logger(__name__)
-
-#   TYPE_CHECKING : Allows fake import of modules pylance work without importing them
 if TYPE_CHECKING:
+    from scivianna.data.data_graph import DataGraph
     import medcoupling
+
+logger = get_logger(__name__)
 
 profile_time = bool(os.environ["VIZ_PROFILE"]) if "VIZ_PROFILE" in os.environ else 0
 
@@ -281,7 +280,7 @@ def worker(
                     raise TypeError(
                         f"The requested panel is not associated to an GraphInterface, found class {type(interface)}."
                     )
-                graph: DataGraph
+                graph: "DataGraph"
                 graph, graph_updated = interface.compute_graph(
                     u=u,
                     v=v,
@@ -803,7 +802,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
         coloring_label: str,
         options: Dict[str, Any],
         caller: str = "API",
-    ) -> Tuple[DataGraph, bool]:
+    ) -> Tuple["DataGraph", bool]:
         """Get the graph from the interface
 
         Parameters
