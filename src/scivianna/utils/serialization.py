@@ -109,6 +109,12 @@ def _get_extension_class(
         for ext in paneldf_default_extensions:
             if ext.__name__ == ext_name:
                 return ext
+    elif panel_type == "PanelGraph":
+        from scivianna.panel.panel_graph import default_extensions_bokeh as panelgraph_default_extensions
+
+        for ext in panelgraph_default_extensions:
+            if ext.__name__ == ext_name:
+                return ext
 
     return None
 
@@ -190,7 +196,7 @@ def _build_panel_metadata(
         "slave_file": "slave.pkl",
     }
 
-    if panel_type in ("Panel2D", "Panel3D"):
+    if panel_type in ("Panel2D", "Panel3D", "PanelGraph"):
         base_metadata["current_data_file"] = "current_data.pkl"
 
     return base_metadata
@@ -431,6 +437,151 @@ def load_panel2d_from_file(file_path: Union[str, Path], include_files: bool = Tr
 
         # Restore panel from json with the loaded data
         panel = Panel2D.from_json(panel_data["panel_json"], slave, current_data, extensions, extension_options)
+
+        return panel
+
+
+# =============================================================================
+# PANELGRAPH ONLY SERIALIZATION
+# =============================================================================
+
+
+def save_panelgraph_to_file(
+    panel: "PanelGraph", file_path: Union[str, Path], include_files: bool = True
+) -> Path:
+    """
+    Save a PanelGraph to a zip file containing panel configuration and slave data.
+
+    The zip file contains:
+    - panel.json: JSON file describing the panel configuration and interface info
+    - slave.pkl: Serialized slave data
+    - current_data.pkl: Serialized current_data (DataGraph) for PanelGraph
+
+    Parameters
+    ----------
+    panel : PanelGraph
+        The panel to save
+    file_path : Union[str, Path]
+        Path to the output zip file
+    include_files : bool = True
+        If True, includes loaded files in the slave serialization
+
+    Returns
+    -------
+    Path
+        Path to the saved zip file
+    """
+    from scivianna.interface import INTERFACES
+
+    file_path = Path(file_path)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        # Get interface info
+        slave = panel.get_slave()
+        interface_class = slave.code_interface
+
+        # Find the key for this interface in INTERFACES dict
+        interface_key = None
+        for key, iface_class in INTERFACES.items():
+            if iface_class == interface_class:
+                interface_key = key if isinstance(key, str) else key.value
+                break
+
+        # If not found in built-in interfaces, use class name as fallback
+        if interface_key is None:
+            interface_key = interface_class.__name__
+
+        # Save panel configuration as JSON using the utility function
+        panel_data = _build_panel_metadata("PanelGraph", panel, interface_key)
+
+        panel_json_path = temp_path / "panel.json"
+        with open(panel_json_path, "w") as f:
+            json.dump(panel_data, f, indent=2)
+
+        # Save slave data using the slave serialization function
+        slave_data_path = temp_path / "slave.pkl"
+        save_slave_to_file(slave, slave_data_path, include_files=include_files)
+
+        # Also save current_data
+        current_data_path = temp_path / "current_data.pkl"
+        with open(current_data_path, "wb") as f:
+            pickle.dump(panel.current_data, f)
+
+        # Create the zip file
+        zip_path = file_path.with_suffix(".zip") if not file_path.suffix == ".zip" else file_path
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, dirs, files in os.walk(temp_path):
+                for file in files:
+                    file_path_inside = Path(root) / file
+                    arcname = file_path_inside.relative_to(temp_path)
+                    zf.write(file_path_inside, arcname)
+
+    return zip_path
+
+
+def load_panelgraph_from_file(file_path: Union[str, Path], include_files: bool = True) -> "PanelGraph":
+    """
+    Load a PanelGraph from a zip file. The slave is automatically recreated from the saved data.
+
+    Parameters
+    ----------
+    file_path : Union[str, Path]
+        Path to the input zip file
+    include_files : bool = True
+        If True, includes loaded files in the slave deserialization
+
+    Returns
+    -------
+    PanelGraph
+        The loaded panel with its associated slave
+    """
+    from scivianna.panel.panel_graph import PanelGraph
+
+    file_path = Path(file_path)
+    zip_path = file_path.with_suffix(".zip") if not file_path.suffix == ".zip" else file_path
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(temp_path)
+
+        # Read panel.json
+        panel_json_path = temp_path / "panel.json"
+        with open(panel_json_path, "r") as f:
+            panel_data = json.load(f)
+
+        # Get the interface class from the INTERFACES dictionary using the interface_key
+        interface_key = panel_data.get("interface_key")
+        interface = INTERFACES.get(interface_key)
+
+        if interface is None:
+            raise KeyError(f"Interface '{interface_key}' not found in INTERFACES dictionary")
+
+        # Create slave and load data using the slave serialization function
+        slave = load_slave_from_file(
+            temp_path / panel_data.get("slave_file", "slave.pkl"),
+            interface,
+            include_files=include_files,
+        )
+
+        # Load current_data
+        current_data = None
+        current_data_path = temp_path / panel_data.get("current_data_file", "current_data.pkl")
+        if current_data_path.exists():
+            with open(current_data_path, "rb") as f:
+                current_data = pickle.load(f)
+
+        # Rebuild extensions with their state using the utility function
+        extensions_data = panel_data.get("extensions_data", {})
+        saved_extensions = panel_data.get("extensions", [])
+        extensions, extension_options = _restore_extensions(extensions_data, saved_extensions, interface, "PanelGraph")
+
+        # Restore panel from json with the loaded data
+        panel = PanelGraph.from_json(panel_data["panel_json"], slave, current_data, extensions, extension_options)
 
         return panel
 

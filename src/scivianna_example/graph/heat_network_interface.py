@@ -6,9 +6,11 @@ structure is fixed, so a new frame only changes the cell values (the returned
 ``graph_updated`` flag stays False).
 """
 
+from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
 import multiprocessing as mp
+import pickle
 
 from scivianna.data.data_graph import DataGraph
 from scivianna.enums import VisualizationMode
@@ -142,3 +144,30 @@ class HeatNetworkInterface(GraphInterface):
             Empty list: the example has no input file.
         """
         return []
+
+    def save(self, file_path: Path, include_files: bool = True):
+        """Pickle saves the interface state (the last computed graph) to a file.
+
+        Parameters
+        ----------
+        file_path : Path
+            File in which to save the state
+        include_files : bool
+            Ignored: the example has no input file.
+        """
+        with open(file_path, "wb") as f:
+            pickle.dump({"graph": self._graph}, f)
+
+    def load(self, file_path: Path, include_files: bool = True):
+        """Pickle loads the interface state (the last computed graph) from a file.
+
+        Parameters
+        ----------
+        file_path : Path
+            File from which to load the state
+        include_files : bool
+            Ignored: the example has no input file.
+        """
+        with open(file_path, "rb") as f:
+            state = pickle.load(f)
+        self._graph = state.get("graph")
