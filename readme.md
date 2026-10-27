@@ -102,12 +102,18 @@ Scivianna provides flexible interfaces to read various data formats:
 Access the visualizer from a distant computer using Panel's server/client architecture. Perfect for running simulations on HPC clusters while visualizing locally.
 
 ### 5. Extensible Architecture
-Extensions can be added to panels for additional functionality:
-- Field selectors
-- Line selection tools
-- File loaders
-- Layout management
-- AI assistant integration
+
+Scivianna GUI is based on extensions used to parametrize plots. By default, extensions are provided to:
+- Edit plots coloring
+- Set up 1D axes
+- Load files
+- Edit plots using a AI assistant
+
+Additional extensions can be implemented to customize the GUI interactions using [panel](https://panel.holoviz.org/) ecosystem.
+
+![Extension demonstration](https://github.com/user-attachments/assets/54fb68ea-c140-46d1-afc5-ca703d2274d6)
+
+
 
 ## Panel interactions
 
