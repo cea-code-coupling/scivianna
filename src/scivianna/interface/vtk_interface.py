@@ -283,7 +283,11 @@ class VTKExtension(Extension):
             Dictionary with time and recompute options
         """
         return {
-            "time": self.time_slider.values[self.time_slider.value_throttled],
+            "time": (
+                self.time_slider.value_throttled 
+                if self.time_slider.value_throttled in self.time_slider.values
+                else self.time_slider.values[0]
+            ),
             "recompute": self.recompute_on_change.value,
         }
 
