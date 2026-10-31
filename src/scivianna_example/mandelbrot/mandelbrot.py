@@ -385,8 +385,7 @@ def make_panel(
     panel_2.set_colormap("BuRd")
 
     layout = SplitLayout(
-        SplitItem(panel, panel_2, SplitDirection.VERTICAL),
-        additional_interfaces={"Mandelbrot": MandelBrotInterface},
+        SplitItem(panel, panel_2, SplitDirection.VERTICAL)
     )
 
     if return_slaves:

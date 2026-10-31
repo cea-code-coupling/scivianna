@@ -268,4 +268,5 @@ def make_graph_panel(**plotter_kwargs) -> PanelGraph:
 
 
 if __name__ == "__main__":
-    make_graph_panel().show()
+    from scivianna.notebook_tools import _serve_panel
+    _serve_panel(make_graph_panel())

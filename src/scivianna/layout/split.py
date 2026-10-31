@@ -68,8 +68,7 @@ class SplitLayout(GenericLayout):
 
     def __init__(
         self,
-        split_item: SplitItem,
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
+        split_item: SplitItem
     ):
         """VisualizationGridStack constructor
 
@@ -86,7 +85,7 @@ class SplitLayout(GenericLayout):
 
         self.split_item = split_item
 
-        super().__init__(self.get_panels_dict(split_item), additional_interfaces)
+        super().__init__(self.get_panels_dict(split_item))
 
         """
             Building interface
@@ -375,8 +374,7 @@ class SplitLayout(GenericLayout):
     def restore_from_zip(
         cls,
         file_path: Union[str, Path],
-        include_files: bool = True,
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
+        include_files: bool = True
     ) -> "SplitLayout":
         """Restores a SplitLayout from a zip file.
 
@@ -386,12 +384,10 @@ class SplitLayout(GenericLayout):
             Path to the zip file to restore from
         include_files : bool = True
             If True, includes loaded files in the slave deserialization
-        additional_interfaces : Dict = {}
-            Additional interfaces to register
 
         Returns
         -------
         SplitLayout
             Restored SplitLayout instance
         """
-        return load_layout_from_zip(file_path, include_files, additional_interfaces)
+        return load_layout_from_zip(file_path, include_files)

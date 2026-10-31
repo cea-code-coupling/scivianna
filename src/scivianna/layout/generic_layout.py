@@ -44,7 +44,7 @@ class GenericLayout:
     """ Available interface classes to switch from one to another
     """
     load_available_interfaces: Callable = None
-    """ Function loading available interfaces. Can be overwriten to add additional interfaces.
+    """ Function loading available interfaces.
     """
 
     visualisation_panels: Dict[str, VisualizationPanel]
@@ -53,8 +53,7 @@ class GenericLayout:
 
     def __init__(
         self,
-        visualisation_panels: Dict[str, VisualizationPanel],
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
+        visualisation_panels: Dict[str, VisualizationPanel]
     ):
         self.visualisation_panels = visualisation_panels
 
@@ -62,13 +61,6 @@ class GenericLayout:
             self.available_interfaces = scivianna.interface.INTERFACES
         else:
             self.available_interfaces = self.load_available_interfaces()
-
-        for interface in additional_interfaces:
-            if not issubclass(additional_interfaces[interface], GenericInterface):
-                raise TypeError(
-                    f"Provided interface {interface} is not a GenericInterface, found type {type(additional_interfaces[interface])}"
-                )
-            self.available_interfaces[interface] = additional_interfaces[interface]
 
         self.code_interface_to_update = True
 

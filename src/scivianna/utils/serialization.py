@@ -1133,8 +1133,7 @@ def save_layout_to_zip(
 
 def load_layout_from_zip(
     file_path: Union[str, Path],
-    include_files: bool = True,
-    additional_interfaces: Dict[Union[str, Any], Type[GenericInterface]] = {},
+    include_files: bool = True
 ) -> "SplitLayout":
     """
     Restores a SplitLayout from a zip file.
@@ -1145,8 +1144,6 @@ def load_layout_from_zip(
         Path to the input zip file
     include_files : bool = True
         If True, includes loaded files in the slave deserialization
-    additional_interfaces : Dict = {}
-        Additional interfaces to register
 
     Returns
     -------
@@ -1168,19 +1165,13 @@ def load_layout_from_zip(
         with open(layout_json_path, "r") as f:
             layout_data = json.load(f)
 
-        # Register additional interfaces first
-        from scivianna.interface import INTERFACES as IFACE_DICT
-
-        for key, iface_class in additional_interfaces.items():
-            register_interface(key, iface_class)
-
         # Rebuild the split item structure with pre-loaded data
         split_item = _deserialize_split_item(
             layout_data["split_item"], layout_data, temp_path, include_files
         )
 
         # Create the layout instance
-        layout = SplitLayout(split_item=split_item, additional_interfaces=additional_interfaces)
+        layout = SplitLayout(split_item=split_item)
 
         # Restore time_widget if it was saved
         time_widget_data = layout_data.get("time_widget")
@@ -1572,8 +1563,7 @@ def save_gridstack_to_zip(
 
 def load_gridstack_from_zip(
     file_path: Union[str, Path],
-    include_files: bool = True,
-    additional_interfaces: Dict[Union[str, Any], Type[GenericInterface]] = {},
+    include_files: bool = True
 ) -> "GridStackLayout":
     """
     Restores a GridStackLayout from a zip file.
@@ -1587,8 +1577,6 @@ def load_gridstack_from_zip(
         Path to the input zip file
     include_files : bool = True
         If True, includes loaded files in the slave deserialization
-    additional_interfaces : Dict = {}
-        Additional interfaces to register
 
     Returns
     -------
@@ -1609,12 +1597,6 @@ def load_gridstack_from_zip(
         layout_json_path = temp_path / "layout.json"
         with open(layout_json_path, "r") as f:
             layout_data = json.load(f)
-
-        # Register additional interfaces first
-        from scivianna.interface import INTERFACES as IFACE_DICT
-
-        for key, iface_class in additional_interfaces.items():
-            register_interface(key, iface_class)
 
         # Rebuild panels with their loaded data using load_panelX_from_file functions
         restored_panels = {}
@@ -1654,8 +1636,7 @@ def load_gridstack_from_zip(
         layout = GridStackLayout(
             visualisation_panels=restored_panels,
             bounds_x=bounds_x,
-            bounds_y=bounds_y,
-            additional_interfaces=additional_interfaces,
+            bounds_y=bounds_y
         )
 
         # Restore time_widget if it was saved

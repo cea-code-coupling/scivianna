@@ -210,6 +210,44 @@ class ReactFlowPlotter(PlotterGraph):
         """Returns the ReactFlow viewable."""
         return self.canvas
 
+    def save_png(self, path: str, width: int = 1600, height: int = 1000, pixel_ratio: float = 1.0, **kwargs) -> str:
+        """Saves the graph as a PNG file, without any GUI (headless browser, ReactFlow export).
+
+        All the nodes are framed in a ``width`` x ``height`` image, with the colorbar if shown.
+        See :meth:`scivianna_graph.SciviannaGraph.save_png` (needs playwright + chromium).
+
+        Parameters
+        ----------
+        path : str
+            Output file (``.png`` appended if missing).
+        width, height : int
+            Image size in pixels (before ``pixel_ratio``).
+        pixel_ratio : float
+            Resolution factor, e.g. 2 for a twice larger image.
+        **kwargs
+            ``padding`` (fraction of margin around the nodes), ``background`` (CSS color), ``timeout`` (s).
+
+        Returns
+        -------
+        str
+            Path of the written file.
+        """
+        if self.graph is None:
+            raise RuntimeError("No graph to save, call plot() first.")
+        return self.graph_builder.save_png(path, width=width, height=height, pixel_ratio=pixel_ratio, **kwargs)
+
+    def plot_on_axes(self, ax, **kwargs):
+        """Draws the graph in an existing matplotlib axes (see ``SciviannaGraph.plot_on_axes``)."""
+        if self.graph is None:
+            raise RuntimeError("No graph to plot, call plot() first.")
+        return self.graph_builder.plot_on_axes(ax, **kwargs)
+
+    def plot_figure(self, **kwargs):
+        """Creates a matplotlib ``(fig, ax)`` and draws the graph in it (see ``SciviannaGraph.plot_figure``)."""
+        if self.graph is None:
+            raise RuntimeError("No graph to plot, call plot() first.")
+        return self.graph_builder.plot_figure(**kwargs)
+
     def update_colorbar(self, display: bool, value_range: Tuple[float, float]):
         """Shows or hides the canvas colorbar.
 

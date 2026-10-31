@@ -44,7 +44,6 @@ class GridStackLayout(GenericLayout):
         visualisation_panels: Dict[str, VisualizationPanel],
         bounds_x: Dict[str, Tuple[int]],
         bounds_y: Dict[str, Tuple[int]],
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
     ):
         """VisualizationGridStack constructor
 
@@ -56,11 +55,6 @@ class GridStackLayout(GenericLayout):
             Dictionnary containing position in the gridstack along the horizontal axis
         bounds_y : Dict[str, Tuple[int]]
             Dictionnary containing position in the gridstack along the vertical axis
-
-        Raises
-        ------
-        TypeError
-            One of the additional interfaces classes does not inherit from GenericInterface
         """
         assert set(bounds_x.keys()) == set(
             visualisation_panels.keys()
@@ -72,7 +66,7 @@ class GridStackLayout(GenericLayout):
         self.bounds_x = bounds_x
         self.bounds_y = bounds_y
 
-        super().__init__(visualisation_panels, additional_interfaces)
+        super().__init__(visualisation_panels)
 
         size_x = max(max([x_range for x_range in bounds_x.values()]))
         size_y = max(max([y_range for y_range in bounds_y.values()]))
@@ -324,8 +318,7 @@ class GridStackLayout(GenericLayout):
     def restore_from_zip(
         cls,
         file_path: Union[str, Path],
-        include_files: bool = True,
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
+        include_files: bool = True
     ) -> "GridStackLayout":
         """
         Restores a GridStackLayout from a zip file.
@@ -336,8 +329,6 @@ class GridStackLayout(GenericLayout):
             Path to the input zip file
         include_files : bool = True
             If True, includes loaded files in the slave deserialization
-        additional_interfaces : Dict = {}
-            Additional interfaces to register
 
         Returns
         -------
@@ -346,6 +337,5 @@ class GridStackLayout(GenericLayout):
         """
         return load_gridstack_from_zip(
             file_path,
-            include_files=include_files,
-            additional_interfaces=additional_interfaces,
+            include_files=include_files
         )
