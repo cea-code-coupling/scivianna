@@ -10,6 +10,7 @@ from scivianna.constants import MATERIAL, MESH
 from scivianna.data.data2d import Data2D
 from scivianna.enums import GeometryType, UpdateEvent, VisualizationMode
 from scivianna.extension.extension import Extension
+from scivianna.interface import register_interface
 from scivianna.interface.generic_interface import Geometry2DGrid
 from scivianna.layout.split import SplitDirection, SplitItem, SplitLayout
 from scivianna.panel.panel_2d import Panel2D
@@ -368,6 +369,8 @@ class MandelBrotInterface(Geometry2DGrid):
             "v_steps": self.last_computed_frame[-2] if self.last_computed_frame != {} else 300,
             "max_iter": self.last_computed_frame[-1] if self.last_computed_frame != {} else 10
         }
+
+register_interface("MandelBrotInterface", MandelBrotInterface)
 
 def make_panel(
     _, return_slaves=False

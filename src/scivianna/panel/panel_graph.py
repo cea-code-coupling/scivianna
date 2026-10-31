@@ -177,11 +177,26 @@ class PanelGraph(VisualizationPanel):
         except Exception:
             pass
 
+    def _on_visibility_change(self, event):
+        """Re-fit the canvas when the panel becomes visible.
+
+        The canvas fits itself to the nodes when they are built, but if the panel
+        is not visible at that time (e.g. in a hidden tab of a demonstrator) the
+        nodes have no size and the fit does nothing.
+        """
+        if event.new:
+            self.plotter.fit_view()
+
     def __panel__(self):
         """Layout of the panel: the extensions sidebar (if any extension) and the graph."""
-        if not self.extensions:
-            return pn.Row(self.figure, margin=0, sizing_mode="stretch_both")
-        return super().__panel__()
+        if not hasattr(self, "_layout"):
+            if not self.extensions:
+                self._layout = pn.Row(self.figure, margin=0, sizing_mode="stretch_both")
+            else:
+                self._layout = super().__panel__()
+            # Watch visibility so the canvas re-fits when a hidden panel is shown.
+            self._layout.param.watch(self._on_visibility_change, "visible")
+        return self._layout
 
     @property
     def main_frame(self):

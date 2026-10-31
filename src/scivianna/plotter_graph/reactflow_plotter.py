@@ -206,6 +206,15 @@ class ReactFlowPlotter(PlotterGraph):
         self.graph = data
         self._update_colorbar()
 
+    def fit_view(self):
+        """Asks the canvas to re-fit the viewport to the drawn nodes.
+
+        The canvas fits itself when the set of node ids changes, but not when it
+        was hidden at mount time and only becomes visible later. Call this after
+        the panel is shown again.
+        """
+        self.graph_builder.fit_view()
+
     def make_panel(self):
         """Returns the ReactFlow viewable."""
         return self.canvas

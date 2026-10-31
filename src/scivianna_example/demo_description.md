@@ -10,6 +10,10 @@ Welcome to the demonstrator of the visu_serma module. Several use cases are prov
 
 -   **Coupling example** : Plot of a coupled simulation to see time dependant data (if salome-c3po installed).
 
--   **3D example** : 3D plot interacting with a 2D plot. (if medcoupling and pyvista installed).
+-   **Medcoupling 3D example** : 3D plot of a Medcoupling mesh interacting with a 2D plot. (if medcoupling and pyvista installed)
+
+-   **VTK 3D example** : 3D plot of a VTK mesh interacting with a 2D plot. (if pyvista installed)
+
+-   **Heat network example** : A small heat network where a generator feeds two factories through four pipes. Each node is a 2D plot colored on one global value range; drag nodes to rearrange the layout. (if scivianna-graph installed)
 
 To open an example, please use the dial widget at the bottom right of the screen.

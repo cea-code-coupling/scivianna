@@ -15,6 +15,7 @@ import pickle
 from scivianna.data.data_graph import DataGraph
 from scivianna.enums import VisualizationMode
 from scivianna.interface.generic_interface import GraphInterface
+from scivianna.interface import register_interface
 
 
 class HeatNetworkInterface(GraphInterface):
@@ -171,3 +172,5 @@ class HeatNetworkInterface(GraphInterface):
         with open(file_path, "rb") as f:
             state = pickle.load(f)
         self._graph = state.get("graph")
+
+register_interface("HeatNetworkInterface", HeatNetworkInterface)

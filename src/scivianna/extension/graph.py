@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import panel as pn
@@ -41,7 +42,7 @@ class Graph(Extension):
 The graph extension allows you to customize the canvas layout.
 
 You can change the padding between a node's border and its content (label and figure),
-and hide all the node labels at once.
+hide all the node labels at once, and re-fit the viewport to the drawn nodes.
 """
 
         self.iconsize = "1.0em"
@@ -63,6 +64,14 @@ and hide all the node labels at once.
             margin=5,
         )
 
+        self.fit_view_button = pmui.Button(
+            label="Fit view",
+            width=125,
+            icon=(Path(scivianna.__file__).parent / "icon" / "fit_screen.svg").read_text().strip(),
+            margin=5,
+        )
+        self.fit_view_button.on_click(self._fit_view)
+
         def update_node_padding(*args, **kwargs):
             if self._restoring:
                 return
@@ -79,6 +88,10 @@ and hide all the node labels at once.
         self.node_padding_inp.param.watch(update_node_padding, "value")
         self.hide_labels_chk.param.watch(update_hide_labels, "value")
 
+    def _fit_view(self, *args, **kwargs):
+        """Re-fits the canvas viewport to the drawn nodes."""
+        self.plotter.fit_view()
+
     def make_gui(self) -> pn.viewable.Viewable:
         """Returns a panel viewable to display in the extension tab.
 
@@ -91,6 +104,7 @@ and hide all the node labels at once.
             pmui.Typography("Node padding (px)"),
             self.node_padding_inp,
             self.hide_labels_chk,
+            self.fit_view_button,
             margin=0,
         )
 
