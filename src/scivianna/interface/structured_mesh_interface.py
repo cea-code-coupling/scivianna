@@ -1,3 +1,5 @@
+"""Interface for structured meshes, to be subclassed by file-specific interfaces."""
+
 import multiprocessing as mp
 import os
 import pickle
@@ -234,6 +236,8 @@ if __name__ == "__main__":
     from scivianna.slave import ComputeSlave
 
     class MyMeshInterface(StructuredMeshInterface):
+        """Demo interface over a structured mesh (only used in this __main__ block)."""
+
         def read_file(self, file_path: str, file_label: str):
             """Read a file and store its content in the interface
 

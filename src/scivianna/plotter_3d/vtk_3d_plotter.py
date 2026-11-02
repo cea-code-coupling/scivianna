@@ -1,3 +1,5 @@
+"""VTK-based 3D plotter wrapping the scivianna_vtk VTKPlotter component."""
+
 from typing import Callable, Tuple
 
 import numpy as np
@@ -13,6 +15,7 @@ class Plotter3D(Plotter3D):
     def __init__(
         self,
     ):
+        """Create the underlying VTKPlotter component."""
         self.plotter = VTKPlotter(sizing_mode="stretch_both", margin=0)
         self.plotter.set_clip_enabled(False)
 
@@ -155,6 +158,7 @@ class Plotter3D(Plotter3D):
         self.plotter.set_clip_plane(new_origin, w_vector)
 
     def send_event(self, callback):
+        """Call the mouse callback with the current hovered cell and position."""
         if self.plotter.hover_cell_id is not None and not any(
             np.isnan(self.plotter.hover_position)
         ):

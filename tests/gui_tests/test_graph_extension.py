@@ -140,6 +140,7 @@ def test_heat_network_colors(color_map):
         assert len(data.cell_edge_colors) == len(data.cell_ids)
 
     def color_of(node: str, index: int = 0):
+        """Return the RGB color of a node's cell as an int tuple."""
         return tuple(int(c) for c in graph.datas[node].cell_colors[index])
 
     low = color_of("factory_2")   # value 140 -> minimum of the range

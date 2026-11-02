@@ -1,3 +1,5 @@
+"""Integration tests for serializing and restoring slaves, panels and layouts."""
+
 import tempfile
 from pathlib import Path
 
@@ -33,6 +35,7 @@ scivianna.utils._testing = True
 
 @pytest.mark.medcoupling
 def test_serialize_slave():
+    """Serialize a slave and check it can be restored."""
     from scivianna.interface.med_interface import MEDInterface
     from scivianna_example.med.split_item_example import get_med_panel, get_panel
     slave = None
@@ -74,6 +77,7 @@ def test_serialize_slave():
 
 @pytest.mark.medcoupling
 def test_serialize_panel_2d():
+    """Serialize a 2D panel and check it can be restored."""
     from scivianna_example.med.split_item_example import get_med_panel, get_panel
     slave = None
     slave2 = None
@@ -147,6 +151,7 @@ def test_serialize_panel_2d():
 
 @pytest.mark.medcoupling
 def test_serialize_split():
+    """Serialize a split layout and check it can be restored."""
     from scivianna_example.med.split_item_example import get_med_panel, get_panel
     new_layout = None
     try:
@@ -172,6 +177,7 @@ def test_serialize_split():
 
 @pytest.mark.medcoupling
 def test_serialize_gridstack():
+    """Serialize a gridstack layout and check it can be restored."""
     from scivianna_example.med.grid_stack_example import get_panel as get_gridstack_panel
     new_layout = None
     try:

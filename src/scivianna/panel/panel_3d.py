@@ -38,10 +38,10 @@ default_extensions = [FileLoader, FieldSelector, Slice3D]
 
 
 class Panel3D(VisualizationPanel):
-    """2D Visualisation panel associated to a code."""
+    """3D Visualisation panel associated to a code."""
 
     plotter: Plotter3D
-    """ 2D plotter displaying and updating the graph
+    """ 3D plotter displaying and updating the figure
     """
     current_data: Data3D
     """ Displayed data and their properties.
@@ -66,8 +66,6 @@ class Panel3D(VisualizationPanel):
             ComputeSlave object to which request the plots.
         name : str
             Name of the panel.
-        display_polygons : bool
-            Display as polygons or as a 2D grid.
         extensions : List[Extension]
             List of extensions to add to the gui.
         extension_jsons : dict[Type[Extension], dict]
@@ -352,7 +350,7 @@ class Panel3D(VisualizationPanel):
 
     def provide_on_axes_change_callback(self, callback: Callable):
         """Stores a function to call everytime the axes are changed.
-        the functions takes two numpy arrays and three values (u, v, origin, size_u, size_v).
+        The function takes the u and v direction vectors, the slice origin and its size.
 
         Parameters
         ----------

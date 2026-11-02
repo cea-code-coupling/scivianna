@@ -108,6 +108,7 @@ Controls:
         self._get_vtk_plotter().param.watch(self._on_plane_change, "clip_normal")
 
     def _on_2d_change(self, event):
+        """Toggle the 2D top-down view mode on the underlying VTK plotter."""
         self.plotter.plotter.set_view_2d_mode(self.view_2d_checkbox.value)
 
     def _get_vtk_plotter(self):
@@ -141,6 +142,7 @@ Controls:
         self.plotter.set_info(event.new)
 
     def _on_plane_change(self, event):
+        """Log the clip plane origin and normal whenever they change in the viewer."""
         vtk_plotter = self._get_vtk_plotter()
         logger.debug(
             "Clip plane - origin: %s, normal: %s",

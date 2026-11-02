@@ -1,3 +1,5 @@
+"""Panel1D - 1D visualization panel for Scivianna."""
+
 from typing import Callable, Dict, List, Tuple, Type, Union
 
 import pandas as pd
@@ -17,7 +19,7 @@ default_extensions = [LineSelector]
 
 
 class Panel1D(VisualizationPanel):
-    """Visualisation panel associated to a code."""
+    """1D Visualisation panel associated to a code."""
 
     plotter: Plotter1D
     """ 1D plotter displaying and updating the graph
@@ -186,7 +188,14 @@ class Panel1D(VisualizationPanel):
 
     def get_slave(
         self,
-    ):
+    ) -> ComputeSlave:
+        """Returns the current panel code slave.
+
+        Returns
+        -------
+        ComputeSlave
+            Panel slave
+        """
         return self.slave
 
     def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
@@ -204,14 +213,12 @@ class Panel1D(VisualizationPanel):
         self.recompute()
 
     def set_field(self, field_names: List[str]):
-        """Updates the plotted fields
+        """Updates the plotted fields. Unknown field names are silently ignored.
 
         Parameters
         ----------
-        field_name : List[str]
+        field_names : List[str]
             Fields to display
-        allow_wrong_name : bool
-            Accept a wrong field (nothing happens)
         """
         fields: List[str] = []
         self.fields_list = self.slave.get_labels()

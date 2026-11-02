@@ -1,3 +1,5 @@
+"""MED example with a gridstack layout of synchronized views."""
+
 from typing import Dict
 
 import panel as pn
@@ -10,6 +12,7 @@ from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 def get_panel(_, return_slaves=False):
+    """Build the gridstack layout of synchronized MED views."""
     visualisation_panels: Dict[str, VisualizationPanel] = {}
 
     med_1 = get_med_panel(geo=None, title="MEDCoupling visualizer XY")
@@ -54,6 +57,7 @@ def get_panel(_, return_slaves=False):
 
 
 def get_template():
+    """Return the main frame of the gridstack demo for serving."""
     panel = get_panel(None)
     return panel.main_frame
 

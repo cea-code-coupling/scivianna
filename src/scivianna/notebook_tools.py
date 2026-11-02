@@ -1,3 +1,10 @@
+"""
+Notebook and server helpers for Scivianna.
+
+Provides convenience functions to display or serve a visualization panel,
+with ready-made helpers for MEDCoupling .med files.
+"""
+
 from pathlib import Path
 from typing import Any, Callable
 
@@ -8,10 +15,6 @@ from scivianna.enums import UpdateEvent
 from scivianna.panel.panel_2d import Panel2D
 from scivianna.panel.visualisation_panel import VisualizationPanel
 from scivianna.slave import ComputeSlave
-
-"""
-    Generic functions for every codes
-"""
 
 
 def _show_panel(panel: VisualizationPanel, title: str = ""):
@@ -50,9 +53,7 @@ def _serve_panel(
 
     ip_adress = socket.gethostbyname(socket.gethostname())
 
-    """
-        Catching a free port to provide to pn.serve
-    """
+    # Catch a free port to provide to pn.serve
     sock = socket.socket()
     sock.bind((ip_adress, 0))
     port = sock.getsockname()[1]
@@ -66,6 +67,7 @@ def _serve_panel(
         ), "If panel is not provided, get_panel_function must be."
 
         def get_template():
+            """Build the panel to serve from the given panel factory."""
             return get_panel_function(slave_input)
 
     pn.serve(
@@ -75,12 +77,6 @@ def _serve_panel(
         port=port,
         threaded=True,
     )
-
-
-"""
-    MED functions
-
-"""
 
 
 def get_med_panel(geo: str, title="MED") -> Panel2D:

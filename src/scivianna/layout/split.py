@@ -1,3 +1,5 @@
+"""SplitLayout - layout arranging visualization panels in nested resizable splits."""
+
 import functools
 import pickle
 from dataclasses import dataclass
@@ -40,10 +42,12 @@ class SplitDirection(Enum):
 
 @dataclass
 class SplitItem:
+    """One node of the split tree: two panels (or sub-splits) and their divider."""
+
     panel_1: Union[VisualizationPanel, "SplitItem"]
     """First visualization panel or other SplitItem"""
     panel_2: Union[VisualizationPanel, "SplitItem"]
-    """First visualization panel or other SplitItem"""
+    """Second visualization panel or other SplitItem"""
 
     direction: SplitDirection
     """Direction of the split between the two panels"""
@@ -52,14 +56,14 @@ class SplitItem:
 
 
 class SplitLayout(GenericLayout):
-    """Displayable that lets arranging several VisualizationPanel"""
+    """Layout arranging several VisualizationPanels in nested resizable splits."""
 
     split_item: SplitItem
-    """ Name - Intricated SplitItem defining the displayed panels
+    """ Intricated SplitItem defining the displayed panels
     """
 
     main_frame: pn.Column
-    """ Main frame : gridstack of different VisualizationPanel main_frame
+    """ Main frame : split of different VisualizationPanel figures
     """
 
     available_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]]
@@ -70,7 +74,7 @@ class SplitLayout(GenericLayout):
         self,
         split_item: SplitItem
     ):
-        """VisualizationGridStack constructor
+        """SplitLayout constructor.
 
         Parameters
         ----------
@@ -102,6 +106,13 @@ class SplitLayout(GenericLayout):
         self.change_current_frame()
 
     def change_code_interface(self, event):
+        """Replaces the current panel with one linked to the new code interface and rebuilds the splits.
+
+        Parameters
+        ----------
+        event : Any
+            Event to make the function linkable to the split
+        """
         super().change_code_interface(event)
         current_frame = self.current_frame
 

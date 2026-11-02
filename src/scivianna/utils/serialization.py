@@ -48,6 +48,7 @@ except (ImportError, ModuleNotFoundError):
 
         @classmethod
         def from_json(*args, **kwargs):
+            """Stub that fails when a serialized 3D panel is loaded without pyvista."""
             raise NotImplementedError("Panel3D could not be imported, please install scivianna")
 
 

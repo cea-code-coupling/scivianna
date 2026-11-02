@@ -1,3 +1,5 @@
+"""Unit tests that the slave catches and reports worker errors."""
+
 from typing import Any, Dict, List, Tuple, Union
 
 import pytest
@@ -7,6 +9,8 @@ from scivianna.slave import ComputeSlave
 
 
 class ThrowingErrorInterface(ValueAtLocation):
+    """Interface whose constructor raises, to exercise slave error handling."""
+
     def __init__(self, ):
         """Interface built to test error catching.
         """
@@ -85,6 +89,7 @@ class ThrowingErrorInterface(ValueAtLocation):
 
 @pytest.mark.default
 def test_runtime_error_allowed():
+    """With allow_errors, a worker RuntimeError is swallowed and None returned."""
     slave = ComputeSlave(ThrowingErrorInterface, allow_errors=True)
     try:
         val = slave.get_labels()
@@ -97,6 +102,7 @@ def test_runtime_error_allowed():
 
 @pytest.mark.default
 def test_value_error_allowed():
+    """With allow_errors, a worker ValueError is swallowed and None returned."""
     slave = ComputeSlave(ThrowingErrorInterface, allow_errors=True)
     try:
         val = slave.get_value(None, None, None, None)
@@ -109,6 +115,7 @@ def test_value_error_allowed():
 
 @pytest.mark.default
 def test_notimplemented_error_allowed():
+    """With allow_errors, a worker NotImplementedError is swallowed and None returned."""
     slave = ComputeSlave(ThrowingErrorInterface, allow_errors=True)
     try:
         val = slave.get_values(None, None, None, None)
@@ -122,6 +129,7 @@ def test_notimplemented_error_allowed():
 
 @pytest.mark.default
 def test_runtime_error():
+    """Without allow_errors, a worker RuntimeError is re-raised."""
     slave = ComputeSlave(ThrowingErrorInterface)
     try:
         val = slave.get_labels()
@@ -134,6 +142,7 @@ def test_runtime_error():
 
 @pytest.mark.default
 def test_value_error():
+    """Without allow_errors, a worker ValueError is re-raised."""
     slave = ComputeSlave(ThrowingErrorInterface)
     try:
         val = slave.get_value(None, None, None, None)
@@ -146,6 +155,7 @@ def test_value_error():
 
 @pytest.mark.default
 def test_notimplemented_error():
+    """Without allow_errors, a worker NotImplementedError is re-raised."""
     slave = ComputeSlave(ThrowingErrorInterface)
     try:
         val = slave.get_values(None, None, None, None)

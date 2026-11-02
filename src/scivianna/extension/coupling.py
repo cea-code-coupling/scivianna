@@ -1,3 +1,5 @@
+"""Extension that starts and stops C3PO coupled simulations from the panel, and selects the current display time."""
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 

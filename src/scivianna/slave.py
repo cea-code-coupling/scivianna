@@ -557,6 +557,7 @@ class ComputeSlave:
         self._start()
 
         def terminate_process():
+            """Terminate the worker process when the interpreter exits."""
             self.terminate()
 
         atexit.register(terminate_process)
@@ -573,6 +574,7 @@ class ComputeSlave:
         self._start()
 
     def _start(self):
+        """Create the task/return/error queues and spawn the worker process."""
         if self.p is not None and self.p.is_alive():
             raise RuntimeError("Slave starting a process before the past was closed.")
 

@@ -1,3 +1,5 @@
+"""Unit tests for serializing interfaces and data (pickle and dill)."""
+
 from pickle import PicklingError
 from typing import Any
 
@@ -8,11 +10,17 @@ from scivianna.slave import ComputeSlave
 
 
 class FakeIterface(GenericInterface):
+    """Minimal interface with nothing to serialize."""
+
     def read_file(self, file_path, file_label):
+        """Accept any file (no-op)."""
         assert True
 
 class FakeIterfaceWithSerialization(GenericInterface):
+    """Interface that provides a custom serialize method."""
+
     def read_file(self, file_path, file_label):
+        """Check that the serialized payload arrived intact."""
         assert file_path == "OK"
 
     @classmethod
@@ -42,22 +50,31 @@ class FakeIterfaceWithSerialization(GenericInterface):
     
 
 class UnpicklableObject:
+    """Object that raises when pickled."""
+
     def __init__(self, data):
+        """Store the payload."""
         self.data = data
 
     def __reduce__(self):
+        """Always fail pickling."""
         raise PicklingError("This object cannot be pickled and thus cannot be passed through multiprocessing.Queue.")
 
 
 class PicklableObject:
+    """Object that pickles normally."""
+
     def __init__(self, data):
+        """Store the payload."""
         self.data = data
 
     def read_file(self, file_path, file_label):
+        """Check that the pickled payload arrived intact."""
         assert file_path.data == "OK"
 
 @pytest.mark.default
 def test_pickle():
+    """A picklable argument is passed to the worker unchanged."""
     try:
         slave = ComputeSlave(FakeIterface)
         slave.read_file(PicklableObject("OK"), "key")
@@ -66,6 +83,7 @@ def test_pickle():
 
 @pytest.mark.default
 def test_non_pickle():
+    """An unpicklable argument without a serialize method raises an error."""
     try:
         slave = ComputeSlave(FakeIterface)
         slave.read_file(UnpicklableObject(None), "key")
@@ -78,6 +96,7 @@ def test_non_pickle():
 
 @pytest.mark.default
 def test_non_pickle_serialized():
+    """An unpicklable argument is passed when the interface defines serialize."""
     try:
         slave = ComputeSlave(FakeIterfaceWithSerialization)
         slave.read_file(UnpicklableObject(None), "key")

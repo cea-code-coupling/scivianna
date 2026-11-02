@@ -1,3 +1,5 @@
+"""Extension to select the displayed line and axis scales in a Panel1D."""
+
 from typing import TYPE_CHECKING
 
 import panel as pn
@@ -60,11 +62,13 @@ If a color bar is used, you can decide to center it on zero.
         self.y_scale.param.watch(self.set_y_scale, "value")
 
     def set_x_scale(self, *args, **kwargs):
+        """Apply the selected x-axis scale to the plotter."""
         if self._restoring:
             return
         self.plotter.set_x_scale(self.x_scale.value)
 
     def set_y_scale(self, *args, **kwargs):
+        """Apply the selected y-axis scale to the plotter."""
         if self._restoring:
             return
         self.plotter.set_y_scale(self.y_scale.value)

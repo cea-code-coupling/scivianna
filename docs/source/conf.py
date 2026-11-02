@@ -1,3 +1,5 @@
+"""Sphinx configuration for the scivianna documentation."""
+
 # -- Project information -----------------------------------------------------
 project = 'scivianna'
 copyright = '2026, T. Moulignier'

@@ -37,7 +37,7 @@ class VisualizationPanel(pn.viewable.Viewer):
     """ Slave to which request the plots
     """
     plotter: Plotter2D
-    """ 2D plotter displaying and updating the graph
+    """ Plotter displaying and updating the figure
     """
     main_frame: pmui.Container
     """ Main frame displaying the geometry.
@@ -318,6 +318,7 @@ class VisualizationPanel(pn.viewable.Viewer):
     def __panel__(
         self,
     ):
+        """Returns the panel to display: the extensions sidebar next to the figure."""
         return pn.Row(self.gui_panel, self.figure, margin=0, sizing_mode="stretch_both")
 
     def rename(self, name: str):
@@ -349,6 +350,15 @@ class VisualizationPanel(pn.viewable.Viewer):
         return new_name
 
     def trigger_on_file_load(self, file_path: str, file_label: str):
+        """Notifies every extension that a new file has been loaded.
+
+        Parameters
+        ----------
+        file_path : str
+            Path of the loaded file
+        file_label : str
+            Label of the loaded file
+        """
         for extension in self.extensions:
             extension.on_file_load(file_path, file_label)
 

@@ -1,3 +1,5 @@
+"""Base class for scivianna extensions: plugins that customize a visualization panel."""
+
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
 import panel as pn

@@ -1,3 +1,5 @@
+"""Extension to customize the graph canvas: node padding, labels and viewport fit."""
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -73,6 +75,7 @@ hide all the node labels at once, and re-fit the viewport to the drawn nodes.
         self.fit_view_button.on_click(self._fit_view)
 
         def update_node_padding(*args, **kwargs):
+            """Apply the node padding to the canvas and refresh the node sizes."""
             if self._restoring:
                 return
             self.plotter.canvas.node_padding = self.node_padding_inp.value
@@ -81,6 +84,7 @@ hide all the node labels at once, and re-fit the viewport to the drawn nodes.
             self.plotter.graph_builder.update_view_sizes()
 
         def update_hide_labels(*args, **kwargs):
+            """Show or hide all the node labels on the canvas."""
             if self._restoring:
                 return
             self.plotter.set_labels_visible(not self.hide_labels_chk.value)
@@ -143,3 +147,23 @@ hide all the node labels at once, and re-fit the viewport to the drawn nodes.
         extension.hide_labels_chk.value = info_dict.get("hide_labels", False)
         extension._restoring = False
         return extension
+
+    def on_node_selection_change(self, selected_nodes: list[str]):
+        """Function called when the selection of nodes changes on a graph plot.
+
+        Parameters
+        ----------
+        selected_nodes : List[str]
+            Ids of the currently selected nodes (empty list when nothing is selected).
+        """
+        print("Nodes selected :", selected_nodes)
+
+    def on_nodes_moved(self, moved_nodes: list[dict[str, float]]):
+        """Function called when one or several nodes are moved on a graph plot.
+
+        Parameters
+        ----------
+        moved_nodes : List[Dict[str, float]]
+            One entry per moved node: {"id": node key, "x": new x position, "y": new y position}.
+        """
+        print("Nodes moved :", moved_nodes)

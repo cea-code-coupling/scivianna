@@ -1,3 +1,5 @@
+"""DataGraph: a graph of 2D plots connected by directed links (coupling topology)."""
+
 from typing import Literal, Optional
 
 from scivianna.data.data_container import DataContainer

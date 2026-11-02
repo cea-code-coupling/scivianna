@@ -40,7 +40,7 @@ pip install scivianna[graph]
 
 ```python
 from scivianna.layout.gridstack import GridStackLayout
-from scivianna.panel.panel2d import Panel2D
+from scivianna.panel.panel_2d import Panel2D
 from scivianna.slave import ComputeSlave
 
 # Create a slave with your data interface

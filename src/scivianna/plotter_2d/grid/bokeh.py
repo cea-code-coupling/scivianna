@@ -1,3 +1,5 @@
+"""Bokeh-based 2D grid (rasterized) plotter."""
+
 import functools
 import os
 from typing import IO, Callable, List, Tuple
@@ -257,6 +259,7 @@ class Bokeh2DGridPlotter(Plotter2D):
         if self.dim_hovered_cell:
 
             def on_mouse_enter(event):
+                """Mark the figure as hovered so the cell highlight is active."""
                 self.active = True
 
             self.figure.on_event(bokeh.events.MouseMove, self.on_mouse_move)
@@ -460,6 +463,7 @@ class Bokeh2DGridPlotter(Plotter2D):
         self.update_2d_frame(data)
 
     def update_range(self, event: events.RangesUpdate):
+        """Forward the figure range change to the registered callback."""
         self.range_callback(event.x0, event.x1, event.y0, event.y1)
 
     def _set_callback_on_range_update(self, callback: IO):
@@ -566,6 +570,7 @@ class Bokeh2DGridPlotter(Plotter2D):
     def _polygons_to_coords(
         self, polygons: List[PolygonElement]
     ) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
+        """Convert polygon elements into the nested xs/ys lists Bokeh patches expect."""
         xs_dict = [
             [
                 {
@@ -672,6 +677,7 @@ class Bokeh2DGridPlotter(Plotter2D):
     def reset_hover(
         self,
     ):
+        """Clear the hovered cell highlight and restore the frame."""
         self.active = False
         self.save_data = False
         self.update_2d_frame(self.data)

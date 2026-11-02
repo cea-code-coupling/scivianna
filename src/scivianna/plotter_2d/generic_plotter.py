@@ -1,3 +1,5 @@
+"""Abstract interface for 2D geometry plotters."""
+
 from typing import IO, Callable, Tuple
 
 import panel as pn

@@ -22,10 +22,12 @@ class HeatNetworkInterface(GraphInterface):
     """GraphInterface of the heat network example (a static graph)."""
 
     def __init__(self):
+        """Initialize the interface; the graph is built lazily on first use."""
         self._graph: DataGraph = None
         """Last computed graph (its structure does not change)"""
 
     def _build_graph(self) -> DataGraph:
+        """Build (and cache) the static heat network graph."""
         # Imported here to avoid a circular import with heat_network.py.
         from scivianna_example.graph.heat_network import build_graph
 

@@ -1,3 +1,5 @@
+"""Extension that lets the user pick and load files into the slave."""
+
 import functools
 import os
 from pathlib import Path

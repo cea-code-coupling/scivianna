@@ -1,3 +1,5 @@
+"""Custom GridStack panel layout component for scivianna."""
+
 from __future__ import annotations
 
 from typing import Dict, Tuple

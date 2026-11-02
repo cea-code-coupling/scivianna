@@ -1,3 +1,5 @@
+"""Integration test for the Gmsh interface."""
+
 import matplotlib
 
 matplotlib.use("Agg")

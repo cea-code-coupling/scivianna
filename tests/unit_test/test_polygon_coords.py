@@ -1,3 +1,5 @@
+"""Unit tests for PolygonCoords."""
+
 import numpy as np
 import pytest
 

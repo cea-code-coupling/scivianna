@@ -1,3 +1,5 @@
+"""Public matplotlib plotting API: render a scivianna frame."""
+
 from typing import Any, Dict, Tuple, Union
 
 import matplotlib.axes

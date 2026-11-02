@@ -24,15 +24,18 @@ class TrackingGraphExtension(Extension):
     """Extension tracking node selection and move events, like DummyTestExtension."""
 
     def __init__(self, slave, plotter, panel):
+        """Record every selection and move event for later inspection."""
         super().__init__("Tracking graph", "", slave, plotter, panel)
 
         self.selection_history = []
         self.moved_history = []
 
     def on_node_selection_change(self, selected_nodes):
+        """Append the new selection to the history."""
         self.selection_history.append(selected_nodes)
 
     def on_nodes_moved(self, moved_nodes):
+        """Append the moved nodes to the history."""
         self.moved_history.append(moved_nodes)
 
 
@@ -48,6 +51,7 @@ def make_graph_panel_with_tracking():
     panel = PanelGraph(name="Graph callbacks", slave=slave, extensions=[TrackingGraphExtension])
 
     def cleanup():
+        """Terminate the slave process."""
         slave.terminate()
 
     return panel, next(e for e in panel.extensions if isinstance(e, TrackingGraphExtension)), cleanup
@@ -140,6 +144,33 @@ def test_unknown_message_type_ignored():
 
         assert tracking.selection_history == []
         assert tracking.moved_history == []
+    finally:
+        cleanup()
+
+
+@pytest.mark.graph
+def test_selection_only_reported_when_changed():
+    """Re-sending the same selection is not re-dispatched; a different one is."""
+    panel, tracking, cleanup = make_graph_panel_with_tracking()
+    try:
+        send_message(panel, {"type": "selection_changed", "ids": ["pipe_1"]})
+        send_message(panel, {"type": "selection_changed", "ids": ["pipe_1"]})  # unchanged: ignored
+        send_message(panel, {"type": "selection_changed", "ids": ["generator"]})  # changed: dispatched
+
+        assert tracking.selection_history == [["pipe_1"], ["generator"]]
+    finally:
+        cleanup()
+
+
+@pytest.mark.graph
+def test_selection_order_independent():
+    """Selection is compared as a set, so the same ids in another order are not re-dispatched."""
+    panel, tracking, cleanup = make_graph_panel_with_tracking()
+    try:
+        send_message(panel, {"type": "selection_changed", "ids": ["pipe_1", "generator"]})
+        send_message(panel, {"type": "selection_changed", "ids": ["generator", "pipe_1"]})  # same set
+
+        assert tracking.selection_history == [["pipe_1", "generator"]]
     finally:
         cleanup()
 

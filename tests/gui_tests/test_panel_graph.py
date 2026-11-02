@@ -33,6 +33,7 @@ def make_graph_panel():
     panel = PanelGraph(name="Graph test", slave=slave)
 
     def cleanup():
+        """Terminate the slave process."""
         slave.terminate()
 
     return panel, cleanup

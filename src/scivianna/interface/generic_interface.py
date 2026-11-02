@@ -1,3 +1,9 @@
+"""Abstract base classes for all code interfaces.
+
+Defines the interface hierarchy (GenericInterface and its 2D/3D/graph/value/coupling
+specializations) that every concrete code adapter must implement.
+"""
+
 import multiprocessing as mp
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
@@ -142,6 +148,7 @@ class GenericInterface:
 
     @classmethod
     def get_slave(cls):
+        """Returns a ComputeSlave instance running this interface class in a worker process."""
         from scivianna.slave import ComputeSlave
 
         return ComputeSlave(cls)

@@ -1,3 +1,5 @@
+"""Plotter displaying pandas DataFrames in a Panel DataFrame pane."""
+
 from typing import Callable, Optional
 
 import pandas as pd
@@ -13,6 +15,7 @@ class DataframePlotter:
     """Function to call when the mouse is clicked on the plot"""
 
     def __init__(self):
+        """Create the DataFrame pane used to display the data."""
         self._dataframe_pane = pn.pane.DataFrame(
             sizing_mode="stretch_both",
             styles={"border": "2px solid lightgray"},

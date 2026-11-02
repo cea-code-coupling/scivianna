@@ -1,3 +1,5 @@
+"""Abstract interface for 1D line plotters."""
+
 from typing import List, Tuple
 
 import pandas as pd
@@ -9,6 +11,7 @@ class Plotter1D:
     def __init__(
         self,
     ):
+        """Initialize an empty 1D plotter."""
         pass
 
     def plot(self, name: str, serie: pd.Series):
@@ -49,11 +52,13 @@ class Plotter1D:
         raise NotImplementedError()
 
     def _disable_interactions(self, val: bool):
+        """Enable or disable the figure interactions (mouse callbacks)."""
         pass
 
     def make_panel(
         self,
     ):
+        """Return the Panel viewable displaying the 1D figure."""
         raise NotImplementedError()
 
     def set_x_scale(self, scale: str):

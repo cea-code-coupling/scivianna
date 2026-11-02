@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class AIAssistant(Extension):
-    """Extension to load files and send them to the slave."""
+    """Extension providing AI-assisted code generation to edit the plot cell colors."""
 
     def __init__(self, slave: ComputeSlave, plotter: Plotter2D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
@@ -85,11 +85,13 @@ class AIAssistant(Extension):
             )
 
             def clear_prompt(*args, **kwargs):
+                """Clear the prompt and generated code, then recompute the panel."""
                 self.prompt_text_input.value = ""
                 self.llm_code = ""
                 self.panel.recompute()
 
             def exec_prompt(*args, **kwargs):
+                """Ask the LLM to turn the prompt into code and show it in the dialog."""
                 if self.prompt_text_input.value != "":
                     dw = Data2DWorker(self.current_data)
                     valid, llm_code = dw(self.prompt_text_input.value)
@@ -134,11 +136,13 @@ class AIAssistant(Extension):
             )
 
             def valid_code(e):
+                """Accept the generated code and recompute the panel with it."""
                 self.llm_code = self.code_editor.value
                 self.code_editor.value = ""
                 self.panel.recompute()
 
             def invalid_code(e):
+                """Discard the generated code."""
                 self.llm_code = ""
                 self.code_editor.value = ""
 

@@ -1,3 +1,5 @@
+"""Bokeh-based 2D polygon plotter with colorbar and hover support."""
+
 import functools
 import os
 from typing import IO, Callable, List, Tuple, Union
@@ -490,6 +492,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         )
 
     def update_range(self, event: events.RangesUpdate):
+        """Forward the figure range change to the registered callback."""
         self.range_callback(event.x0, event.x1, event.y0, event.y1)
 
     def _set_callback_on_range_update(self, callback: IO):
@@ -595,6 +598,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
     def _polygons_to_coords(
         self, polygons: List[PolygonElement]
     ) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
+        """Convert polygon elements into the nested xs/ys lists Bokeh patches expect."""
         xs_dict = [
             [
                 {
@@ -625,6 +629,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         return xs, ys
 
     def send_event(self, callback):
+        """Call the mouse callback with the current hover position and cell."""
         # If the mouse is hovered while a range update triggered update is done, the self.source_polygons.data length is updated faster than the data coming from the mouse.
         #   The value of self.source_mouse.data["index"][0] will be greater than the polygon length. In this case, the callback is not called.
         if (

@@ -1,3 +1,5 @@
+"""Interface serving per-country time series for the Europe grid example."""
+
 import os
 import pickle
 from pathlib import Path
@@ -16,6 +18,8 @@ from scivianna.interface.generic_interface import (
 
 
 class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameInterface):
+    """Serves per-country time series from a CSV as 1D values and DataFrames."""
+
     def __init__(
         self,
     ):
@@ -195,6 +199,7 @@ class CountryTimeSeriesInterface(ValueAtLocation, Value1DAtLocation, DataFrameIn
         return VisualizationMode.FLOAT
 
     def get_dataframe(self, cell_id, origin, field_name=None, options=None):
+        """Return the time series of a country as a one-row DataFrame."""
         return pd.DataFrame(
             data=[cell_id]
             + [

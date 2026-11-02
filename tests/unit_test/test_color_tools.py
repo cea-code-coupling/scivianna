@@ -1,3 +1,5 @@
+"""Unit tests for scivianna.utils.color_tools (interpolation and color lists)."""
+
 import multiprocessing as mp
 from typing import Any, Dict, List, Tuple, Union
 
@@ -14,6 +16,8 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 
 class ColorTestInterface(Geometry2DPolygon):
+    """Minimal interface used to exercise the color tools."""
+
     def __init__(
         self,
     ):
@@ -162,6 +166,7 @@ class ColorTestInterface(Geometry2DPolygon):
 
 @pytest.mark.default
 def test_interpolate_cmap_gray():
+    """Interpolating the gray colormap gives the expected gray values."""
     colors = interpolate_cmap_at_values("gray", [0, 0.5, 1.0])
 
     white = np.array((255, 255, 255, 255))
@@ -179,6 +184,7 @@ def test_interpolate_cmap_gray():
 
 @pytest.mark.default
 def test_interpolate_cmap_blues():
+    """Interpolating the Blues colormap gives the expected blue values."""
     colors = interpolate_cmap_at_values("Blues", [0, 0.4, 1.0])
 
     value_0 = np.array((247, 251, 255, 255))
@@ -190,6 +196,7 @@ def test_interpolate_cmap_blues():
 
 @pytest.mark.default
 def test_color_list_none():
+    """With no color list, edge colors default to gray."""
     interface = ColorTestInterface()
     data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
     set_colors_list(data2D, interface, MESH, "gray", False, {})
@@ -200,6 +207,7 @@ def test_color_list_none():
 
 @pytest.mark.default
 def test_color_list_str():
+    """A string color list is applied to the edge colors."""
     interface = ColorTestInterface()
     data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
     set_colors_list(data2D, interface, "str", "gray", False, {})
@@ -211,6 +219,7 @@ def test_color_list_str():
 
 @pytest.mark.default
 def test_color_list_float():
+    """A float color list is applied to the edge colors."""
     interface = ColorTestInterface()
     data2D, _ = interface.compute_2D_data(u=None, v=None, origin=(0.0, 0.0, 0.0), size_u=1.0, size_v=1.0, q_tasks=None, options={}, caller="Test")
 

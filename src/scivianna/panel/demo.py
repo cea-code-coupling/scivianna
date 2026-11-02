@@ -1,3 +1,5 @@
+"""Demo components: a multi-app demonstrator and the overlay it displays apps in."""
+
 from pathlib import Path
 from typing import Dict, Union
 
@@ -13,10 +15,10 @@ from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 class DemoOverlay(ReactiveHTML):
-    """This component allow displaying a menu in front of a background."""
+    """Component that displays a menu overlaid on top of a background app."""
 
     app = Child()
-    """App to show as backgorund"""
+    """App to show as background"""
     menu = Child()
     """Menu to display"""
 
@@ -36,11 +38,11 @@ class DemoOverlay(ReactiveHTML):
                         </div>
                     </div>
                 """
-    """HTML code of the elemet display"""
+    """HTML template of the displayed element"""
 
 
 class Demonstrator:
-    """The demonstrator allows having several apps in one and switch between them"""
+    """Demonstrator that hosts several apps in one window, with a menu to switch between them."""
 
     menu: pmui.MenuButton
     """Menu button to switch between apps"""
@@ -102,5 +104,5 @@ class Demonstrator:
     def __panel__(
         self,
     ):
-        """Returns the displayed object if doing demonstrator.show/serve"""
+        """Returns the displayed object when calling show or serve on the demonstrator."""
         return self.main_frame

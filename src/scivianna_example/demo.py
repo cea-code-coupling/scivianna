@@ -1,3 +1,5 @@
+"""Main demo page: builds a tabbed Panel application with one tab per example app."""
+
 import scivianna_example
 import scivianna_example.europe_grid.europe_grid as europe_grid
 from scivianna.icon import get_icon
@@ -73,6 +75,11 @@ import panel_material_ui as pmui
 
 # download at https://composables.com/icons/icon-libraries/material-symbols?q=dashboard
 def make_demo(return_slaves=False) -> pmui.Page:
+    """Build the demo page with one tab per available example app.
+
+    Each example is only included if its optional dependencies import cleanly;
+    every tab pairs the panel's main frame with its description text.
+    """
     icons = {
         "Help": get_icon("question_mark"),
         "Europe example": get_icon("line_axis"),

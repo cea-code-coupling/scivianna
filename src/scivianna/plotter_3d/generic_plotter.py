@@ -1,3 +1,5 @@
+"""Abstract interface for 3D plotters."""
+
 from typing import Callable, Optional, Tuple
 
 import numpy as np
@@ -11,6 +13,7 @@ class Plotter3D:
     def __init__(
         self,
     ):
+        """Initialize an empty 3D plotter."""
         self.on_axes_change_callback = None
 
     def plot(self, data: Data3D):

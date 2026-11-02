@@ -1,3 +1,4 @@
+"""Heat network example: a generator feeding two factories through four pipes."""
 
 from dataclasses import dataclass, field
 
@@ -139,6 +140,7 @@ FACTORY_LOGO = {
 LOGO_SCALE = 1/1000
 
 def make_generator(name: str):
+    """Build the generator node data from the flame logo polygons."""
     data = Data2D.from_polygon_list(
         [
             PolygonElement(
@@ -162,6 +164,7 @@ def make_generator(name: str):
     return data
 
 def make_factory(name: str, value: float):
+    """Build a factory node data from the factory logo polygons."""
     data = Data2D.from_polygon_list(
         [
             PolygonElement(
@@ -185,6 +188,7 @@ def make_factory(name: str, value: float):
     return data
 
 def build_graph():
+    """Assemble the full heat network as a DataGraph of nodes and links."""
     generator = make_generator("generator")
     
     pipe_1 = pipe_data(Pipe("pipe_1", 3., .15, 90, np.linspace(190, 170, 10)))

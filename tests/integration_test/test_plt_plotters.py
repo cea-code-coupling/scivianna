@@ -1,3 +1,4 @@
+"""Integration tests for the matplotlib plotters (polygons and grid)."""
 
 # Field example
 from pathlib import Path
@@ -15,6 +16,7 @@ from scivianna_example.mandelbrot.mandelbrot import MandelBrotInterface
 
 
 def build_data_polygon() -> Data2D:
+    """Build a 2D frame of polygons from a MED file."""
     from scivianna.interface.med_interface import MEDInterface
     med = MEDInterface()
     med.read_file(
@@ -42,6 +44,7 @@ def build_data_polygon() -> Data2D:
     return data_2d
 
 def build_data_grid() -> Data2D:
+    """Build a 2D grid frame from the Mandelbrot interface."""
     mandelbrot = MandelBrotInterface()
     data_2d:Data2D
     u, v = X, Y
@@ -65,6 +68,7 @@ def build_data_grid() -> Data2D:
 
 @pytest.mark.medcoupling
 def test_polygon_plt_from_polygons():
+    """Plot polygon data with the matplotlib polygon plotter."""
     data_2d = build_data_polygon()
 
     plotter = Matplotlib2DPolygonPlotter()
@@ -72,6 +76,7 @@ def test_polygon_plt_from_polygons():
     plotter.figure.savefig("p2p.png")
 
 def test_grid_plt_from_polygons():
+    """Plot grid data (as polygons) with the matplotlib polygon plotter."""
     data_2d = build_data_grid()
 
     plotter = Matplotlib2DPolygonPlotter()
@@ -80,6 +85,7 @@ def test_grid_plt_from_polygons():
 
 @pytest.mark.grid
 def test_grid_plt_from_grid():
+    """Plot grid data with the matplotlib grid plotter."""
     data_2d = build_data_grid()
 
     plotter = Matplotlib2DGridPlotter()

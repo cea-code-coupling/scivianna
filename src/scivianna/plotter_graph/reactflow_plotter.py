@@ -98,6 +98,7 @@ class ReactFlowPlotter(PlotterGraph):
         colorbar_bins: int = 64,
         **flow_kwargs,
     ):
+        """Store the sizing and colorbar options; the canvas is built on first plot."""
         super().__init__()
         self.max_size = max_size
         self.scale = scale
@@ -379,18 +380,23 @@ class ReactFlowPlotter(PlotterGraph):
     # Per-node slice access (the graph plotter keeps each node fitted to its
     # own content, so these are no-ops kept for interface compatibility).
     def move_slice_to(self, plot_name: str, u=None, v=None, origin=None):
+        """No-op: each node is fitted to its own content, there is no shared slice."""
         pass
 
     def get_slice_normal(self, plot_name: str) -> np.ndarray:
+        """Return the (fixed) slice normal of a node."""
         return np.array([0.0, 0.0, 1.0])
 
     def set_slice_origin(self, plot_name: str, origin: Tuple[float, float, float]):
+        """No-op: node positions are fixed by the graph layout."""
         pass
 
     def get_slice_origin(self, plot_name: str) -> np.ndarray:
+        """Return the (fixed) slice origin of a node."""
         return np.zeros(3)
 
     def get_uv(self, plot_name: str) -> Tuple[np.ndarray, np.ndarray]:
+        """Return the (fixed) u and v axis vectors of a node."""
         return np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])
 
     # ------------------------------------------------------------------ figure building
@@ -586,6 +592,7 @@ class ReactFlowPlotter(PlotterGraph):
 
     @staticmethod
     def _links_signature(links: List) -> str:
+        """Build a comparable string from the endpoints and sides of all links."""
         return repr([(l.source_data, l.target_data, l.source_direction, l.target_direction) for l in links])
 
     @staticmethod

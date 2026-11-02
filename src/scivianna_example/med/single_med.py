@@ -1,9 +1,12 @@
+"""Single MED file example served as a panel."""
+
 from scivianna.layout.split import SplitLayout
 from scivianna.notebook_tools import _serve_panel, get_med_panel
 from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 def get_panel(*args, return_slaves=False, **kwargs) -> VisualizationPanel:
+    """Build a single MED panel."""
     med_1 = get_med_panel(geo=None, title="MEDCoupling visualizer XY")
 
     if return_slaves:

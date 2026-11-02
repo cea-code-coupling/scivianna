@@ -1,3 +1,5 @@
+"""Abstract interface for graph plotters (nodes + directed links)."""
+
 from typing import Callable, Optional, Tuple
 
 import numpy as np
@@ -26,6 +28,7 @@ class PlotterGraph:
     def __init__(
         self,
     ):
+        """Initialize an empty graph plotter."""
         self.on_axes_change_callback = None
 
     def plot(self, data: DataGraph):

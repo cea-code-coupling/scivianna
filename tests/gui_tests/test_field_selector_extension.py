@@ -328,6 +328,7 @@ class TestSetColorsList:
             
             # Set coloring mode to FROM_STRING for testing
             def mock_get_coloring_mode(label):
+                """Return the FROM_STRING coloring mode for any label."""
                 return VisualizationMode.FROM_STRING
             
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
@@ -373,6 +374,7 @@ class TestSetColorsList:
             
             # Set coloring mode to FROM_STRING for testing (since TestInterface returns FROM_STRING for MATERIAL)
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
             
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
@@ -419,6 +421,7 @@ class TestSetColorsList:
             
             # Set coloring mode to NONE
             def mock_get_coloring_mode(label):
+                """Return the NONE coloring mode for any label."""
                 return VisualizationMode.NONE
             
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
@@ -481,6 +484,7 @@ class TestSetColorsList:
 
             # Set coloring mode to FROM_STRING
             def mock_get_coloring_mode(label):
+                """Return the FROM_STRING coloring mode for any label."""
                 return VisualizationMode.FROM_STRING
 
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
@@ -529,6 +533,7 @@ class TestSetColorsList:
             
             # Set coloring mode to FROM_VALUE
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
             
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
@@ -704,6 +709,7 @@ class TestForceRangeFeature:
 
             # Set coloring mode to FROM_VALUE
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
 
@@ -824,6 +830,7 @@ class TestEdgeOffsetFeature:
 
             # Set coloring mode to FROM_VALUE
             def mock_get_coloring_mode(label):
+                """Return the FROM_VALUE coloring mode for any label."""
                 return VisualizationMode.FROM_VALUE
             panel.slave.get_label_coloring_mode = mock_get_coloring_mode
 

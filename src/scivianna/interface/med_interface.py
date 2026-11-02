@@ -359,6 +359,8 @@ This extension allows defining the medcoupling field display parameters.
 
 
 class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
+    """Interface for MEDCoupling (.med) files: 2D slices, 3D meshes and C3PO coupling."""
+
     file_path: str
     """MEDCoupling .med file path saved to read MedCouplingFields later."""
 
@@ -963,6 +965,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         }
 
         def _mc_ph_to_vtk_fast(connectivity: np.ndarray, offsets: np.ndarray) -> np.ndarray:
+            """Convert polyhedron connectivity (with -1 face separators) to VTK format."""
             if len(connectivity) == 0:
                 return np.array([], dtype=int)
             cell_length = offsets[1:] - offsets[:-1]
@@ -992,6 +995,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         def _to_unstructured(
             mesh: medcoupling.MEDCouplingUMesh, coords: np.ndarray
         ) -> pv.UnstructuredGrid:
+            """Build a pyvista UnstructuredGrid from a MEDCoupling unstructured mesh."""
             offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
             cell_length = offsets[1:] - offsets[:-1] - 1
 
@@ -1031,6 +1035,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             return pv_mesh
 
         def _to_polydata(mesh: medcoupling.MEDCouplingUMesh, coords: np.ndarray) -> pv.PolyData:
+            """Build a pyvista PolyData from a MEDCoupling structured (regular) mesh."""
             offsets = mesh.getNodalConnectivityIndex().toNumPyArray()
             cell_length = offsets[1:] - offsets[:-1] - 1
             cell_types_idx = offsets[:-1]
@@ -1051,6 +1056,7 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
         def to_pv(
             mesh: medcoupling.MEDCouplingUMesh | medcoupling.MEDCouplingFieldDouble,
         ) -> pv.UnstructuredGrid | pv.PolyData:
+            """Convert a MEDCoupling mesh or field into a pyvista dataset."""
             if isinstance(mesh, medcoupling.MEDCouplingFieldDouble):
                 field: medcoupling.MEDCouplingFieldDouble = mesh
                 mesh = mesh.getMesh()

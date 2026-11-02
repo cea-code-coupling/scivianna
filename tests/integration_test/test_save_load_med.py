@@ -1,3 +1,5 @@
+"""Integration test for saving and loading a MED panel state."""
+
 from pathlib import Path
 
 import numpy as np

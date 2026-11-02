@@ -69,7 +69,7 @@ class Panel2D(VisualizationPanel):
     """2D Visualisation panel associated to a code."""
 
     plotter: Plotter2D
-    """ 2D plotter displaying and updating the graph
+    """ 2D plotter displaying and updating the figure
     """
     current_data: Data2D
     """ Displayed data and their properties.
@@ -522,12 +522,12 @@ class Panel2D(VisualizationPanel):
     def get_uv(
         self,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Gets the normal direction vectors from the FloatInput objects.
+        """Returns the normalized u and v axis direction vectors.
 
         Returns
         -------
         Tuple[np.ndarray, np.ndarray]
-            Vectors U, V
+            Normalized vectors u, v
         """
         u = self.u / np.linalg.norm(self.u)
         v = self.v / np.linalg.norm(self.v)

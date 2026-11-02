@@ -259,7 +259,7 @@ class GridLayoutData(BaseModel):
 
     @model_validator(mode="after")
     def check(self):
-
+        """Validates that all panel names in the grid are unique."""
         found_names = set()
 
         for line in self.grid:
@@ -308,6 +308,7 @@ class SplitLayoutData(BaseModel):
 
     @model_validator(mode="after")
     def check(self):
+        """Validates that all panel names in the split layout are unique."""
         found_names = set()
 
         for element in self.get_panels():

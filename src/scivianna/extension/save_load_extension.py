@@ -1,3 +1,5 @@
+"""Extension to save and load the state of a frame (and optionally its files)."""
+
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
 
 
 class SaveLoadExtension(Extension):
+    """Extension to save a frame state to a pickle file and load it back later."""
+
     def __init__(self, slave: ComputeSlave, plotter: Plotter2D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
 

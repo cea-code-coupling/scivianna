@@ -1,3 +1,5 @@
+"""MED 3D example: a MedCoupling mesh in 3D interacting with a 2D plot."""
+
 from pathlib import Path
 
 import scivianna
@@ -15,6 +17,7 @@ from scivianna.slave import ComputeSlave
 def get_panel(
     geo, title: str = "3D", displayed_field="INTEGRATED_POWER", *args, return_slaves=False, **kwargs
 ) -> VisualizationPanel:
+    """Build a 3D MED panel displaying the given field."""
     slave = ComputeSlave(MEDInterface)
     if geo is None:
         slave.read_file(Path(scivianna.__file__).parent / "input_file" / "power.med", GEOMETRY)

@@ -1,3 +1,5 @@
+"""Extension to customize the 2D plot axes: direction vectors, origin and slice size."""
+
 from typing import TYPE_CHECKING, Tuple
 
 import numpy as np
@@ -39,7 +41,7 @@ icon_svg = """
 
 
 class Axes(Extension):
-    """Extension to load files and send them to the slave."""
+    """Extension to customize the 2D plot axes: direction vectors, origin and slice size."""
 
     def __init__(self, slave: "ComputeSlave", plotter: Plotter2D, panel: "VisualizationPanel"):
         """Constructor of the extension, saves the slave and the panel
@@ -147,6 +149,7 @@ The following keys are binded:
         self.recompute_button.on_click(self.trigger_update)
 
         def update_origin_x(*args, **kwargs):
+            """Store the new origin x and schedule a data update."""
             if self._restoring:
                 return
             to_update = {"origin_x": self.origin_x_inp.value}
@@ -158,6 +161,7 @@ The following keys are binded:
                 self.update_data()
 
         def update_origin_y(*args, **kwargs):
+            """Store the new origin y and schedule a data update."""
             if self._restoring:
                 return
             to_update = {"origin_y": self.origin_y_inp.value}
@@ -169,6 +173,7 @@ The following keys are binded:
                 self.update_data()
 
         def update_origin_z(*args, **kwargs):
+            """Store the new origin z and schedule a data update."""
             if self._restoring:
                 return
             to_update = {"origin_z": self.origin_z_inp.value}
@@ -180,6 +185,7 @@ The following keys are binded:
                 self.update_data()
 
         def update_size_u(*args, **kwargs):
+            """Store the new size along u and schedule a data update."""
             if self._restoring:
                 return
             to_update = {"size_u": self.size_u_inp.value}
@@ -191,6 +197,7 @@ The following keys are binded:
                 self.update_data()
 
         def update_size_v(*args, **kwargs):
+            """Store the new size along v and schedule a data update."""
             if self._restoring:
                 return
             to_update = {"size_v": self.size_v_inp.value}
@@ -396,6 +403,7 @@ The following keys are binded:
                 self.update_data()
 
     def on_frame_change(self, u_vector, v_vector):
+        """Sync the axis vector widgets when the frame axes change in the figure."""
         u, v = self.get_uv()
         if [*list(u_vector), *list(v_vector)] != [*u.tolist(), *(v.tolist())]:
             if not (all([e == 0 for e in u]) or all([e == 0 for e in v])):
@@ -410,6 +418,7 @@ The following keys are binded:
     def update_data(
         self,
     ):
+        """Push the pending axis/origin/size changes into the widgets and recompute if needed."""
         if self.__new_data != {}:
             if "u0" in self.__new_data:
                 self.u0_inp.value = self.__new_data["u0"]
@@ -445,11 +454,13 @@ The following keys are binded:
     async def async_update_data(
         self,
     ):
+        """Async wrapper around update_data, run on the next Bokeh tick."""
         self.update_data()
 
     def update_widgets_visibility(
         self,
     ):
+        """Show or hide the axis widgets according to the geometry type."""
         geom_type: GeometryType = self.slave.get_geometry_type()
 
         # Definition of U and V vectors
@@ -462,6 +473,7 @@ The following keys are binded:
         self.origin_z_inp.visible = geom_type in [GeometryType._3D, GeometryType._3D_INFINITE]
 
     def trigger_update(self, *args, **kwargs):
+        """Send the current axes, origin and size to the panel for a recompute."""
         if self._restoring:
             return
         u, v = self.get_uv()
