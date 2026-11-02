@@ -156,7 +156,7 @@ hide all the node labels at once, and re-fit the viewport to the drawn nodes.
         selected_nodes : List[str]
             Ids of the currently selected nodes (empty list when nothing is selected).
         """
-        print("Nodes selected :", selected_nodes)
+        return
 
     def on_nodes_moved(self, moved_nodes: list[dict[str, float]]):
         """Function called when one or several nodes are moved on a graph plot.
@@ -166,4 +166,4 @@ hide all the node labels at once, and re-fit the viewport to the drawn nodes.
         moved_nodes : List[Dict[str, float]]
             One entry per moved node: {"id": node key, "x": new x position, "y": new y position}.
         """
-        print("Nodes moved :", moved_nodes)
+        return

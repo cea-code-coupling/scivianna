@@ -177,6 +177,9 @@ class PanelGraph(VisualizationPanel):
         except Exception:
             pass
 
+        self.plotter.provide_on_nodes_moved_callback(self.on_nodes_moved_callback)
+        self.plotter.provide_on_node_selection_change_callback(self.on_node_selection_change_callback)
+
     def _on_visibility_change(self, event):
         """Re-fit the canvas when the panel becomes visible.
 
@@ -444,28 +447,42 @@ class PanelGraph(VisualizationPanel):
         self.on_axes_change_callback = callback
         self.plotter.provide_on_axes_change_callback(callback)
 
-    def provide_on_node_selection_change_callback(self, callback: Callable):
-        """Stores a function to call everytime the selection of nodes changes on the graph.
-        Functions arguments are the ids of the selected nodes (empty list when nothing
-        is selected).
+    def on_node_selection_change_callback(
+        self,
+        selected_nodes: List[str]
+    ):
+        """Function called when the selection of nodes changes on a graph panel.
+
+        It notifies every extension of the panel that owns the graph plot.
 
         Parameters
         ----------
-        callback : Callable
-            Function to call.
+        selected_nodes : List[str]
+            Ids of the currently selected nodes (empty list when nothing is selected).
         """
-        self.plotter.provide_on_node_selection_change_callback(callback)
+        for extension in self.extensions:
+            extension.on_node_selection_change(selected_nodes)
 
-    def provide_on_nodes_moved_callback(self, callback: Callable):
-        """Stores a function to call everytime one or several nodes are moved on the graph.
-        Functions arguments are a list of {"id", "x", "y"} dicts, one per moved node.
+    def on_nodes_moved_callback(
+        self,
+        moved_nodes: List[Dict[str, float]]
+    ):
+        """Function called when one or several nodes are moved on a graph panel.
+
+        It notifies every extension of the panel that owns the graph plot and
+        stores the new positions in the displayed graph.
 
         Parameters
         ----------
-        callback : Callable
-            Function to call.
+        moved_nodes : List[Dict[str, float]]
+            One entry per moved node: {"id": node key, "x": new x position, "y": new y position}.
         """
-        self.plotter.provide_on_nodes_moved_callback(callback)
+        if self.current_data is not None:
+            for node in moved_nodes:
+                if node["id"] in self.current_data.locations:
+                    self.current_data.locations[node["id"]] = (node["x"], node["y"])
+        for extension in self.extensions:
+            extension.on_nodes_moved(moved_nodes)
 
     def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
         """A graph has no slice location: nothing to recompute. Kept for interface compatibility.
