@@ -93,7 +93,7 @@ def test_bokeh_polygon_mouse_info_out_of_bounds():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.default
+@pytest.mark.grid
 def test_bokeh_grid_mouse_info_hovering():
     """get_mouse_info returns coordinates and cell id when hovering a grid cell."""
     from scivianna_example.mandelbrot import mandelbrot
@@ -127,7 +127,7 @@ def test_bokeh_grid_mouse_info_hovering():
             slave.terminate()
 
 
-@pytest.mark.default
+@pytest.mark.grid
 def test_bokeh_grid_mouse_info_not_hovering():
     """get_mouse_info returns an empty string when the mouse is not over the grid figure."""
     from scivianna_example.mandelbrot import mandelbrot
