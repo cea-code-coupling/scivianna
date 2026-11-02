@@ -122,6 +122,7 @@ class GenericLayout:
             panel.provide_on_clic_callback(self.on_clic_callback)
             panel.provide_on_mouse_move_callback(self.mouse_move_callback)
             panel.provide_field_change_callback(self.field_change_callback)
+            panel.provide_on_axes_change_callback(self.on_axes_change_callback)
 
             # 2: assuming the two first are the button to open and close the tab
             self.button_columns[panel.panel_name] = [b[0] for b in panel.gui.buttons]
