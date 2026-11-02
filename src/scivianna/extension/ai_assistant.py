@@ -12,6 +12,7 @@ import panel_material_ui as pmui
 
 import scivianna
 from scivianna.data.data2d import Data2D
+from scivianna.data.data3d import Data3D
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
 from scivianna.logging_config import get_logger
@@ -194,6 +195,9 @@ Agent not loaded, received error :
             return
 
         from scivianna.agent.data_2d_worker import Data2DWorker
+
+        if not isinstance(data, (Data2D, Data3D)):
+            return
 
         self.current_data = data
         if self.llm_code != "":

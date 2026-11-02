@@ -54,7 +54,7 @@ panel.show()
 ```
 
 ### Running the Demonstrator
-Scivianna includes a `scivianna_example` module with several demonstration cases. 
+Scivianna includes a `scivianna_example` module with several demonstration cases.
 
 It can be opened online at:
 https://huggingface.co/spaces/tmoulignier/scivianna
@@ -86,6 +86,9 @@ Visualize line plots, 2D geometries, 3D VTK-based plots, and pandas DataFrames t
 
 #### Grid based 2D plot
 ![Grid based 2D plot](https://github.com/user-attachments/assets/66716616-872d-493c-9b77-b9640345cfdf)
+
+#### Multi-element graph plot
+![Multi-element graph plot](https://github.com/user-attachments/assets/777cf1d9-ba76-40c7-8cc4-626c303c3ef6)
 
 
 ### 2. Real-Time Code Coupling

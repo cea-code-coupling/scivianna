@@ -244,8 +244,9 @@ class Bokeh2DGridPlotter(Plotter2D):
             ),
         )
 
+        self.colormap = "BuRd"
         self.color_mapper = LinearColorMapper(
-            palette=self.__get_color_mapper_from_string("BuRd"), low=0.0, high=1.0
+            palette=self.__get_color_mapper_from_string(self.colormap), low=0.0, high=1.0
         )
 
         self.figure_color_bar = ColorBar(
