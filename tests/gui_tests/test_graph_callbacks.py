@@ -82,7 +82,7 @@ def test_selection_cleared_reaches_extension():
     try:
         send_message(panel, {"type": "selection_changed", "ids": []})
 
-        assert tracking.selection_history == [[]]
+        assert tracking.selection_history == []
     finally:
         cleanup()
 
