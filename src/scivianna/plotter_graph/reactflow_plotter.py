@@ -399,6 +399,14 @@ class ReactFlowPlotter(PlotterGraph):
         """Return the (fixed) u and v axis vectors of a node."""
         return np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])
 
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell in the graph (node key, coordinates, cell id, value)."""
+        for key, plotter in self.plotters.items():
+            info = plotter.get_mouse_info()
+            if info:
+                return f"[{key}] {info}"
+        return ""
+
     # ------------------------------------------------------------------ figure building
     def _make_node(self, key: str, data_graph: DataGraph) -> GraphNode:
         """Builds the bokeh figure of a node and wraps it in a GraphNode."""

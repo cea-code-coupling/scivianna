@@ -171,3 +171,13 @@ class Plotter3D:
             Mouse location
         """
         raise NotImplementedError()
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value).
+
+        Returns
+        -------
+        str
+            Information on mouse hovered location
+        """
+        raise NotImplementedError()

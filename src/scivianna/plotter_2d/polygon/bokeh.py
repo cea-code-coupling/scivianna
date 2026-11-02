@@ -50,6 +50,7 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self,
     ):
         """Creates the bokeh Figure and ColumnDataSources"""
+        self._mouse_inside = False
         self.source_polygons = ColumnDataSource(
             {
                 XS: [],
@@ -187,6 +188,15 @@ class Bokeh2DPolygonPlotter(Plotter2D):
         self.figure.yaxis.visible = False
 
         self.figure.add_tools(self.hover_tool)
+
+        def _on_enter(_):
+            self._mouse_inside = True
+
+        def _on_leave(_):
+            self._mouse_inside = False
+
+        self.figure.on_event(bokeh.events.MouseEnter, _on_enter)
+        self.figure.on_event(bokeh.events.MouseLeave, _on_leave)
 
         self.figure.js_on_event(
             MouseMove,
@@ -725,3 +735,26 @@ class Bokeh2DPolygonPlotter(Plotter2D):
             self.permanent_source_mouse.data["y"][0],
             self.permanent_source_mouse.data["z"][0],
         )
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value).
+
+        Returns an empty string when the mouse is not over this figure.
+        """
+        if not self._mouse_inside:
+            return ""
+        x = self.source_mouse.data["x"][0]
+        y = self.source_mouse.data["y"][0]
+        z = self.source_mouse.data["z"][0]
+        info = f"({x:.3f}, {y:.3f}, {z:.3f})"
+        idx = int(self.source_mouse.data.get("index", [0])[0])
+        if CELL_NAMES in self.source_polygons.data:
+            names = self.source_polygons.data[CELL_NAMES]
+            if 0 <= idx < len(names):
+                cell_id = names[idx]
+                info += f" | Cell: {cell_id}"
+                if CELL_VALUES in self.source_polygons.data:
+                    values = self.source_polygons.data[CELL_VALUES]
+                    if 0 <= idx < len(values):
+                        info += f" | Value: {values[idx]}"
+        return info

@@ -184,7 +184,7 @@ class VisualizationPanel(pn.viewable.Viewer):
         """
         if self.figure.key:
             if self.figure.key == "i":
-                logger.debug("Current mouse location: %s", self.plotter.get_mouse_location())
+                print(self.plotter.get_mouse_info())
 
             for extension in self.extensions:
                 extension.on_key_pressed(self.figure.key)

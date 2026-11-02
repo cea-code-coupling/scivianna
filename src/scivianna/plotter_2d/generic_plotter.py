@@ -181,3 +181,13 @@ class Plotter2D:
             Mouse location
         """
         raise NotImplementedError()
+
+    def get_mouse_info(self) -> str:
+        """Returns the information on mouse location
+
+        Returns
+        -------
+        str
+            Information on mouse hovered location
+        """
+        raise NotImplementedError()

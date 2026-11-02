@@ -140,3 +140,13 @@ class PlotterGraph:
             Function to call.
         """
         raise NotImplementedError()
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell in the graph (node key, coordinates, cell id, value).
+
+        Returns
+        -------
+        str
+            Information on mouse hovered location
+        """
+        raise NotImplementedError()

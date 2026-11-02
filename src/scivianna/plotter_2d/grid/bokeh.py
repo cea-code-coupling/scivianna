@@ -48,6 +48,7 @@ class Bokeh2DGridPlotter(Plotter2D):
         self,
     ):
         """Creates the bokeh Figure and ColumnDataSources"""
+        self._mouse_inside = False
         self.source_grid = ColumnDataSource(
             {
                 GRID: [],
@@ -193,6 +194,15 @@ class Bokeh2DGridPlotter(Plotter2D):
         self.figure.yaxis.visible = False
 
         self.figure.add_tools(hover_tool)
+
+        def _on_enter(_):
+            self._mouse_inside = True
+
+        def _on_leave(_):
+            self._mouse_inside = False
+
+        self.figure.on_event(bokeh.events.MouseEnter, _on_enter)
+        self.figure.on_event(bokeh.events.MouseLeave, _on_leave)
 
         self.figure.js_on_event(
             MouseMove,
@@ -766,6 +776,28 @@ class Bokeh2DGridPlotter(Plotter2D):
             self.permanent_source_mouse.data["y"],
             self.permanent_source_mouse.data["z"],
         )
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value).
+
+        Returns an empty string when the mouse is not over this figure.
+        """
+        if not self._mouse_inside:
+            return ""
+        x = self.source_mouse.data["x"][0]
+        y = self.source_mouse.data["y"][0]
+        z = self.source_mouse.data["z"][0]
+        info = f"({x:.3f}, {y:.3f}, {z:.3f})"
+        if "i" in self.source_mouse.data and self.cell_name_grid is not None:
+            i, j = int(self.source_mouse.data["i"][0]), int(self.source_mouse.data["j"][0])
+            if j < len(self.cell_name_grid) and i < len(self.cell_name_grid[j]):
+                cell_id = self.cell_name_grid[j, i]
+                info += f" | Cell: {cell_id}"
+                if CELL_VALUES in self.source_grid.data:
+                    val_grid = self.source_grid.data[CELL_VALUES][0]
+                    if j < val_grid.shape[0] and i < val_grid.shape[1]:
+                        info += f" | Value: {val_grid[j, i]}"
+        return info
 
     def set_range(self, u_range: Tuple[float, float], v_range: Tuple[float, float]):
         """Updates the plot ranges
