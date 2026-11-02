@@ -16,7 +16,6 @@ import panel_material_ui as pmui
 from scivianna.constants import OUTSIDE
 from scivianna.data.data2d import Data2D
 from scivianna.data.data3d import Data3D
-from scivianna.data.data_graph import DataGraph
 from scivianna.enums import VisualizationMode
 from scivianna.extension.extension import Extension
 from scivianna.icon import get_icon
