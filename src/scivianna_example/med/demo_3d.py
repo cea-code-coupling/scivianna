@@ -24,7 +24,7 @@ def get_panel(
         raise TypeError(f"Provided type {type(geo)} not implemented")
 
     if displayed_field not in slave.get_labels():
-        displayed_field = None
+        displayed_field = slave.get_labels()[0]
 
     med_2 = Panel2D(slave, name="MEDCoupling slice", u=X, v=Y, displayed_field=displayed_field)
     med_2.update_event = [UpdateEvent.CLIC, UpdateEvent.AXES_CHANGE]
