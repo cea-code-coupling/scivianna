@@ -16,20 +16,7 @@ class PlotterGraph:
     methods below; they are consumed by ``PanelGraph`` in the same way that
     :class:`Plotter2D`/ :class:`Plotter3D` backends are consumed by their
     panels.
-
-    Attributes
-    ----------
-    on_axes_change_callback : Callable, optional
-        Callback invoked when the user changes a node's axes (u, v, origin,
-        size_u, size_v), registered via
-        :meth:`provide_on_axes_change_callback`.
     """
-
-    def __init__(
-        self,
-    ):
-        """Initialize an empty graph plotter."""
-        self.on_axes_change_callback = None
 
     def plot(self, data: DataGraph):
         """Adds a new graph to the figure from a set of nodes and links
@@ -99,17 +86,6 @@ class PlotterGraph:
     def provide_on_clic_callback(self, callback: Callable):
         """Stores a function to call everytime the user clics on the plot.
         Functions arguments are location, cell_id.
-
-        Parameters
-        ----------
-        callback : Callable
-            Function to call.
-        """
-        raise NotImplementedError()
-
-    def provide_on_axes_change_callback(self, callback: Callable):
-        """Stores a function to call everytime the user changes the axes.
-        Functions arguments are the new axis values (u, v, origin, size_u, size_v).
 
         Parameters
         ----------

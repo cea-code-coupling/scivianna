@@ -269,9 +269,6 @@ class GraphInterface(GenericInterface):
 
     def compute_graph(
         self,
-        u: Tuple[float, float, float],
-        v: Tuple[float, float, float],
-        origin: Tuple[float, float, float],
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -280,12 +277,6 @@ class GraphInterface(GenericInterface):
 
         Parameters
         ----------
-        u : Tuple[float, float, float]
-            Horizontal coordinate director vector
-        v : Tuple[float, float, float]
-            Vertical coordinate director vector
-        origin : Tuple[float, float, float]
-            Physical 3D position of the slice center
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]

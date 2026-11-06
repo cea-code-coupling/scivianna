@@ -165,8 +165,19 @@ class Data2DWorker(Data2DWorker):
 
         self.python_executor = self.smoll_agent.python_executor
 
-    def extract_exectute_code(self, text: str):
-        """Extract the last execute_code call from an agent trace."""
+    def extract_exectute_code(self, text: str) -> str:
+        """Extract the last execute_code call from an agent trace
+
+        Parameters
+        ----------
+        text : str
+            LLM return text
+
+        Returns
+        -------
+        str
+            Generated code
+        """
         if not "execute_code" in text:
             return
 
@@ -175,9 +186,21 @@ class Data2DWorker(Data2DWorker):
 
         return last_exec
 
-    def __call__(self, question, reset=False, images=[], max_steps=15, additional_args={}):
-        """Run the LLM agent on a question and return whether it produced valid code."""
+    def __call__(self, question, max_steps=15):
+        """Run the LLM agent on a question and return whether it produced valid code.
 
+        Parameters
+        ----------
+        question : str
+            Prompt
+        max_steps : int, optional
+            maximum agent steps, by default 15
+
+        Returns
+        -------
+        bool, str
+            Success, executed code
+        """
         print(
             f"\nLLM used by agent :\n\n- {ai_server.client_kwargs['base_url']}\n- {ai_server.model_id}\n"
         )

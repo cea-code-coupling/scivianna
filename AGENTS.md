@@ -73,7 +73,7 @@ scivianna/
 │   │   ├── axes.py                 # Axes customization extension
 │   │   ├── field_selector.py       # Field selection extension
 │   │   ├── file_loader.py          # File loading extension
-│   │   ├── graph.py                # Graph canvas extension (node padding, labels)
+│   │   ├── graph.py                # Graph canvas extension (node padding, labels, colorbar placement)
 │   │   ├── save_load_extension.py  # Save/load session state extension
 │   │   └── ...
 │   │
@@ -225,7 +225,7 @@ class Plotter2D:
 
 ### 4b. PlotterGraph (Graph Rendering)
 
-The `PlotterGraph` abstract class (`plotter_graph/generic_plotter.py`) defines the rendering interface for a graph of 2D nodes connected by directed links (coupling topology). It mirrors `Plotter2D`/`Plotter3D` but operates on a `DataGraph`:
+The `PlotterGraph` abstract class (`plotter_graph/generic_plotter.py`) defines the rendering interface for a graph of 2D nodes connected by directed links (coupling topology). It mirrors `Plotter2D`/`Plotter3D` but operates on a `DataGraph`. A graph has no slice (every node is fitted to its own content), so there is no u/v/origin to request or change:
 
 ```python
 class PlotterGraph:
@@ -234,17 +234,12 @@ class PlotterGraph:
     def make_panel(self) -> pn.viewable.Viewable: ...    # Returns Panel widget
     def update_colorbar(self, display: bool, value_range: Tuple[float, float]): ...
     def set_color_map(self, color_map_name: str): ...
+    def set_colorbar_position(self, position: str): ...  # ReactFlowPlotter only
+    def set_colorbar_orientation(self, orientation): ...  # ReactFlowPlotter only
     def provide_on_mouse_move_callback(self, callback): ...
     def provide_on_clic_callback(self, callback): ...
-    def provide_on_axes_change_callback(self, callback): ...
     def provide_on_node_selection_change_callback(self, callback): ...  # selected node ids
     def provide_on_nodes_moved_callback(self, callback): ...            # [{"id","x","y"}, ...]
-    # Per-node slice access (plot_name = node key in the graph)
-    def move_slice_to(self, plot_name: str, u=None, v=None, origin=None): ...
-    def get_slice_normal(self, plot_name: str) -> np.ndarray: ...
-    def set_slice_origin(self, plot_name: str, origin: Tuple[float, float, float]): ...
-    def get_slice_origin(self, plot_name: str) -> np.ndarray: ...
-    def get_uv(self, plot_name: str) -> Tuple[np.ndarray, np.ndarray]: ...
 ```
 
 **Implementation:** `ReactFlowPlotter` (`plotter_graph/reactflow_plotter.py`) renders the graph on a ReactFlow canvas built by the `scivianna-graph` package: every node is a Bokeh figure filled with scivianna's `Bokeh2DPolygonPlotter`, hover-only, fitted to its content with an equal aspect ratio. Node selection changes and node drags are reported back from the frontend (`selection_changed` / `nodes_moved` messages) and dispatched through the two `provide_on_..._callback` methods above.
@@ -506,7 +501,7 @@ panel.show()  # or use _show_panel from scivianna.notebook_tools
 | `src/scivianna/panel/visualisation_panel.py` | Abstract panel base class |
 | `src/scivianna/extension/extension.py` | Extension base class with hooks |
 | `src/scivianna/extension/axes.py` | Axes customization extension |
-| `src/scivianna/extension/graph.py` | Graph canvas extension (node padding, label visibility) |
+| `src/scivianna/extension/graph.py` | Graph canvas extension (node padding, label visibility, colorbar position/orientation) |
 | `src/scivianna/plotter_2d/generic_plotter.py` | Plotter2D abstract interface |
 | `src/scivianna/plotter_2d/polygon/bokeh.py` | Bokeh polygon renderer |
 | `src/scivianna/plotter_2d/api.py` | Public matplotlib plotting API |

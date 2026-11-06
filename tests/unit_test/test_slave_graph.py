@@ -16,9 +16,6 @@ def test_compute_graph_fills_cell_values():
     slave = ComputeSlave(HeatNetworkInterface)
     try:
         graph, graph_updated = slave.compute_graph(
-            (1.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
-            (0.0, 0.0, 0.0),
             None,
             "Temperature",
             {},
@@ -47,9 +44,6 @@ def test_get_graph_value_dict_round_trip():
     slave = ComputeSlave(HeatNetworkInterface)
     try:
         graph, _ = slave.compute_graph(
-            (1.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
-            (0.0, 0.0, 0.0),
             None,
             "Temperature",
             {},
@@ -72,9 +66,6 @@ def test_compute_graph_rejects_non_graph_interface():
     slave = ComputeSlave(CSVInterface, allow_errors=True)
     try:
         val = slave.compute_graph(
-            (1.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
-            (0.0, 0.0, 0.0),
             None,
             "Temperature",
             {},

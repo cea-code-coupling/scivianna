@@ -296,6 +296,34 @@ class ReactFlowPlotter(PlotterGraph):
         self.color_map_name = color_map_name
         self._update_colorbar()
 
+    def set_colorbar_position(self, position: str):
+        """Stores a new colorbar position on the canvas and refreshes it.
+
+        The new position is used as soon as the colorbar is displayed (see
+        ``show_colorbar``); a hidden colorbar is only restated.
+
+        Parameters
+        ----------
+        position : str
+            Corner or side of the canvas (see ``colorbar_position``).
+        """
+        self.colorbar_position = position
+        self._update_colorbar()
+
+    def set_colorbar_orientation(self, orientation: str):
+        """Stores a new colorbar orientation and refreshes it.
+
+        The new orientation is used as soon as the colorbar is displayed (see
+        ``show_colorbar``); a hidden colorbar is only restated.
+
+        Parameters
+        ----------
+        orientation : {"vertical", "horizontal"}
+            Orientation of the colorbar.
+        """
+        self.colorbar_orientation = orientation
+        self._update_colorbar()
+
     def set_labels_visible(self, visible: bool):
         """Shows or hides the label of every node.
 
@@ -342,18 +370,6 @@ class ReactFlowPlotter(PlotterGraph):
             for plotter in self.plotters.values():
                 plotter.provide_on_clic_callback(callback)
 
-    def provide_on_axes_change_callback(self, callback: Callable):
-        """Axes are fixed per node in a graph plot (each figure is fitted to
-        its content and tools are disabled). This method stores the callback
-        for interface compatibility but it is never triggered.
-
-        Parameters
-        ----------
-        callback : Callable
-            Function to call.
-        """
-        self.on_axes_change_callback = callback
-
     def provide_on_node_selection_change_callback(self, callback: Callable):
         """Stores a function to call everytime the selection of nodes changes on the canvas.
         Functions arguments are the ids of the selected nodes (empty list when
@@ -376,28 +392,6 @@ class ReactFlowPlotter(PlotterGraph):
             Function to call.
         """
         self.graph_builder.provide_on_nodes_moved_callback(callback)
-
-    # Per-node slice access (the graph plotter keeps each node fitted to its
-    # own content, so these are no-ops kept for interface compatibility).
-    def move_slice_to(self, plot_name: str, u=None, v=None, origin=None):
-        """No-op: each node is fitted to its own content, there is no shared slice."""
-        pass
-
-    def get_slice_normal(self, plot_name: str) -> np.ndarray:
-        """Return the (fixed) slice normal of a node."""
-        return np.array([0.0, 0.0, 1.0])
-
-    def set_slice_origin(self, plot_name: str, origin: Tuple[float, float, float]):
-        """No-op: node positions are fixed by the graph layout."""
-        pass
-
-    def get_slice_origin(self, plot_name: str) -> np.ndarray:
-        """Return the (fixed) slice origin of a node."""
-        return np.zeros(3)
-
-    def get_uv(self, plot_name: str) -> Tuple[np.ndarray, np.ndarray]:
-        """Return the (fixed) u and v axis vectors of a node."""
-        return np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])
 
     def get_mouse_info(self) -> str:
         """Returns a human-readable string describing the hovered cell in the graph (node key, coordinates, cell id, value)."""

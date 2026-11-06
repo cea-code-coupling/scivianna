@@ -124,9 +124,6 @@ class PanelGraph(VisualizationPanel):
         self.field_change_callback: Callable = None
         """Function to call when the field is changed"""
 
-        self.on_axes_change_callback: Callable = None
-        """Function to call when the axes are changed (never triggered: axes are fixed per node)"""
-
         self._pending_updates: Dict = {}
         """Pending visual updates to apply on next tick"""
 
@@ -283,9 +280,6 @@ class PanelGraph(VisualizationPanel):
                 options[key] = value
 
         computed_data, _ = self.slave.compute_graph(
-            (1.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
-            (0.0, 0.0, 0.0),
             None,
             self.displayed_field,
             options,
@@ -434,19 +428,6 @@ class PanelGraph(VisualizationPanel):
         """
         self.field_change_callback = callback
 
-    def provide_on_axes_change_callback(self, callback: Callable):
-        """Stores a function to call everytime the axes are changed.
-        Axes are fixed per node in a graph plot, so it is never triggered; stored for
-        interface compatibility.
-
-        Parameters
-        ----------
-        callback : Callable
-            Function to call.
-        """
-        self.on_axes_change_callback = callback
-        self.plotter.provide_on_axes_change_callback(callback)
-
     def on_node_selection_change_callback(
         self,
         selected_nodes: List[str]
@@ -522,10 +503,6 @@ class PanelGraph(VisualizationPanel):
 
                 if self.field_change_callback is not None:
                     self.field_change_callback(field_name)
-
-    def set_coordinates(self, *args, **kwargs):
-        """Axes are fixed per node in a graph plot. Kept for interface compatibility."""
-        pass
 
     #
     # #

@@ -274,7 +274,7 @@ def worker(
             #
             #   GraphInterface functions
             elif task == SlaveCommand.COMPUTE_GRAPH:
-                u, v, origin, q_tasks_, coloring_label, options, caller = data
+                q_tasks_, coloring_label, options, caller = data
 
                 if not isinstance(interface, GraphInterface):
                     raise TypeError(
@@ -282,9 +282,6 @@ def worker(
                     )
                 graph: "DataGraph"
                 graph, graph_updated = interface.compute_graph(
-                    u=u,
-                    v=v,
-                    origin=origin,
                     q_tasks=q_tasks_,
                     options=options,
                     caller=caller,
@@ -797,9 +794,6 @@ See https://docs.python.org/3/library/__main__.html for more information.
     #   GraphInterface functions
     def compute_graph(
         self,
-        u: Tuple[float, float, float],
-        v: Tuple[float, float, float],
-        origin: Tuple[float, float, float],
         q_tasks: mp.Queue,
         coloring_label: str,
         options: Dict[str, Any],
@@ -807,14 +801,11 @@ See https://docs.python.org/3/library/__main__.html for more information.
     ) -> Tuple["DataGraph", bool]:
         """Get the graph from the interface
 
+        A graph has no slice: every node is fitted to its own content, so no
+        u/v axes or origin have to be requested.
+
         Parameters
         ----------
-        u : Tuple[float, float, float]
-            Horizontal coordinate director vector
-        v : Tuple[float, float, float]
-            Vertical coordinate director vector
-        origin : Tuple[float, float, float]
-            Physical 3D position of the slice center
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         coloring_label : str
@@ -833,9 +824,6 @@ See https://docs.python.org/3/library/__main__.html for more information.
             [
                 SlaveCommand.COMPUTE_GRAPH,
                 [
-                    u,
-                    v,
-                    origin,
                     q_tasks,
                     coloring_label,
                     options,

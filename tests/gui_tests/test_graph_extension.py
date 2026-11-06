@@ -97,23 +97,78 @@ def test_hide_labels_survives_rebuild():
 
 
 @pytest.mark.graph
+def test_colorbar_position_select():
+    """Changing the position select moves the colorbar on the canvas."""
+    panel, cleanup = make_graph_panel()
+    try:
+        graph_ext = next(e for e in panel.extensions if isinstance(e, Graph))
+
+        # The field selector displays the colorbar on first update, bottom-right by default.
+        colorbar = panel.plotter.graph_builder.canvas.colorbar
+        assert colorbar is not None
+        assert colorbar["position"] == "bottom-right"
+
+        graph_ext.colorbar_position_select.value = "top-left"
+
+        assert panel.plotter.colorbar_position == "top-left"
+        assert panel.plotter.graph_builder.canvas.colorbar["position"] == "top-left"
+    finally:
+        cleanup()
+
+
+@pytest.mark.graph
+def test_colorbar_orientation_select():
+    """Changing the orientation select rotates the colorbar on the canvas."""
+    panel, cleanup = make_graph_panel()
+    try:
+        graph_ext = next(e for e in panel.extensions if isinstance(e, Graph))
+
+        colorbar = panel.plotter.graph_builder.canvas.colorbar
+        assert colorbar is not None
+        assert colorbar["orientation"] == "vertical"
+
+        graph_ext.colorbar_orientation_select.value = "horizontal"
+
+        assert panel.plotter.colorbar_orientation == "horizontal"
+        assert panel.plotter.graph_builder.canvas.colorbar["orientation"] == "horizontal"
+    finally:
+        cleanup()
+
+
+@pytest.mark.graph
 def test_extension_json_round_trip():
-    """The extension state (padding, labels) survives to_json / from_json."""
+    """The extension state (padding, labels, colorbar placement) survives to_json / from_json."""
     panel, cleanup = make_graph_panel()
     try:
         graph_ext = next(e for e in panel.extensions if isinstance(e, Graph))
 
         graph_ext.node_padding_inp.value = 15
         graph_ext.hide_labels_chk.value = True
+        graph_ext.colorbar_position_select.value = "top-left"
+        graph_ext.colorbar_orientation_select.value = "horizontal"
 
         info = graph_ext.to_json()
         assert info["node_padding"] == 15
         assert info["hide_labels"] is True
+        assert info["colorbar_position"] == "top-left"
+        assert info["colorbar_orientation"] == "horizontal"
 
-        restored = Graph.from_json(graph_ext, {"node_padding": 5, "hide_labels": False})
+        restored = Graph.from_json(
+            graph_ext,
+            {
+                "node_padding": 5,
+                "hide_labels": False,
+                "colorbar_position": "top-right",
+                "colorbar_orientation": "vertical",
+            },
+        )
         assert restored.node_padding_inp.value == 5
         assert restored.hide_labels_chk.value is False
+        assert restored.colorbar_position_select.value == "top-right"
+        assert restored.colorbar_orientation_select.value == "vertical"
         assert panel.plotter.canvas.node_padding == 5
+        assert panel.plotter.colorbar_position == "top-right"
+        assert panel.plotter.colorbar_orientation == "vertical"
     finally:
         cleanup()
 

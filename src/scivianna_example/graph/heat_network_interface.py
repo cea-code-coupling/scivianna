@@ -71,9 +71,6 @@ class HeatNetworkInterface(GraphInterface):
 
     def compute_graph(
         self,
-        u: Tuple[float, float, float],
-        v: Tuple[float, float, float],
-        origin: Tuple[float, float, float],
         q_tasks: mp.Queue,
         options: Dict[str, Any],
         caller: str = "API",
@@ -82,12 +79,6 @@ class HeatNetworkInterface(GraphInterface):
 
         Parameters
         ----------
-        u : Tuple[float, float, float]
-            Horizontal coordinate director vector (ignored: the layout is fixed)
-        v : Tuple[float, float, float]
-            Vertical coordinate director vector (ignored: the layout is fixed)
-        origin : Tuple[float, float, float]
-            Physical 3D position of the slice center (ignored: the layout is fixed)
         q_tasks : mp.Queue
             Queue from which get orders from the master.
         options : Dict[str, Any]
