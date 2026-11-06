@@ -34,7 +34,7 @@ card_style = {}
 
 
 class GenericLayout:
-    """Displayable that lets arranging several VisualizationPanel"""
+    """Base layout arranging several VisualizationPanels, with a shared extensions sidebar."""
 
     main_frame: pn.Column
     """ Main frame : gridstack of different VisualizationPanel main_frame
@@ -44,7 +44,7 @@ class GenericLayout:
     """ Available interface classes to switch from one to another
     """
     load_available_interfaces: Callable = None
-    """ Function loading available interfaces. Can be overwriten to add additional interfaces.
+    """ Function loading available interfaces.
     """
 
     visualisation_panels: Dict[str, VisualizationPanel]
@@ -53,22 +53,21 @@ class GenericLayout:
 
     def __init__(
         self,
-        visualisation_panels: Dict[str, VisualizationPanel],
-        additional_interfaces: Dict[Union[str, GenericInterfaceEnum], Type[GenericInterface]] = {},
+        visualisation_panels: Dict[str, VisualizationPanel]
     ):
+        """Constructor of the layout.
+
+        Parameters
+        ----------
+        visualisation_panels : Dict[str, VisualizationPanel]
+            Panels to arrange in the layout, keyed by name
+        """
         self.visualisation_panels = visualisation_panels
 
         if self.load_available_interfaces is None:
             self.available_interfaces = scivianna.interface.INTERFACES
         else:
             self.available_interfaces = self.load_available_interfaces()
-
-        for interface in additional_interfaces:
-            if not issubclass(additional_interfaces[interface], GenericInterface):
-                raise TypeError(
-                    f"Provided interface {interface} is not a GenericInterface, found type {type(additional_interfaces[interface])}"
-                )
-            self.available_interfaces[interface] = additional_interfaces[interface]
 
         self.code_interface_to_update = True
 
@@ -112,6 +111,13 @@ class GenericLayout:
 
     @pn.io.hold()
     def register_panel(self, panel: VisualizationPanel):
+        """Registers a panel in the layout: wires its callbacks and adds its extension buttons to the shared sidebar.
+
+        Parameters
+        ----------
+        panel : VisualizationPanel
+            Panel to register
+        """
         if isinstance(panel, VisualizationPanel):
             panel.provide_on_clic_callback(self.on_clic_callback)
             panel.provide_on_mouse_move_callback(self.mouse_move_callback)
@@ -333,6 +339,13 @@ class GenericLayout:
             self.add_periodic_update()
 
     def mark_to_recompute(self, panels_to_recompute):
+        """Marks the given panels to be recomputed on the next update.
+
+        Parameters
+        ----------
+        panels_to_recompute : List[str]
+            Names of the panels to recompute
+        """
         self.panels_to_recompute = panels_to_recompute
 
     def _make_button_icon(
@@ -360,7 +373,9 @@ class GenericLayout:
         space_location: Tuple[float, float, float],
         cell_id: Union[str, int],
     ):
-        """Function called when the mouse moves on the plot
+        """Function called when the user clicks on a plot.
+
+        Panels whose update event is CLIC are recomputed at the clicked location.
 
         Parameters
         ----------
@@ -493,9 +508,11 @@ class GenericLayout:
         return self.main_frame
 
     def show(self, *args, **kwargs):
+        """Shows the layout in a browser window."""
         return self.main_frame.show(*args, **kwargs)
 
     def servable(self, *args, **kwargs):
+        """Serves the layout on a web server."""
         return self.main_frame.servable(*args, **kwargs)
 
     def _process_notifications(self):

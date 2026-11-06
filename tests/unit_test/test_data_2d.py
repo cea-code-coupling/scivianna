@@ -1,3 +1,5 @@
+"""Unit tests for the Data2D container (reorder, arithmetic, edge cases)."""
+
 from typing import Tuple
 
 import numpy as np
@@ -62,6 +64,8 @@ def assert_array_equal_strict(actual, expected, attr_name: str):
 
 @pytest.mark.default
 class TestReorderData2D:
+    """Tests for reordering Data2D to match a cell order."""
+
     def test_reorder_same_order(self):
         """Test reordering when cell_ids are already in the same order."""
         data = create_data2d([1, 2, 3], [10.0, 20.0, 30.0])
@@ -104,6 +108,8 @@ class TestReorderData2D:
 
 @pytest.mark.default
 class TestAdd:
+    """Tests for Data2D __add__."""
+
     def test_add_scalar(self):
         """Test adding a float to Data2D."""
         data = create_data2d([1, 2, 3], [10.0, 20.0, 30.0])
@@ -159,6 +165,8 @@ class TestAdd:
 
 @pytest.mark.default
 class TestSub:
+    """Tests for Data2D __sub__."""
+
     def test_sub_scalar(self):
         """Test subtracting a float from Data2D."""
         data = create_data2d([1, 2, 3], [10.0, 20.0, 30.0])
@@ -213,6 +221,8 @@ class TestSub:
 
 @pytest.mark.default
 class TestMul:
+    """Tests for Data2D __mul__."""
+
     def test_mul_scalar(self):
         """Test multiplying Data2D by a float."""
         data = create_data2d([1, 2, 3], [10.0, 20.0, 30.0])
@@ -274,6 +284,8 @@ class TestMul:
 
 @pytest.mark.default
 class TestDiv:
+    """Tests for Data2D __truediv__."""
+
     def test_div_scalar(self):
         """Test dividing Data2D by a float."""
         data = create_data2d([1, 2, 3], [10.0, 20.0, 30.0])
@@ -350,6 +362,8 @@ class TestDiv:
 
 @pytest.mark.default
 class TestEdgeCases:
+    """Tests for type safety and edge cases of Data2D arithmetic."""
+
     def test_unsupported_type(self):
         """Test that unsupported operand types raise TypeError."""
         data = create_data2d([1, 2, 3], [10.0, 20.0, 30.0])

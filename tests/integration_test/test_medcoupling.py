@@ -1,3 +1,5 @@
+"""Integration tests for the MedCoupling interface (memory and options)."""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -12,6 +14,7 @@ from scivianna.logging_config import get_logger
 
 @pytest.mark.medcoupling
 def test_plot_medcoupling_from_memory():
+    """Plot a MedCoupling file loaded from memory."""
     import medcoupling
     from scivianna.interface.med_interface import MEDInterface
 
@@ -66,6 +69,7 @@ def test_plot_medcoupling_from_memory():
 
 @pytest.mark.medcoupling
 def test_medcoupling_options_dict():
+    """Check that compute options are passed through to the MedCoupling interface."""
     import medcoupling
     from scivianna.interface.med_interface import MEDInterface
 
@@ -73,6 +77,28 @@ def test_medcoupling_options_dict():
 
     # Field example
     slave = ComputeSlave(MEDInterface)
+    slave.read_file(
+        file_path,
+        GEOMETRY,
+    )
+
+    options_dict = slave.get_options_dictionnary()
+
+    assert "Iteration" in options_dict and options_dict["Iteration"] == -1
+    assert "Order" in options_dict and options_dict["Order"] == -1
+    assert "time" in options_dict and options_dict["time"] == 0.
+
+    slave.terminate()
+
+@pytest.mark.medcoupling
+def test_get_slave():
+    """Tests the GenericInterface get_slave() function"""
+    from scivianna.interface.med_interface import MEDInterface
+
+    file_path = str(Path(scivianna.__file__).parent / "input_file" / "power.med")
+
+    # Field example
+    slave = MEDInterface.get_slave()
     slave.read_file(
         file_path,
         GEOMETRY,

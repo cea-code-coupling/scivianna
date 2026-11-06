@@ -1,3 +1,5 @@
+"""Script that computes a MED 2D frame, post-processes it with the LLM data worker and saves a matplotlib plot."""
+
 from pathlib import Path
 
 # Field example

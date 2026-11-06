@@ -1,3 +1,10 @@
+"""
+1D data container for Scivianna.
+
+This module defines the Data1D class, which stores 1D line data (such as
+time histories or profiles) together with per-line colors and styles.
+"""
+
 from typing import Any, Callable, Dict, List, Literal, Tuple, Union
 
 import numpy as np
@@ -8,7 +15,7 @@ from scivianna.enums import DataType
 
 
 class Data1D(DataContainer):
-    """Data class containing the 2D geometry data"""
+    """Data class containing the 1D line data"""
 
     line_ids: List[Union[int, str]]
     """List of contained line ids"""
@@ -28,7 +35,7 @@ class Data1D(DataContainer):
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame):
-        """Build a Data1D object from a list of PolygonElement
+        """Build a Data1D object from a pandas DataFrame
 
         Parameters
         ----------
@@ -51,7 +58,7 @@ class Data1D(DataContainer):
 
     @classmethod
     def from_serie_dict(cls, series: Dict[str, pd.Series]):
-        """Build a Data1D object from a list of PolygonElement
+        """Build a Data1D object from a dict of pandas Series
 
         Parameters
         ----------

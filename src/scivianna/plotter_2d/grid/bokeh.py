@@ -1,3 +1,5 @@
+"""Bokeh-based 2D grid (rasterized) plotter."""
+
 import functools
 import os
 from typing import IO, Callable, List, Tuple
@@ -47,6 +49,7 @@ class Bokeh2DGridPlotter(Plotter2D):
         self,
     ):
         """Creates the bokeh Figure and ColumnDataSources"""
+        self._mouse_inside = False
         self.source_grid = ColumnDataSource(
             {
                 GRID: [],
@@ -193,6 +196,15 @@ class Bokeh2DGridPlotter(Plotter2D):
 
         self.figure.add_tools(hover_tool)
 
+        def _on_enter(_):
+            self._mouse_inside = True
+
+        def _on_leave(_):
+            self._mouse_inside = False
+
+        self.figure.on_event(bokeh.events.MouseEnter, _on_enter)
+        self.figure.on_event(bokeh.events.MouseLeave, _on_leave)
+
         self.figure.js_on_event(
             MouseMove,
             CustomJS(
@@ -232,8 +244,9 @@ class Bokeh2DGridPlotter(Plotter2D):
             ),
         )
 
+        self.colormap = "BuRd"
         self.color_mapper = LinearColorMapper(
-            palette=self.__get_color_mapper_from_string("BuRd"), low=0.0, high=1.0
+            palette=self.__get_color_mapper_from_string(self.colormap), low=0.0, high=1.0
         )
 
         self.figure_color_bar = ColorBar(
@@ -258,6 +271,7 @@ class Bokeh2DGridPlotter(Plotter2D):
         if self.dim_hovered_cell:
 
             def on_mouse_enter(event):
+                """Mark the figure as hovered so the cell highlight is active."""
                 self.active = True
 
             self.figure.on_event(bokeh.events.MouseMove, self.on_mouse_move)
@@ -477,6 +491,7 @@ class Bokeh2DGridPlotter(Plotter2D):
         self.update_2d_frame(data)
 
     def update_range(self, event: events.RangesUpdate):
+        """Forward the figure range change to the registered callback."""
         self.range_callback(event.x0, event.x1, event.y0, event.y1)
 
     def _set_callback_on_range_update(self, callback: IO):
@@ -583,6 +598,7 @@ class Bokeh2DGridPlotter(Plotter2D):
     def _polygons_to_coords(
         self, polygons: List[PolygonElement]
     ) -> Tuple[List[List[Tuple[List[float]]]], List[List[Tuple[List[float]]]]]:
+        """Convert polygon elements into the nested xs/ys lists Bokeh patches expect."""
         xs_dict = [
             [
                 {
@@ -689,6 +705,7 @@ class Bokeh2DGridPlotter(Plotter2D):
     def reset_hover(
         self,
     ):
+        """Clear the hovered cell highlight and restore the frame."""
         self.active = False
         self.save_data = False
         self.update_2d_frame(self.data)
@@ -777,6 +794,28 @@ class Bokeh2DGridPlotter(Plotter2D):
             self.permanent_source_mouse.data["y"],
             self.permanent_source_mouse.data["z"],
         )
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value).
+
+        Returns an empty string when the mouse is not over this figure.
+        """
+        if not self._mouse_inside:
+            return ""
+        x = self.source_mouse.data["x"][0]
+        y = self.source_mouse.data["y"][0]
+        z = self.source_mouse.data["z"][0]
+        info = f"({x:.3f}, {y:.3f}, {z:.3f})"
+        if "i" in self.source_mouse.data and self.cell_name_grid is not None:
+            i, j = int(self.source_mouse.data["i"][0]), int(self.source_mouse.data["j"][0])
+            if j < len(self.cell_name_grid) and i < len(self.cell_name_grid[j]):
+                cell_id = self.cell_name_grid[j, i]
+                info += f" | Cell: {cell_id}"
+                if CELL_VALUES in self.source_grid.data:
+                    val_grid = self.source_grid.data[CELL_VALUES][0]
+                    if j < val_grid.shape[0] and i < val_grid.shape[1]:
+                        info += f" | Value: {val_grid[j, i]}"
+        return info
 
     def set_range(self, u_range: Tuple[float, float], v_range: Tuple[float, float]):
         """Updates the plot ranges

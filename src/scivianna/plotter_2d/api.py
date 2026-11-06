@@ -1,3 +1,5 @@
+"""Public matplotlib plotting API: render a scivianna frame."""
+
 from random import randint
 from typing import Any, Dict, Tuple, Union
 

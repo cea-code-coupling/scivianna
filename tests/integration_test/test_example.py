@@ -1,3 +1,5 @@
+"""Integration test for the demo application."""
+
 import math
 from typing import TYPE_CHECKING
 
@@ -20,6 +22,7 @@ scivianna.utils._testing = True
 
 @pytest.mark.default
 def test_demo():
+    """Build the full demo and terminate all its slaves."""
     _, slaves = demo.make_demo(return_slaves = True)
 
     for slave in slaves:
@@ -30,6 +33,7 @@ def test_demo():
 def test_mandelbrot():
     """Ensuring that the mandelbrot example works as expected, and that the range update works correctly."""
     def get_polygon_bounds(data):
+        """Return the min/max x and y bounds of all polygons."""
         xs = np.concatenate([e for sublist in data[XS] for item in sublist for e in item])
         ys = np.concatenate([e for sublist in data[YS] for item in sublist for e in item])
 
@@ -46,6 +50,7 @@ def test_mandelbrot():
         np.array([[-0.491, 0.509], [-0.491, 0.509]])
     )
     polygon_panel.plotter.update_range(RangesUpdate(model = None, x0 = 1., y0 = 1., x1 = 2.5, y1 = 2.5))
+
     np.testing.assert_almost_equal(
         np.array(get_polygon_bounds(polygon_panel.plotter.source_polygons.data)),
         np.array([[0.9985, 2.4985], [0.9985, 2.4985]])

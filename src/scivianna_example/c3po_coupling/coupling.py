@@ -1,3 +1,5 @@
+"""C3PO coupling demo: a DecreasingFieldProblem driver coupled to the scivianna visualizer."""
+
 import os
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
@@ -211,6 +213,7 @@ def get_panel(
         """
 
         def __init__(self, physics, exchangers, dataManagers=None):
+            """Create the coupler and initialize the max power tracker."""
             if dataManagers is None:
                 dataManagers = []
             c3po.Coupler.__init__(self, physics, exchangers, dataManagers)

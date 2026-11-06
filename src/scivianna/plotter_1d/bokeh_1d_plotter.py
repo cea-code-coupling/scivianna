@@ -1,3 +1,5 @@
+"""Bokeh implementation of the 1D line plotter."""
+
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -14,6 +16,7 @@ class BokehPlotter1D(Plotter1D):
     """1D Bokeh plotter."""
 
     def __init__(self):
+        """Create the Bokeh figure and wrap it in a Panel pane."""
 
         self.source_data_dict: Dict[str, ColumnDataSource] = {}
         """Dictionnary of x, y ColumnDataSource containing the data to plot"""
@@ -41,6 +44,7 @@ class BokehPlotter1D(Plotter1D):
     # -------------------------------------------------------------------------
 
     def _create_figure(self):
+        """Create the Bokeh figure with its hover tool and axis scales."""
 
         self.fig = figure(
             name="plot",
@@ -58,6 +62,7 @@ class BokehPlotter1D(Plotter1D):
         self.fig.add_tools(self.hover)
 
     def _add_renderer(self, name: str):
+        """Add a line renderer to the figure for the given plot name."""
 
         renderer = self.fig.line(
             x="x",
@@ -89,6 +94,7 @@ class BokehPlotter1D(Plotter1D):
     # -------------------------------------------------------------------------
 
     def _normalize_series(self, serie: pd.Series) -> pd.Series:
+        """Expand placeholder min/max values or indices into the current figure bounds."""
 
         if len(serie.values) == 2 and list(serie.values) == ["min", "max"]:
             serie = pd.Series(

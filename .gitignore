@@ -38,3 +38,4 @@ utils/.venv_utils
 *.zip
 
 vtk_work
+results

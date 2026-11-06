@@ -1,3 +1,5 @@
+"""GUI sidebar: the drawer of extension buttons shared by visualization panels and layouts."""
+
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple
@@ -10,15 +12,15 @@ from scivianna.extension.extension import Extension
 
 
 class GUI:
-    """Class defining the panels sidebar and managing the extensions"""
+    """Sidebar of a panel or layout: a drawer listing the extension buttons and their toolbars."""
 
     def __init__(self, extensions: List[Extension]):
-        """Constructor of the panels GUI
+        """Constructor of the sidebar.
 
         Parameters
         ----------
         extensions : List[Extension]
-            List of extensions to add to the GUI
+            Extensions to display in the drawer (a button and a toolbar per extension)
         """
         s = "1em"
         button_margin_x = 2
@@ -75,7 +77,7 @@ class GUI:
     def update_colors(
         self,
     ):
-        """Update the GUI extension buttons colors: if the sidebar is open, color the active extension in purple."""
+        """Updates the extension buttons colors: when the drawer is open, the active extension button is highlighted."""
         for b in self.buttons:
             b[0].color = "primary"
             b[1].visible = False
@@ -85,11 +87,11 @@ class GUI:
 
     @pn.io.hold()
     def change_drawer(self, _, extension: Tuple[pmui.IconButton, pn.Column]):
-        """Open the drawer and set the active extension
+        """Opens the drawer and sets the active extension.
 
         Parameters
         ----------
-        _ : _type_
+        _ : Any
             Bokeh event
         extension : Tuple[pmui.IconButton, pn.Column]
             Extension to set active
@@ -104,12 +106,12 @@ class GUI:
 
     @pn.io.hold()
     def open_close_drawer(self, _):
-        """Toggle drawer open
+        """Toggles the drawer open or closed.
 
         Parameters
         ----------
         _ : Any
-            Bokeh even
+            Bokeh event
         """
         self.drawer.open = not self.drawer.open
         self.open_button.visible = not self.open_button.visible
@@ -206,6 +208,7 @@ if __name__ == "__main__":
     sock.close()
 
     def get_panel():
+        """Returns a GUI panel for the demo server."""
         gui = GUI()
         return gui.make_panel()
 

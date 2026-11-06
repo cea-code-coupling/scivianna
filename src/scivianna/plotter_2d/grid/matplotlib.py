@@ -1,3 +1,5 @@
+"""Matplotlib-based 2D grid (rasterized) plotter."""
+
 from typing import IO, Any, Dict, List, Tuple, Union
 
 import matplotlib

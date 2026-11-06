@@ -29,6 +29,9 @@ pip install scivianna[test]
 
 # Code coupling with C3PO
 pip install scivianna[coupling]
+
+# Graph visualization (ReactFlow canvas)
+pip install scivianna[graph]
 ```
 
 ## Quick Start
@@ -37,7 +40,7 @@ pip install scivianna[coupling]
 
 ```python
 from scivianna.layout.gridstack import GridStackLayout
-from scivianna.panel.panel2d import Panel2D
+from scivianna.panel.panel_2d import Panel2D
 from scivianna.slave import ComputeSlave
 
 # Create a slave with your data interface
@@ -51,7 +54,7 @@ panel.show()
 ```
 
 ### Running the Demonstrator
-Scivianna includes a `scivianna_example` module with several demonstration cases. 
+Scivianna includes a `scivianna_example` module with several demonstration cases.
 
 It can be opened online at:
 https://huggingface.co/spaces/tmoulignier/scivianna
@@ -83,6 +86,9 @@ Visualize line plots, 2D geometries, 3D VTK-based plots, and pandas DataFrames t
 
 #### Grid based 2D plot
 ![Grid based 2D plot](https://github.com/user-attachments/assets/66716616-872d-493c-9b77-b9640345cfdf)
+
+#### Multi-element graph plot
+![Multi-element graph plot](https://github.com/user-attachments/assets/777cf1d9-ba76-40c7-8cc4-626c303c3ef6)
 
 
 ### 2. Real-Time Code Coupling
@@ -193,7 +199,9 @@ The `scivianna_example` module provides ready-to-use examples showcasing Scivian
 | **Mandelbrot** | Computes the Mandelbrot set on a 2D grid and converts it to polygons for visualization. |
 | **Medcoupling** | Demonstrates MED file format handling with three synchronized views. Click in one view to offset others at the click location. (if medcoupling available) |
 | **Coupling example** | Plot of a coupled simulation to see time dependant data (if salome-c3po installed) |
-| **3D example** | 3D plot interacting with a 2D plot. (if medcoupling and pyvista available) |
+| **Medcoupling 3D** | 3D plot of a Medcoupling mesh interacting with a 2D plot. (if medcoupling and pyvista available) |
+| **VTK 3D** | 3D plot of a VTK mesh interacting with a 2D plot. (if pyvista available) |
+| **Heat network** | A small heat network where a generator feeds two factories through four pipes. Each node is a 2D plot colored on one global value range; drag nodes to rearrange the layout. (if scivianna-graph available) |
 
 
 ## License

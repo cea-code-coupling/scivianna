@@ -1,3 +1,5 @@
+"""Integration test for plotting polygon data with the public API."""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt

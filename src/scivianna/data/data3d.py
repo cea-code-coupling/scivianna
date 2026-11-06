@@ -1,3 +1,10 @@
+"""
+3D data container for Scivianna.
+
+This module defines the Data3D class, which stores a VTK geometry together
+with per-cell values and colors used for 3D visualization.
+"""
+
 from typing import TYPE_CHECKING, List, Tuple, Union
 
 import numpy as np

@@ -1,4 +1,4 @@
-from typing import List, Union
+"""Unit tests for the polygon sorter."""
 
 import numpy as np
 import pytest
@@ -156,51 +156,51 @@ def test_sort_list_with_different_length_raises(mock_data:Data2D):
         sorter.sort_list(new_data)
 
 
-        
+
 @pytest.mark.default
 def test_sort_polygon_list_with_nan_in_values(mock_data:Data2D):
     """Test that values are sorted with a nan in the values."""
     mock_data.cell_values = [0., 3., np.nan, 1.]
 
     sorter = PolygonSorter()
-    sorter.sort_from_value(mock_data)  
+    sorter.sort_from_value(mock_data)
 
     # Should preserve the previous order
-    np.testing.assert_equal(mock_data.cell_values, [0.0, 1.0, 3.0, np.nan]) 
+    np.testing.assert_equal(mock_data.cell_values, [0.0, 1.0, 3.0, np.nan])
     np.testing.assert_equal(mock_data.cell_colors, [(255, 255, 255), (0, 0, 255), (255, 0, 0), (0, 255, 0)])
     np.testing.assert_equal(mock_data.cell_edge_colors, [(255, 255, 255), (0, 0, 255), (255, 0, 0), (0, 255, 0)])
 
 
-        
+
 @pytest.mark.default
 def test_sort_polygon_list_with_float_values(mock_data:Data2D):
     """Test that values are sorted with a nan in the values."""
     mock_data.cell_values = [0., 3., 12., 1.]
 
     sorter = PolygonSorter()
-    sorter.sort_from_value(mock_data)  
+    sorter.sort_from_value(mock_data)
 
     # Should preserve the previous order
-    np.testing.assert_equal(mock_data.cell_values, [0.0, 1.0, 3.0, 12.])  
+    np.testing.assert_equal(mock_data.cell_values, [0.0, 1.0, 3.0, 12.])
     np.testing.assert_equal(mock_data.cell_colors, [(255, 255, 255), (0, 0, 255), (255, 0, 0), (0, 255, 0)])
     np.testing.assert_equal(mock_data.cell_edge_colors, [(255, 255, 255), (0, 0, 255), (255, 0, 0), (0, 255, 0)])
 
     mock_data.cell_values = [2., 7., 3., 1.]
     mock_data.cell_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255)]
     mock_data.cell_edge_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255)]
-    sorter.sort_list(mock_data)  
-    
-    np.testing.assert_equal(mock_data.cell_values, [2., 1., 7., 3.])  
+    sorter.sort_list(mock_data)
+
+    np.testing.assert_equal(mock_data.cell_values, [2., 1., 7., 3.])
     np.testing.assert_equal(mock_data.cell_colors, [(255, 255, 255), (0, 0, 255), (255, 0, 0), (0, 255, 0)])
     np.testing.assert_equal(mock_data.cell_edge_colors, [(255, 255, 255), (0, 0, 255), (255, 0, 0), (0, 255, 0)])
 
-        
+
 @pytest.mark.default
 def test_sort_polygon_list_with_both_string_float(mock_data:Data2D):
     """Test that values are sorted with a nan in the values."""
     mock_data.cell_values = ["0.", 3., np.nan, 1.]
 
     sorter = PolygonSorter()
-    
+
     with pytest.raises(AssertionError):
         sorter.sort_list(mock_data)

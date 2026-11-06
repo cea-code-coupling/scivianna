@@ -47,6 +47,14 @@ scivianna.data.data\_container module
    :undoc-members:
    :show-inheritance:
 
+scivianna.data.data\_graph module
+---------------------------------
+
+.. automodule:: scivianna.data.data_graph
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

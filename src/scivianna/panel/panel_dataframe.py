@@ -1,3 +1,5 @@
+"""PanelDataFrame - table visualization panel for Scivianna."""
+
 from typing import Callable, Dict, List, Tuple, Type, Union
 
 import pandas as pd
@@ -125,8 +127,6 @@ class PanelDataFrame(VisualizationPanel):
             Dictionnary containing all required information to restore the panel
         slave : ComputeSlave
             Panel associated slave
-        data : Data2D
-            Initial state Data2D
         extensions : List[Extension]
             Extensions to add to the panel
         extension_jsons : dict[Type[Extension], dict]
@@ -173,5 +173,14 @@ class PanelDataFrame(VisualizationPanel):
         return panel
 
     def trigger_on_file_load(self, file_path: str, file_label: str):
+        """Notifies every extension that a new file has been loaded.
+
+        Parameters
+        ----------
+        file_path : str
+            Path of the loaded file
+        file_label : str
+            Label of the loaded file
+        """
         for extension in self.extensions:
             extension.on_file_load(file_path, file_label)

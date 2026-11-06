@@ -1,3 +1,5 @@
+"""Integration test for extruded structured meshes."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -13,10 +15,12 @@ try:
 except ImportError:
     from scivianna.interface.generic_interface import Geometry2D
     class ExtrudedStructuredMesh(Geometry2D):
+        """Stub used when the real extruded mesh module is unavailable."""
         pass
 
 @pytest.mark.medcoupling
 def test_extruded_mesh(plot=False):
+    """Build an extruded structured mesh and check its 2D slices."""
     outer_square = [(0, 0), (2, 0), (2, 2), (0, 2)]
     inner_hole = [(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)]
     inner_hole_0 = [(0.5, 0.5), (1., 0.5), (1., 1.5), (0.5, 1.5)]

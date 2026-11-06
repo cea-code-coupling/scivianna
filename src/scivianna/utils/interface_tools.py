@@ -1,3 +1,5 @@
+"""Helpers to discover and instantiate the built-in code interfaces."""
+
 from enum import Enum
 from typing import Dict, Type, Union
 
@@ -5,6 +7,8 @@ from scivianna.interface.generic_interface import GenericInterface
 
 
 class GenericInterfaceEnum(Enum):
+    """Names of the built-in code interfaces available in scivianna."""
+
     MED = "Medcoupling"
 
 

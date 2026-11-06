@@ -1,4 +1,4 @@
-# tests/test_polygonize_tools.py
+"""Unit tests for PolygonElement (construction, validation and transforms)."""
 
 import numpy as np
 import pytest
@@ -8,11 +8,13 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 # Helper: Create a simple polygon for testing
 def create_test_polygon_coords():
+    """A unit square as PolygonCoords."""
     x_coords = [0.0, 1.0, 1.0, 0.0]
     y_coords = [0.0, 0.0, 1.0, 1.0]
     return PolygonCoords(x_coords, y_coords)
 
 def create_test_hole_coords():
+    """A centered square hole as PolygonCoords."""
     x_coords = [0.25, 0.75, 0.75, 0.25]
     y_coords = [0.25, 0.25, 0.75, 0.75]
     return PolygonCoords(x_coords, y_coords)
@@ -20,6 +22,7 @@ def create_test_hole_coords():
 
 @pytest.mark.default
 def test_init_valid():
+    """A valid PolygonElement is constructed from coords and a cell id."""
     exterior = create_test_polygon_coords()
     holes = [create_test_hole_coords()]
     pe = PolygonElement(exterior_polygon=exterior, holes=holes, cell_id="test_vol")
@@ -30,16 +33,19 @@ def test_init_valid():
 
 @pytest.mark.default
 def test_init_invalid_exterior_type():
+    """A non-PolygonCoords exterior raises TypeError."""
     with pytest.raises(TypeError):
         PolygonElement(exterior_polygon="not a PolygonCoords", holes=[], cell_id="test")
 
 @pytest.mark.default
 def test_init_invalid_holes_type():
+    """A non-list of holes raises TypeError."""
     with pytest.raises(TypeError):
         PolygonElement(exterior_polygon=create_test_polygon_coords(), holes="not a list", cell_id="test")
 
 @pytest.mark.default
 def test_init_invalid_hole_element_type():
+    """A hole that is not a PolygonCoords raises TypeError."""
     exterior = create_test_polygon_coords()
     holes = [create_test_hole_coords(), "not a PolygonCoords"]
     with pytest.raises(TypeError):
@@ -47,6 +53,7 @@ def test_init_invalid_hole_element_type():
 
 @pytest.mark.default
 def test_translate():
+    """Translating a polygon shifts both the exterior and the holes."""
     exterior = create_test_polygon_coords()
     holes = [create_test_hole_coords()]
     pe = PolygonElement(exterior_polygon=exterior, holes=holes, cell_id="test")
@@ -60,6 +67,7 @@ def test_translate():
 
 @pytest.mark.default
 def test_rotate():
+    """Rotating a polygon rotates both the exterior and the holes."""
     exterior = create_test_polygon_coords()
     holes = [create_test_hole_coords()]
     pe = PolygonElement(exterior_polygon=exterior, holes=holes, cell_id="test")

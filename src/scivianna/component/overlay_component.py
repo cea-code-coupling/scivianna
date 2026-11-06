@@ -1,3 +1,5 @@
+"""Panel component overlaying a button and a title on top of a figure."""
+
 import panel as pn
 import param
 from panel.custom import Child, ReactiveHTML
@@ -5,7 +7,10 @@ from panel.reactive import ReactiveHTML
 
 
 class Overlay(ReactiveHTML):
-    """This component allow displaying buttons over a figure only when the mouse is in the area."""
+    """This component allow displaying buttons over a figure only when the mouse is in the area.
+
+    It also tracks keyboard events while the mouse is inside the figure and stores
+    the last pressed key in the ``key`` parameter."""
 
     key = param.String("")
 
@@ -17,7 +22,7 @@ class Overlay(ReactiveHTML):
     """Figure title (displayed on the top left of the figure)"""
 
     distance_from_top: param.String = param.String("10px")
-    """Distance between the button and the right of the figure (increased when the axis are displayed)"""
+    """Distance between the overlay and the top of the figure (increased when the axis are displayed)"""
     distance_from_left: param.String = param.String("10px")
     """Distance between the title and the left of the figure (increased when the axis are displayed)"""
 

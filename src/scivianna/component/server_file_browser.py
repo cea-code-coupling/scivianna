@@ -1,3 +1,5 @@
+"""Server-side file browser component based on a Select widget."""
+
 import os
 from pathlib import Path
 from typing import List, Tuple, Union

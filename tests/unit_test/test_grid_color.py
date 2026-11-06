@@ -1,3 +1,5 @@
+"""Unit tests for grid color handling."""
+
 import numpy as np
 import pytest
 
@@ -8,6 +10,7 @@ from scivianna.utils.color_tools import get_edges_colors
 
 @pytest.mark.default
 def test_get_grid():
+    """Grid edge colors are computed from the cell colors."""
     size = 10
     arr = np.zeros((size, size))
 

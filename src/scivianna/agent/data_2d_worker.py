@@ -1,3 +1,5 @@
+"""LLM agent worker that generates and tests code operating on a Data2D."""
+
 import re
 from pathlib import Path
 
@@ -17,6 +19,7 @@ from scivianna.data.data_2d_worker import Data2DWorker
 
 
 def extract_python_code(text):
+    """Extract the content of a python code block from an LLM response."""
     pattern = r"```python\s*([\s\S]*?)\s*```"
     match = re.search(pattern, text, re.DOTALL)
     return match.group(1).strip() if match else None
@@ -162,7 +165,19 @@ class Data2DWorker(Data2DWorker):
 
         self.python_executor = self.smoll_agent.python_executor
 
-    def extract_exectute_code(self, text: str):
+    def extract_exectute_code(self, text: str) -> str:
+        """Extract the last execute_code call from an agent trace
+
+        Parameters
+        ----------
+        text : str
+            LLM return text
+
+        Returns
+        -------
+        str
+            Generated code
+        """
         if not "execute_code" in text:
             return
 
@@ -171,8 +186,21 @@ class Data2DWorker(Data2DWorker):
 
         return last_exec
 
-    def __call__(self, question, reset=False, images=[], max_steps=15, additional_args={}):
+    def __call__(self, question, max_steps=15):
+        """Run the LLM agent on a question and return whether it produced valid code.
 
+        Parameters
+        ----------
+        question : str
+            Prompt
+        max_steps : int, optional
+            maximum agent steps, by default 15
+
+        Returns
+        -------
+        bool, str
+            Success, executed code
+        """
         print(
             f"\nLLM used by agent :\n\n- {ai_server.client_kwargs['base_url']}\n- {ai_server.model_id}\n"
         )

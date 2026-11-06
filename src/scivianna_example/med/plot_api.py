@@ -1,3 +1,5 @@
+"""Matplotlib plotting of a MED frame via the public API."""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt

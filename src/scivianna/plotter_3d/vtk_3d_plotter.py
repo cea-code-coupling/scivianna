@@ -1,3 +1,5 @@
+"""VTK-based 3D plotter wrapping the scivianna_vtk VTKPlotter component."""
+
 from typing import Callable, Tuple
 
 import numpy as np
@@ -13,6 +15,7 @@ class Plotter3D(Plotter3D):
     def __init__(
         self,
     ):
+        """Create the underlying VTKPlotter component."""
         self.plotter = VTKPlotter(sizing_mode="stretch_both", margin=0)
         self.plotter.set_clip_enabled(False)
 
@@ -157,6 +160,7 @@ class Plotter3D(Plotter3D):
         self.plotter.set_clip_plane(new_origin, w_vector)
 
     def send_event(self, callback):
+        """Call the mouse callback with the current hovered cell and position."""
         if self.plotter.hover_cell_id is not None and not any(
             np.isnan(self.plotter.hover_position)
         ):
@@ -253,6 +257,20 @@ class Plotter3D(Plotter3D):
             Mouse location
         """
         return tuple(self.plotter.hover_position)
+
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value)."""
+        pos = self.plotter.hover_position
+        if pos is None or any(np.isnan(pos)):
+            return ""
+        info = f"({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})"
+        cell_id = self.plotter.hover_cell_id
+        if cell_id is not None:
+            info += f" | Cell: {cell_id}"
+            value = self.plotter.hover_cell_value
+            if value is not None:
+                info += f" | Value: {value}"
+        return info
 
     def set_plane_enabled(self, enabled: bool):
         """Enable or disable the plane visualization overlay.

@@ -302,6 +302,20 @@ class VTK2DPolygonPlotter(Plotter2D):
         """
         return tuple(self.plotter.hover_position)
 
+    def get_mouse_info(self) -> str:
+        """Returns a human-readable string describing the hovered cell (coordinates, cell id, value)."""
+        pos = self.plotter.hover_position
+        if pos is None or any(np.isnan(pos)):
+            return ""
+        info = f"({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})"
+        cell_id = self.plotter.hover_cell_id
+        if cell_id is not None:
+            info += f" | Cell: {cell_id}"
+            value = self.plotter.hover_cell_value
+            if value is not None:
+                info += f" | Value: {value}"
+        return info
+
     def provide_on_mouse_move_callback(self, callback: Callable):
         """
         Store a function to call every time the user moves the mouse on the plot.

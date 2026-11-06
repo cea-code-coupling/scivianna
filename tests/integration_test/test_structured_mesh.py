@@ -1,3 +1,4 @@
+"""Integration tests for structured mesh interfaces (cartesian, spherical, cylindrical)."""
 
 import math
 
@@ -18,6 +19,8 @@ try:
     )
 
     class CarthesianInterface(StructuredMeshInterface):
+        """Test interface over a cartesian structured mesh."""
+
         def read_file(self, file_path: str, file_label: str):
             """Read a file and store its content in the interface
 
@@ -37,6 +40,8 @@ try:
             self.mesh.set_values("id", np.arange(size*size*size).reshape(size, size, size))
 
     class SphericalInterface(StructuredMeshInterface):
+        """Test interface over a spherical structured mesh."""
+
         def read_file(self, file_path: str, file_label: str):
             """Read a file and store its content in the interface
 
@@ -56,6 +61,8 @@ try:
             self.mesh.set_values("id", np.arange(size*size*size).reshape(size, size, size))
 
     class CylindricalInterface(StructuredMeshInterface):
+        """Test interface over a cylindrical structured mesh."""
+
         def read_file(self, file_path: str, file_label: str):
             """Read a file and store its content in the interface
 
@@ -76,10 +83,13 @@ try:
 
 except ImportError:
     class CarthesianInterface:
+        """Stub used when the structured mesh module is unavailable."""
         pass
     class SphericalInterface:
+        """Stub used when the structured mesh module is unavailable."""
         pass
     class CylindricalInterface:
+        """Stub used when the structured mesh module is unavailable."""
         pass
 
 @pytest.mark.pyvista

@@ -1,3 +1,5 @@
+"""Integration test for importing a serialized gridstack layout."""
+
 from typing import Dict
 
 import pytest
@@ -8,6 +10,7 @@ from scivianna.panel.visualisation_panel import VisualizationPanel
 
 
 def get_panel():
+    """Build the gridstack layout of MED panels used by this test."""
     visualisation_panels: Dict[str, VisualizationPanel] = {}
 
     visualisation_panels["MEDCoupling visualizer 1"] = get_med_panel(
@@ -40,6 +43,7 @@ def get_panel():
     return GridStackLayout(visualisation_panels, bounds_y, bounds_x)
 
 def get_template():
+    """Return the gridstack layout to be served."""
     panel = get_panel()
     return panel
 

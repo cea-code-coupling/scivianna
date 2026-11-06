@@ -1,3 +1,5 @@
+"""Color maps and color interpolation utilities for scivianna plots."""
+
 from enum import Enum
 from typing import Dict, List, Tuple
 
@@ -592,7 +594,7 @@ def get_edges_colors(face_colors: np.ndarray, offset: int = -20) -> np.ndarray:
     Returns
     -------
     np.ndarray
-        Face colors
+        Edge colors
     """
     edge_colors: np.ndarray = face_colors.copy()
 
@@ -649,7 +651,7 @@ def interpolate_cmap_at_values(cmap_name: str, values: np.ndarray) -> np.ndarray
 
     float_array = np.stack([r_vals, g_vals, b_vals, np.ones((len(r_vals)))]).T * 255
 
-    # Create a replacement array
+    # NaN values (outside the colormap range) are mapped to a transparent color
     replacement = np.array([0, 0, 0, 0])
     float_array[np.isnan(float_array).any(axis=1)] = replacement
 

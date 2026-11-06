@@ -1,3 +1,5 @@
+"""GUI tests for the 2D panel: field change and callback wiring."""
+
 import numpy as np
 import pytest
 from test_interface import get_cell_ids, get_colors, get_polygons, make_panel_2d, panel_fixture
@@ -381,6 +383,7 @@ def test_field_change_callback(panel_fixture):
         callback_called = []
 
         def my_callback(field_name):
+            """Record the field name passed to the callback."""
             callback_called.append(field_name)
 
         panel.provide_field_change_callback(my_callback)
@@ -404,9 +407,11 @@ def test_provide_callbacks(panel_fixture):
 
     try:
         def mouse_move_cb(location, cell_id):
+            """No-op mouse move callback."""
             pass
 
         def clic_cb(location, cell_id):
+            """No-op click callback."""
             pass
 
         # These should not raise

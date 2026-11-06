@@ -1,3 +1,5 @@
+"""GUI tests for mouse interactions on the Europe grid map."""
+
 import pytest
 
 import scivianna.utils
@@ -11,6 +13,7 @@ from scivianna_example.europe_grid.europe_grid import make_europe_panel as europ
 scivianna.utils._testing = True
 
 def move_to_country(panel_2d, country):
+    """Simulate a mouse move over the given country and return its cell id."""
     index = list(panel_2d.plotter.source_polygons.data[CELL_NAMES]).index(country)
     panel_2d.plotter.source_mouse.data = {
         "sx": [0.],
@@ -24,6 +27,7 @@ def move_to_country(panel_2d, country):
     return panel_2d.plotter.source_polygons.data[CELL_NAMES][index]
 
 def clic_to_country(panel_2d, country):
+    """Simulate a mouse click on the given country and return its cell id."""
     index = list(panel_2d.plotter.source_polygons.data[CELL_NAMES]).index(country)
     panel_2d.plotter.source_mouse.data = {
         "sx": [0.],
@@ -39,6 +43,7 @@ def clic_to_country(panel_2d, country):
 
 # @pytest.mark.default
 def test_europe_mouse_move():
+    """Moving the mouse over a country updates the linked 1D and DataFrame panels."""
     split_panel: SplitLayout
     split_panel, [slave, slave_result] = europe_example(None, return_slaves=True)
 
@@ -72,6 +77,7 @@ def test_europe_mouse_move():
 
 # @pytest.mark.default
 def test_europe_mouse_clic():
+    """Clicking a country updates the linked 1D and DataFrame panels."""
     split_panel: SplitLayout
     split_panel, [slave, slave_result] = europe_example(None, return_slaves=True)
 

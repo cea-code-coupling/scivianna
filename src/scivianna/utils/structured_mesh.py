@@ -1,3 +1,5 @@
+"""Structured mesh containers used to define structured grid based geometries and results."""
+
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -25,7 +27,7 @@ from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 
 class StructuredMesh:
-    """Generic structured mesh class built to help used to define their own structured mesh based geometries/results"""
+    """Generic structured mesh class to help users define their own structured mesh based geometries/results"""
 
     grids: Dict[str, np.ndarray]
     """Numpy array allocating values to cells, coordinates (x, y, z) are expected."""

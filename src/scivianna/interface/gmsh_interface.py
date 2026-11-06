@@ -124,6 +124,7 @@ class GmshInterface(Geometry2DPolygon, Geometry3D):
     """Maximum mesh size used when a CAD / .geo file has to be meshed (None : gmsh default)."""
 
     def __init__(self) -> None:
+        """Initialize an empty Gmsh interface."""
         self.mesh: Optional[pv.UnstructuredGrid] = None
         """Displayed mesh (highest-dimension elements only)."""
 
@@ -271,6 +272,7 @@ class GmshInterface(Geometry2DPolygon, Geometry3D):
         entity_names: List[str] = []
 
         def _index(names: List[str], name: str) -> int:
+            """Return the index of a name, appending it to the list if new."""
             if name not in names:
                 names.append(name)
             return names.index(name)

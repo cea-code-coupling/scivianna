@@ -1,3 +1,5 @@
+"""Interface exposing a time-series DataFrame filled during coupling."""
+
 import os
 import pickle
 from pathlib import Path
@@ -11,6 +13,8 @@ from scivianna.interface.generic_interface import CouplingInterface, Value1DAtLo
 
 
 class TimeDataFrame(Value1DAtLocation, CouplingInterface):
+    """Interface hosting a DataFrame that is filled along a coupling run."""
+
     def __init__(
         self,
     ):

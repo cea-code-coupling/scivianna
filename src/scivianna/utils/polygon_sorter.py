@@ -1,3 +1,5 @@
+"""Sorting utilities for polygon lists in Data2D objects."""
+
 from typing import List, Union
 
 import numpy as np
@@ -6,10 +8,14 @@ from scivianna.data.data2d import Data2D, DataType
 
 
 class PolygonSorter:
-    """Object used to sort a list of polygons per field"""
+    """Object used to sort a list of polygons per field value.
+
+    Sorting the polygons by their value prevents edges of different colors from
+    overlapping in the plot. The sort order is saved so that subsequent calls
+    reapply it without recomputing it."""
 
     def __init__(self):
-        """Object used to sort a list of polygons per field"""
+        """Initialize an empty sorter (no sort order computed yet)."""
         self.sort_indexes = None
 
     def sort_from_value(self, data: Data2D):
@@ -48,13 +54,15 @@ class PolygonSorter:
         self.sort_list(data)
 
     def sort_list(self, data: Data2D):
-        """Sort the value and color list of a Data2D object in the same order as the past sort_polygon_list order.
-        If no sort_polygon_list was called, it is called instead.
+        """Sorts the value and color lists of a Data2D object with the saved sort order.
+
+        If no sort order was saved yet (no prior call to ``sort_from_value``),
+        it is computed from the cell values first.
 
         Parameters
         ----------
-        arr : List[Any]
-            List to sort
+        data : Data2D
+            Data2D object whose lists are sorted in place
         """
         if self.sort_indexes is None:
             self.sort_from_value(data)
