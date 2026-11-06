@@ -194,8 +194,22 @@ def make_demo(return_slaves=False) -> pmui.Page:
     if has_heat_network:
         with open(Path(heat_network.__file__).parent / "description.md", "r") as f:
             heat_network_with_description = pmui.Row(
-                heat_network_panel.main_frame, pmui.Typography(f.read(), width=300)
+                heat_network_panel.main_frame,
+                pmui.Typography(f.read(), width=300)
             )
+
+        def refit_heat_network(event):
+            if event.new and pn.state.curdoc is not None:
+                pn.state.curdoc.add_timeout_callback(
+                    heat_network_panel.plotter.fit_view,
+                    150,
+                )
+
+        # A trick is required here to re-fit the heat network when displaying,
+        # as reactflow computes the frame when its size is null as hidden
+        heat_network_with_description.param.watch(
+            refit_heat_network, "visible"
+        )
 
     description_file = Path(scivianna_example.__file__).parent / "demo_description.md"
 
