@@ -235,11 +235,13 @@ def set_colors_list(
 def set_graph_colors_list(
     graph: "DataGraph",
     color_map: str,
+    coloring_mode: VisualizationMode = VisualizationMode.FROM_VALUE,
     color_scale: str = "linear",
     center_colormap_on_zero: bool = False,
     min_value: float = None,
     max_value: float = None,
     offset: int = -20,
+    seed: int = 42,
 ) -> Tuple[Optional[float], Optional[float]]:
     """Sets the colors of every node of a DataGraph.
 
@@ -253,25 +255,65 @@ def set_graph_colors_list(
         Graph whose nodes are colored (in place).
     color_map : str
         Colormap in which to select the colors.
+    coloring_mode : VisualizationMode
+        How the cell values map onto colors, as in :func:`set_colors_list`.
+        ``FROM_STRING`` assigns a random color to each distinct string value;
+        ``FROM_VALUE`` (the default) maps numeric values through the colormap.
+        Any other mode raises ``NotImplementedError``.
     color_scale : {"linear", "log"}
-        How the values are mapped onto the colormap.
+        How the values are mapped onto the colormap (``FROM_VALUE`` only).
     center_colormap_on_zero : bool
         Center the color map on zero, as in :func:`set_colors_list`. Ignored when
-        ``color_scale`` is "log" (a log scale cannot span zero).
+        ``color_scale`` is "log" (a log scale cannot span zero) or in
+        ``FROM_STRING`` mode.
     min_value : float
-        Force the global scale minimum value.
+        Force the global scale minimum value (``FROM_VALUE`` only).
     max_value : float
-        Force the global scale maximum value.
+        Force the global scale maximum value (``FROM_VALUE`` only).
     offset : int
         Offset added to the edge colors, as in :func:`set_colors_list`.
+    seed : int
+        String hashing seed for ``FROM_STRING`` mode, as in :func:`set_colors_list`.
 
     Returns
     -------
     Tuple[Optional[float], Optional[float]]
         The global (vmin, vmax) used for normalization, or (None, None) if no
-        finite value was found.
+        finite value was found (or in ``FROM_STRING`` mode).
+
+    Raises
+    ------
+    NotImplementedError
+        If ``coloring_mode`` is neither ``FROM_VALUE`` nor ``FROM_STRING``.
     """
     assert color_scale in ("linear", "log"), f"color_scale must be 'linear' or 'log', found {color_scale!r}"
+
+    if coloring_mode == VisualizationMode.FROM_STRING:
+        # A random color is given for each string value, as in set_colors_list.
+        # The colors are independent of any numeric range, so none is returned.
+        for data in graph.datas.values():
+            cell_values = np.asarray(data.cell_values)
+
+            if len(cell_values) == 0:
+                continue
+
+            sorted_values = np.sort(np.unique(list(cell_values)))
+            map_to = np.array([hash_string(c, seed) % 255 for c in sorted_values]) / 255
+
+            _, inv = np.unique(cell_values, return_inverse=True)
+
+            cell_colors = interpolate_cmap_at_values(color_map, map_to[inv].astype(float))
+
+            if OUTSIDE in data.cell_ids:
+                for index_ in np.where(np.asarray(data.cell_ids) == OUTSIDE):
+                    cell_colors[index_] = (255, 255, 255, 0)
+
+            data.cell_colors = cell_colors.astype(np.int16)
+            data.cell_edge_colors = get_edges_colors(cell_colors, offset=offset)
+        return None, None
+
+    if coloring_mode != VisualizationMode.FROM_VALUE:
+        raise NotImplementedError(f"Visualization mode {coloring_mode} not implemented.")
 
     values = np.concatenate([np.asarray(d.cell_values, dtype=float).ravel() for d in graph.datas.values()])
     values = values[np.isfinite(values)]
@@ -515,31 +557,34 @@ If a color bar is used, you can decide to center it on zero.
             with a global value range, see :func:`set_graph_colors_list`.
         """
         if not isinstance(data, (Data2D, Data3D)):
-            try:
-                from scivianna.data.data_graph import DataGraph
-                if isinstance(data, DataGraph):
-                    color_scale = getattr(self.plotter, "color_scale", "linear")
-                    vmin, vmax = set_graph_colors_list(
-                        data,
-                        self.color_map_selector.value_name,
-                        color_scale=color_scale,
-                        center_colormap_on_zero=self.center_colormap_on_zero_tick.value,
-                        min_value=self.min_value.value if self.min_activated.value else None,
-                        max_value=self.max_value.value if self.max_activated.value else None,
-                        offset=self.edge_offset.value,
-                    )
-                    if vmin is not None and vmax is not None:
-                        self.panel.plotter.update_colorbar(True, value_range=(vmin, vmax))
-                        self._restoring = True
-                        if not self.min_activated.value:
-                            self.min_value.value = vmin
-                        if not self.max_activated.value:
-                            self.max_value.value = vmax
-                        self._restoring = False
-                    return
-            except:
-                pass
-
+            from scivianna.data.data_graph import DataGraph
+            if isinstance(data, DataGraph):
+                color_scale = getattr(self.plotter, "color_scale", "linear")
+                coloring_mode = self.slave.get_label_coloring_mode(self.field_color_selector.value)
+                vmin, vmax = set_graph_colors_list(
+                    data,
+                    self.color_map_selector.value_name,
+                    coloring_mode=coloring_mode,
+                    color_scale=color_scale,
+                    center_colormap_on_zero=self.center_colormap_on_zero_tick.value,
+                    min_value=self.min_value.value if self.min_activated.value else None,
+                    max_value=self.max_value.value if self.max_activated.value else None,
+                    offset=self.edge_offset.value,
+                    seed=self.coloring_seed.value,
+                )
+                if vmin is not None and vmax is not None:
+                    # A numeric range was returned (FROM_VALUE): show the colorbar.
+                    self.panel.plotter.update_colorbar(True, value_range=(vmin, vmax))
+                    self._restoring = True
+                    if not self.min_activated.value:
+                        self.min_value.value = vmin
+                    if not self.max_activated.value:
+                        self.max_value.value = vmax
+                    self._restoring = False
+                else:
+                    # FROM_STRING has no numeric range to display.
+                    self.panel.plotter.update_colorbar(False, (None, None))
+                return
             else:
                 raise TypeError(f"Field selector received a data type {type(data)}, only Data2D and DataGraph are implemented")
 

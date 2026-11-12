@@ -14,7 +14,7 @@ Extra features provided by ``scivianna-graph`` (see its README):
   together.
 """
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import panel as pn
@@ -180,6 +180,19 @@ class ReactFlowPlotter(PlotterGraph):
             # Structure changed: rebuild the whole canvas.
             self.plot(data)
             return
+
+        for name, data_2d in data.datas.items():
+            min_x, max_x, min_y, max_y = 1e9, -1e9, 1e9, -1e9
+            polygons = data_2d.get_polygons()
+
+            for element in polygons:
+                min_x = min(min_x, min(element.exterior_polygon.x_coords))
+                max_x = max(max_x, max(element.exterior_polygon.x_coords))
+
+                min_y = min(min_y, min(element.exterior_polygon.y_coords))
+                max_y = max(max_y, max(element.exterior_polygon.y_coords))
+
+            print(name, min_x, max_x, min_y, max_y)
 
         # The shared scale depends on every node: when one geometry changes it can
         # change the size of all the others.
@@ -610,3 +623,16 @@ class ReactFlowPlotter(PlotterGraph):
             if not np.array_equal(pa.exterior_polygon.y_coords, pb.exterior_polygon.y_coords):
                 return False
         return True
+
+    def set_background(
+        self,
+        background: Literal['dots', 'lines', 'none', 'cross']
+    ):
+        """Change the graph background
+
+        Parameters
+        ----------
+        background : Literal['dots', 'lines', 'none', 'cross']
+            Name of the new background
+        """
+        self.graph_builder.set_background(background)
