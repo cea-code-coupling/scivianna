@@ -12,8 +12,12 @@ scivianna.utils._testing = True
 
 from test_panel_graph import make_graph_panel
 
+from scivianna.data.data2d import Data2D
+from scivianna.data.data_graph import DataGraph, Link
+from scivianna.enums import VisualizationMode
 from scivianna.extension.field_selector import set_graph_colors_list
 from scivianna.extension.graph import Graph
+from scivianna.utils.polygonize_tools import PolygonCoords, PolygonElement
 
 
 def get_labels_on_canvas(panel):
@@ -279,3 +283,82 @@ def test_graph_colors_forced_range_and_centering(color_map):
     graph = build_graph()
     vmin, vmax = set_graph_colors_list(graph, color_map, center_colormap_on_zero=True)
     assert (vmin, vmax) == (-190.0, 190.0)
+
+
+def _string_node(name: str, values: list[str]) -> Data2D:
+    """A single-cell-per-value node with string cell values."""
+    cells = [
+        PolygonElement(
+            exterior_polygon=PolygonCoords([0, 1, 1, 0], [0, 0, 1, 1]),
+            holes=[],
+            cell_id=f"{name}_{k}",
+        )
+        for k in range(len(values))
+    ]
+    data = Data2D.from_polygon_list(cells)
+    data.cell_values = np.array(values)
+    return data
+
+
+@pytest.mark.graph
+@pytest.mark.parametrize("color_map", ["BuRd", "viridis"])
+def test_graph_colors_from_string(color_map):
+    """set_graph_colors_list colors string values like set_colors_list does.
+
+    Each distinct string value gets one color (a hash of the string), shared by
+    every cell holding that value across all nodes; the seed changes the colors
+    and no numeric range is returned (string coloring has no scale).
+    """
+    # Two nodes sharing the same three labels: node_a holds A, B, C once each,
+    # node_b repeats A and B so the cross-node "same value -> same color" check
+    # is meaningful.
+    graph = DataGraph(
+        datas={
+            "node_a": _string_node("node_a", ["A", "B", "C"]),
+            "node_b": _string_node("node_b", ["A", "B"]),
+        },
+        locations={"node_a": (0.0, 0.0), "node_b": (100.0, 0.0)},
+        links=[Link(source_data="node_a", target_data="node_b", source_direction="right", target_direction="left")],
+    )
+
+    # String mode is opt-in: the default stays FROM_VALUE and would fail on strings.
+    with pytest.raises(ValueError):
+        set_graph_colors_list(graph, color_map)
+
+    vmin, vmax = set_graph_colors_list(graph, color_map, coloring_mode=VisualizationMode.FROM_STRING)
+
+    # No numeric range exists for string values.
+    assert (vmin, vmax) == (None, None)
+
+    def color_of(node: str, index: int):
+        return tuple(int(c) for c in graph.datas[node].cell_colors[index])
+
+    # Every cell got a color and an edge color.
+    for key, data in graph.datas.items():
+        assert len(data.cell_colors) == len(data.cell_ids)
+        assert len(data.cell_edge_colors) == len(data.cell_ids)
+
+    # Same value -> same color, across nodes; different values -> different colors.
+    assert color_of("node_a", 0) == color_of("node_b", 0)   # both "A"
+    assert color_of("node_a", 1) == color_of("node_b", 1)   # both "B"
+    assert color_of("node_a", 0) != color_of("node_a", 1)   # "A" vs "B"
+    assert color_of("node_a", 2) not in (color_of("node_a", 0), color_of("node_a", 1))  # "C"
+
+    # The seed changes the colors.
+    graph = DataGraph(
+        datas={"node_a": _string_node("node_a", ["A", "B", "C"])},
+        locations={"node_a": (0.0, 0.0)},
+        links=[],
+    )
+    set_graph_colors_list(graph, color_map, coloring_mode=VisualizationMode.FROM_STRING, seed=42)
+    colors_42 = [tuple(int(c) for c in row) for row in graph.datas["node_a"].cell_colors]
+
+    graph = DataGraph(
+        datas={"node_a": _string_node("node_a", ["A", "B", "C"])},
+        locations={"node_a": (0.0, 0.0)},
+        links=[],
+    )
+    set_graph_colors_list(graph, color_map, coloring_mode=VisualizationMode.FROM_STRING, seed=43)
+    colors_43 = [tuple(int(c) for c in row) for row in graph.datas["node_a"].cell_colors]
+
+    assert colors_42 != colors_43
