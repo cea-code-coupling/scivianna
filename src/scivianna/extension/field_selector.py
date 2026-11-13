@@ -312,7 +312,12 @@ def set_graph_colors_list(
             data.cell_edge_colors = get_edges_colors(cell_colors, offset=offset)
         return None, None
 
-    if coloring_mode != VisualizationMode.FROM_VALUE:
+    elif coloring_mode == VisualizationMode.NONE:
+        for data in graph.datas.values():
+            cell_colors = np.array([(200, 200, 200, 0)] * (len(data.cell_ids)))
+            data.cell_edge_colors = get_edges_colors(data.cell_colors, offset=offset)
+
+    elif coloring_mode != VisualizationMode.FROM_VALUE:
         raise NotImplementedError(f"Visualization mode {coloring_mode} not implemented.")
 
     values = np.concatenate([np.asarray(d.cell_values, dtype=float).ravel() for d in graph.datas.values()])
@@ -344,9 +349,12 @@ def set_graph_colors_list(
         cell_values = np.asarray(data.cell_values, dtype=float)
 
         if not np.isfinite(cell_values).any():
-            # No value to color: gray cells, no edges.
+            # No value to color: as in the 2D display, a transparent gray
+            # fill and a visible gray edge.
             data.cell_colors = np.full((len(cell_values), 4), (200, 200, 200, 0))
-            data.cell_edge_colors = np.full((len(cell_values), 4), (200, 200, 200, 0))
+            edge_colors = get_edges_colors(data.cell_colors, offset=offset)
+            edge_colors[:, 3] = 255
+            data.cell_edge_colors = edge_colors
             continue
 
         if color_scale == "log":
@@ -357,8 +365,19 @@ def set_graph_colors_list(
             vmin, vmax = vmin_global, vmax_global
 
         normalized = (cell_values - vmin) / (vmax - vmin)
-        data.cell_colors = interpolate_cmap_at_values(color_map, normalized).astype(np.int16)
-        data.cell_edge_colors = get_edges_colors(data.cell_colors, offset=offset)
+
+        # Cells without a value to color (NaN, or <= 0 on a log scale) are
+        # drawn as in the 2D display: a transparent gray fill and a visible
+        # gray edge - e.g. the wall cells have no value for hydro fields and
+        # must stay visible in the graph, not fade out.
+        missing = np.isnan(normalized)
+
+        cell_colors = interpolate_cmap_at_values(color_map, normalized).astype(np.int16)
+        cell_colors[missing] = (200, 200, 200, 0)
+        data.cell_colors = cell_colors
+        edge_colors = get_edges_colors(data.cell_colors, offset=offset)
+        edge_colors[missing, 3] = 255
+        data.cell_edge_colors = edge_colors
 
     return vmin_global, vmax_global
 
