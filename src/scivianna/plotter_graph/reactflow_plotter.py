@@ -14,7 +14,7 @@ Extra features provided by ``scivianna-graph`` (see its README):
   together.
 """
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import panel as pn
@@ -203,6 +203,20 @@ class ReactFlowPlotter(PlotterGraph):
 
         # Nodes are sized from their figures: tell the canvas about the new sizes.
         self.graph_builder.update_view_sizes()
+
+        # The layout (locations, rotations, labels) is computed by the interface
+        # and can change with the options even when the node set is the same:
+        # apply it to the canvas, like the figures above.
+        for key in new_keys:
+            old_location = self.graph.locations.get(key)
+            if old_location is None or not np.allclose(old_location, data.locations[key]):
+                self.graph_builder.set_node_position(key, tuple(data.locations[key]))
+            old_rotation = self.graph.rotations.get(key, 0.0)
+            if not np.isclose(old_rotation, data.rotations.get(key, 0.0)):
+                self.graph_builder.set_node_rotation(key, float(data.rotations.get(key, 0.0)))
+            old_label = self.graph.labels.get(key, key)
+            if old_label != data.labels.get(key, key):
+                self.graph_builder.set_node_label(key, data.labels.get(key, key))
 
         self.graph = data
         self._update_colorbar()
@@ -610,3 +624,16 @@ class ReactFlowPlotter(PlotterGraph):
             if not np.array_equal(pa.exterior_polygon.y_coords, pb.exterior_polygon.y_coords):
                 return False
         return True
+
+    def set_background(
+        self,
+        background: Literal['dots', 'lines', 'none', 'cross']
+    ):
+        """Change the graph background
+
+        Parameters
+        ----------
+        background : Literal['dots', 'lines', 'none', 'cross']
+            Name of the new background
+        """
+        self.graph_builder.set_background(background)

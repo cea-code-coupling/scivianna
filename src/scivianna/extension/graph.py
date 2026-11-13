@@ -86,6 +86,13 @@ and move the colorbar to a corner or side of the canvas, vertically or horizonta
             width=280,
         )
 
+        self.background_select = pmui.Select(
+            label="Background",
+            options=["Dots", "Lines", "Cross", "None"],
+            value="Dots",
+            width=280,
+        )
+
         def update_node_padding(*args, **kwargs):
             """Apply the node padding to the canvas and refresh the node sizes."""
             if self._restoring:
@@ -113,10 +120,17 @@ and move the colorbar to a corner or side of the canvas, vertically or horizonta
                 return
             self.plotter.set_colorbar_orientation(self.colorbar_orientation_select.value)
 
+        def update_background(*args, **kwargs):
+            """Rotate the colorbar to the selected orientation."""
+            if self._restoring:
+                return
+            self.plotter.set_background(self.background_select.value.lower())
+
         self.node_padding_inp.param.watch(update_node_padding, "value")
         self.hide_labels_chk.param.watch(update_hide_labels, "value")
         self.colorbar_position_select.param.watch(update_colorbar_position, "value")
         self.colorbar_orientation_select.param.watch(update_colorbar_orientation, "value")
+        self.background_select.param.watch(update_background, "value")
 
     def _fit_view(self, *args, **kwargs):
         """Re-fits the canvas viewport to the drawn nodes."""
@@ -134,6 +148,7 @@ and move the colorbar to a corner or side of the canvas, vertically or horizonta
             pmui.Typography("Node padding (px)"),
             self.node_padding_inp,
             self.hide_labels_chk,
+            self.background_select,
             self.fit_view_button,
             pmui.Typography("Colorbar"),
             self.colorbar_position_select,
@@ -154,6 +169,7 @@ and move the colorbar to a corner or side of the canvas, vertically or horizonta
             "hide_labels": self.hide_labels_chk.value,
             "colorbar_position": self.colorbar_position_select.value,
             "colorbar_orientation": self.colorbar_orientation_select.value,
+            "background": self.background_select.value,
         }
 
     @classmethod
@@ -182,10 +198,14 @@ and move the colorbar to a corner or side of the canvas, vertically or horizonta
         extension.colorbar_orientation_select.value = info_dict.get(
             "colorbar_orientation", extension.plotter.colorbar_orientation
         )
+        extension.background_select.value = info_dict.get(
+            "background", "Dots"
+        )
         extension._restoring = False
         # The watchers were silent during the restore: apply the restored values.
         extension.plotter.set_colorbar_position(extension.colorbar_position_select.value)
         extension.plotter.set_colorbar_orientation(extension.colorbar_orientation_select.value)
+        extension.plotter.set_background(extension.background_select.value)
         return extension
 
     def on_node_selection_change(self, selected_nodes: list[str]):
