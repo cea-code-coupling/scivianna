@@ -181,19 +181,6 @@ class ReactFlowPlotter(PlotterGraph):
             self.plot(data)
             return
 
-        for name, data_2d in data.datas.items():
-            min_x, max_x, min_y, max_y = 1e9, -1e9, 1e9, -1e9
-            polygons = data_2d.get_polygons()
-
-            for element in polygons:
-                min_x = min(min_x, min(element.exterior_polygon.x_coords))
-                max_x = max(max_x, max(element.exterior_polygon.x_coords))
-
-                min_y = min(min_y, min(element.exterior_polygon.y_coords))
-                max_y = max(max_y, max(element.exterior_polygon.y_coords))
-
-            print(name, min_x, max_x, min_y, max_y)
-
         # The shared scale depends on every node: when one geometry changes it can
         # change the size of all the others.
         old_scale = self._scale
@@ -216,6 +203,20 @@ class ReactFlowPlotter(PlotterGraph):
 
         # Nodes are sized from their figures: tell the canvas about the new sizes.
         self.graph_builder.update_view_sizes()
+
+        # The layout (locations, rotations, labels) is computed by the interface
+        # and can change with the options even when the node set is the same:
+        # apply it to the canvas, like the figures above.
+        for key in new_keys:
+            old_location = self.graph.locations.get(key)
+            if old_location is None or not np.allclose(old_location, data.locations[key]):
+                self.graph_builder.set_node_position(key, tuple(data.locations[key]))
+            old_rotation = self.graph.rotations.get(key, 0.0)
+            if not np.isclose(old_rotation, data.rotations.get(key, 0.0)):
+                self.graph_builder.set_node_rotation(key, float(data.rotations.get(key, 0.0)))
+            old_label = self.graph.labels.get(key, key)
+            if old_label != data.labels.get(key, key):
+                self.graph_builder.set_node_label(key, data.labels.get(key, key))
 
         self.graph = data
         self._update_colorbar()
