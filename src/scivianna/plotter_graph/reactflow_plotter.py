@@ -486,11 +486,15 @@ class ReactFlowPlotter(PlotterGraph):
         fig.xaxis.visible = False
         fig.yaxis.visible = False
 
-        # Fixed ranges: no tool can change them. ``_fit_figure`` sets them to the
-        # data bounds and disables match_aspect so the frame is not re-sized.
+        # Fixed ranges: no tool can change them (hover only). ``_fit_figure`` sets them
+        # to the data bounds and disables match_aspect so the frame is not re-sized.
+        # No ``bounds``: with bounds="auto", BokehJS freezes the bounds at the first
+        # start/end it sees and clamps every later start/end into them, so a figure
+        # whose data grows on update_plot kept drawing its old extent (polygons
+        # looked cropped by the node).
         from bokeh.models import Range1d
-        fig.x_range = Range1d(0, 1, bounds="auto")
-        fig.y_range = Range1d(0, 1, bounds="auto")
+        fig.x_range = Range1d(0, 1, bounds=None)
+        fig.y_range = Range1d(0, 1, bounds=None)
 
         self._fit_figure(plotter, data)
         return plotter

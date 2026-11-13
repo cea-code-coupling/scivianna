@@ -111,6 +111,8 @@ scivianna = [
     "readme.md"
 ]
 scivianna_example = [
+    "vtk_example/*",
+    "graph/*",
     "c3po_coupling/*",
     "europe_grid/*",
     "image/*.png",
