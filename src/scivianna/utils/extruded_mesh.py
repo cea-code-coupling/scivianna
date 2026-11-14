@@ -365,6 +365,10 @@ class ExtrudedStructuredMesh(Geometry2DPolygon, Geometry3D):
         # is a translated copy of mesh2d, following the vectors of mesh1d's
         # segments - equivalent to the previous per-slab translate+extrude.
         mesh3d = mesh2d.buildExtrudedMesh(mesh1d, 0)
+        # The triangles produced by shapely have an arbitrary winding, so the
+        # extruded PENTA6 cells may be inside-out with respect to the MED
+        # convention: fix their node order in place (cell numbering is kept).
+        mesh3d.findAndCorrectBadOriented3DExtrudedCells()
         mesh3d.checkConsistencyLight()
 
         n_base_cells = mesh2d.getNumberOfCells()
