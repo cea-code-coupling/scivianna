@@ -946,6 +946,8 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             medcoupling.NORM_SEG2: pv.CellType.LINE,
             medcoupling.NORM_SEG3: pv.CellType.QUADRATIC_EDGE,
             medcoupling.NORM_TETRA4: pv.CellType.TETRA,
+            medcoupling.NORM_PYRA5: pv.CellType.PYRAMID,
+            medcoupling.NORM_PENTA6: pv.CellType.WEDGE,
             medcoupling.NORM_POLYGON: pv.CellType.POLYGON,
             medcoupling.NORM_QPOLYG: pv.CellType.QUADRATIC_POLYGON,
             medcoupling.NORM_POLYHED: pv.CellType.POLYHEDRON,
@@ -959,10 +961,41 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             medcoupling.NORM_SEG2: 1,
             medcoupling.NORM_SEG3: 1,
             medcoupling.NORM_TETRA4: 3,
+            medcoupling.NORM_PYRA5: 3,
+            medcoupling.NORM_PENTA6: 3,
             medcoupling.NORM_POLYGON: 2,
             medcoupling.NORM_QPOLYG: 3,  # only UnstructuredGrid
             medcoupling.NORM_POLYHED: 3,
         }
+
+        # MED and VTK use opposite orientation conventions for linear 3D cells:
+        # a well-oriented MED cell (positive MEDCoupling measure) is inverted in
+        # VTK, and vice versa. The node order must therefore be permuted when
+        # converting, otherwise VTK sees inside-out cells (wrong normals, broken
+        # rendering/clipping, negative volumes). E.g. for an extruded triangle,
+        # MED's PENTA6 base triangle is oriented away from the top face while
+        # VTK's WEDGE base triangle is oriented towards it.
+        # Each permutation gives, for each VTK node, the index of the MED node.
+        MC_TO_VTK_NODE_PERMUTATION = {
+            medcoupling.NORM_TETRA4: [0, 2, 1, 3],
+            medcoupling.NORM_PYRA5: [0, 3, 2, 1, 4],
+            medcoupling.NORM_PENTA6: [0, 2, 1, 3, 5, 4],
+            medcoupling.NORM_HEXA8: [0, 3, 2, 1, 4, 7, 6, 5],
+        }
+
+        def _permute_nodes_mc_to_vtk(
+            connectivity: np.ndarray, offsets: np.ndarray, mc_cell_types: np.ndarray
+        ):
+            """Reorder in place the nodes of the cells whose MED and VTK node
+            orderings differ (see ``MC_TO_VTK_NODE_PERMUTATION``)."""
+            for mc_type, perm in MC_TO_VTK_NODE_PERMUTATION.items():
+                cells = np.flatnonzero(mc_cell_types == mc_type)
+                if len(cells) == 0:
+                    continue
+                # Node positions in the connectivity array, one row per cell
+                # (offsets point to the cell type, nodes start right after).
+                node_idx = offsets[cells][:, None] + 1 + np.arange(len(perm))[None, :]
+                connectivity[node_idx] = connectivity[node_idx[:, perm]]
 
         def _mc_ph_to_vtk_fast(connectivity: np.ndarray, offsets: np.ndarray) -> np.ndarray:
             """Convert polyhedron connectivity (with -1 face separators) to VTK format."""
@@ -1003,6 +1036,8 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
             connectivity = np.array(mesh.getNodalConnectivity().toNumPyArray())
             mc_cell_types = np.array(connectivity[cell_types_idx])
 
+            _permute_nodes_mc_to_vtk(connectivity, offsets, mc_cell_types)
+
             # Split off polyhedrons
             # NOTE: polyhedrons should be higher types id
             # TODO: I should check that and isolate the POLYHED case...
@@ -1028,8 +1063,9 @@ class MEDInterface(Geometry2DPolygon, Geometry3D, CouplingInterface):
                 offsets=offsets[ind_l : ind_r + 1] - offsets[ind_l],
             )
 
-            # Combination
-            connectivity = np.r_[connectivity_npl, connectivity_npr, connectivity_ph]
+            # Combination: keep the polyhedrons at their position so that the
+            # connectivity stays aligned with cell_types
+            connectivity = np.r_[connectivity_npl, connectivity_ph, connectivity_npr]
 
             pv_mesh = pv.UnstructuredGrid(connectivity, cell_types, coords)
             return pv_mesh
