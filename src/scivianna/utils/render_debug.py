@@ -21,7 +21,7 @@ from typing import Any, Optional
 from bokeh.document import Document
 from bokeh.document.events import ModelChangedEvent
 from bokeh.model import Model
-from bokeh.models import CustomJS
+from bokeh.models import ColumnDataSource, CustomJS
 
 from scivianna.logging_config import get_logger
 
@@ -94,6 +94,8 @@ def _log_change(event: Any) -> None:
     if not isinstance(event, ModelChangedEvent):
         return
     model, attr = event.model, event.attr
+    if getattr(model, "name", None) == "scivianna_render_debug_sink":
+        return
     new_models = _models_in(event.new)
     legends = [m for m in new_models if type(m).__name__ in ("Legend", "LegendItem")]
     # Legends brought in by a whole new sub-tree (e.g. a new figure or pane) do not get
@@ -125,6 +127,19 @@ BROWSER_JS = r"""
 if (!window.__sv_render_debug) {
   window.__sv_render_debug = true;
   const P = "[sv-debug]";
+  // Messages are also sent to Python (logged in the terminal) through the sink data source.
+  const queue = [];
+  const flush = () => {
+    if (!queue.length) return;
+    const lines = queue.splice(0);
+    try { sink.data = {level: lines.map((l) => l[0]), text: lines.map((l) => l[1])}; } catch (err) { }
+  };
+  setInterval(flush, 300);
+  const out = (level) => (...parts) => {
+    console[level](...parts);
+    if (level !== "debug") queue.push([level, parts.map((x) => typeof x === "string" ? x : String(x)).join(" ")]);
+  };
+  const LOG = {warn: out("warn"), error: out("error"), debug: out("debug")};
   const docs = () => (window.Bokeh && Bokeh.documents) ? Bokeh.documents : [];
   const find = (id) => { for (const d of docs()) { const m = d.get_model_by_id(id); if (m) return m; } return null; };
   const desc = (m) => m ? `${m.type}(${m.id}${m.name ? ", " + m.name : ""})` : "?";
@@ -153,11 +168,11 @@ if (!window.__sv_render_debug) {
     const ids = [...new Set(String(text).match(/\bp\d+\b/g) ?? [])];
     for (const id of ids) {
       const m = find(id);
-      console.warn(P, `  ${id}: ${m ? desc(m) : "UNKNOWN to the browser"}, view: ${hasView(id)}, held by: ${m ? plotOf(id) : "-"}`);
+      LOG.warn(P, `  ${id}: ${m ? desc(m) : "UNKNOWN to the browser"}, view: ${hasView(id)}, held by: ${m ? plotOf(id) : "-"}`);
     }
   };
-  window.addEventListener("error", (e) => { console.warn(P, "window error:", e.message); explain(e.message); });
-  window.addEventListener("unhandledrejection", (e) => { const msg = e.reason?.message ?? String(e.reason); console.warn(P, "unhandled rejection:", msg); explain(msg); });
+  window.addEventListener("error", (e) => { LOG.warn(P, "window error:", e.message); explain(e.message); });
+  window.addEventListener("unhandledrejection", (e) => { const msg = e.reason?.message ?? String(e.reason); LOG.warn(P, "unhandled rejection:", msg); explain(msg); });
 
   // Patches received from the server.
   let n = 0;
@@ -180,14 +195,14 @@ if (!window.__sv_render_debug) {
       });
       const created = newDefs(patch.events ?? [], []);
       const interesting = events.some((e) => /Legend|\.(above|below|left|right|center|renderers)\b/.test(e)) || created.length;
-      (interesting ? console.warn : console.debug)(P, `patch #${i}:`, events.join(" | "), created.length ? "\n   new: " + created.join(", ") : "");
+      (interesting ? LOG.warn : LOG.debug)(P, `patch #${i}:`, events.join(" | "), created.length ? "\n   new: " + created.join(", ") : "");
       try {
         return orig.call(this, patch, buffers);
       } catch (err) {
-        console.error(P, `patch #${i} FAILED:`, err.message); explain(err.message); throw err;
+        LOG.error(P, `patch #${i} FAILED:`, err.message); explain(err.message); throw err;
       }
     };
-    console.warn(P, "patch logging installed");
+    LOG.warn(P, "patch logging installed");
   };
 
   // Plot layout failures: name the plot and the side-panel models without a view.
@@ -203,27 +218,34 @@ if (!window.__sv_render_debug) {
         try { return orig.call(this); }
         catch (err) {
           const m = this.model;
-          console.error(P, `layout of ${desc(m)} FAILED: ${err.message}`);
+          LOG.error(P, `layout of ${desc(m)} FAILED: ${err.message}`);
           for (const side of ["above", "below", "left", "right", "center"]) {
             for (const x of (m[side] ?? [])) {
               const known = !!find(x.id);
               const view = this.views?.find_one ? this.views.find_one(x) : (this.renderer_views?.get?.(x));
-              if (!known || view == null) console.error(P, `   ${side}: ${desc(x)} known: ${known}, view: ${view != null}`);
+              if (!known || view == null) LOG.error(P, `   ${side}: ${desc(x)} known: ${known}, view: ${view != null}`);
             }
           }
           throw err;
         }
       };
-      console.warn(P, "plot layout logging installed");
+      LOG.warn(P, "plot layout logging installed");
       return true;
     }
     return false;
   };
+  LOG.warn(P, "probe running in the browser");
   const install = () => { for (const d of docs()) patchDoc(d); return patchPlotView(); };
   let tries = 0;
   const timer = setInterval(() => { if (install() || ++tries > 120) clearInterval(timer); }, 500);
 }
 """
+
+
+def _on_browser_message(attr: str, old: Any, new: Any) -> None:
+    """Logs the messages the browser probe sends through the sink data source."""
+    for level, text in zip(new.get("level", []), new.get("text", [])):
+        log("BROWSER %s: %s", level, text)
 
 
 def install(doc: Optional[Document]) -> None:
@@ -232,7 +254,10 @@ def install(doc: Optional[Document]) -> None:
         return
     setattr(doc, _DOC_FLAG, True)
     doc.on_change(_on_change)
-    doc.js_on_event("document_ready", CustomJS(code=BROWSER_JS))
+    sink = ColumnDataSource(data={"level": [], "text": []}, name="scivianna_render_debug_sink")
+    sink.on_change("data", _on_browser_message)
+    doc.add_root(sink)
+    doc.js_on_event("document_ready", CustomJS(code=BROWSER_JS, args={"sink": sink}))
     log("installed in document %s", id(doc) % 10000)
 
 

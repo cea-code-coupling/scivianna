@@ -184,12 +184,18 @@ class ReactFlowPlotter(PlotterGraph):
             DataGraph object with updated node geometries and links
         """
         if self.graph is None:
+            render_debug.log("graph update_plot(): no current graph -> rebuild")
             self.plot(data)
             return
 
         old_keys = set(self.graph.datas.keys())
         new_keys = set(data.datas.keys())
         if old_keys != new_keys or self._links_signature(self.graph.links) != self._links_signature(data.links):
+            render_debug.log(
+                "graph update_plot(): structure changed -> rebuild. nodes removed %s, added %s, links changed: %s",
+                sorted(old_keys - new_keys), sorted(new_keys - old_keys),
+                self._links_signature(self.graph.links) != self._links_signature(data.links),
+            )
             # Structure changed: rebuild the whole canvas.
             self.plot(data)
             return
