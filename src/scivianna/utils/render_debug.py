@@ -70,13 +70,48 @@ def _caller() -> str:
     return " <- ".join(f"{os.path.basename(f.filename)}:{f.lineno} {f.name}" for f in reversed(frames[-4:])) or "?"
 
 
+def _placement(legend: Model, roots: list) -> str:
+    """Where a legend sits: ``figure.side`` of the plot holding it among the given models' references."""
+    for root in roots:
+        for plot in root.references():
+            for side in ("above", "below", "left", "right", "center"):
+                value = getattr(plot, side, None)
+                if isinstance(value, (list, tuple)) and any(v is legend for v in value):
+                    return f"{describe(plot)}.{side}"
+    return "?"
+
+
 def _on_change(event: Any) -> None:
-    """Document change listener: logs legend / plot-panel changes with their origin."""
+    """Document change listener: logs legend / plot-panel changes with their origin (never raises)."""
+    try:
+        _log_change(event)
+    except Exception as e:  # debugging must not break the application
+        log("change logger failed: %s: %s", type(e).__name__, e)
+
+
+def _log_change(event: Any) -> None:
+    """Logs legend / plot-panel changes of one document event."""
     if not isinstance(event, ModelChangedEvent):
         return
     model, attr = event.model, event.attr
     new_models = _models_in(event.new)
     legends = [m for m in new_models if type(m).__name__ in ("Legend", "LegendItem")]
+    # Legends brought in by a whole new sub-tree (e.g. a new figure or pane) do not get
+    # their own change event: look for them inside the new models.
+    seen = event.document.__dict__.setdefault("_scivianna_render_debug_legends", set())
+    nested = []
+    for m in new_models:
+        for ref in m.references():
+            if type(ref).__name__ == "Legend" and ref not in legends and ref.id not in seen:
+                seen.add(ref.id)
+                nested.append(ref)
+    for legend in nested:
+        log(
+            "doc %s: %s.%s brings %s (items %s) placed in %s  (from %s)",
+            id(event.document) % 10000, describe(model), attr, describe(legend),
+            [i.label.value if i.label is not None else None for i in legend.items],
+            _placement(legend, new_models), _caller(),
+        )
     if attr in PANEL_ATTRS or legends or type(model).__name__ in ("Legend", "LegendItem"):
         log(
             "doc %s: %s.%s = [%s]  (from %s)",
