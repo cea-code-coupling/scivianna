@@ -206,9 +206,27 @@ class ReactFlowPlotter(PlotterGraph):
             raise
 
     def _figures_detached(self) -> bool:
-        """Whether in-place figure updates may not reach the browser (see ``SciviannaGraph.views_detached``)."""
+        """Whether in-place figure updates may not reach the browser.
+
+        ``pn.pane.Bokeh`` hands the same figure to every document showing the canvas,
+        and the last one takes it from the others. True when the canvas is shown in
+        several documents, or when a figure is owned by another document than the one
+        showing the canvas. Uses ``SciviannaGraph.views_detached`` when the installed
+        scivianna-graph provides it (>= 0.1.6), else the same check done here.
+        """
         check = getattr(self.graph_builder, "views_detached", None)
-        return bool(check()) if check is not None else False
+        if check is not None:
+            return bool(check())
+        docs = []
+        for model, _ in list(self.canvas._models.values()):
+            doc = model.document
+            if doc is not None and all(doc is not d for d in docs):
+                docs.append(doc)
+        if not docs:
+            return False
+        if len(docs) > 1:
+            return True
+        return any(plotter.figure.document is not docs[0] for plotter in self.plotters.values())
 
     def _update_in_place(self, data: DataGraph, new_keys: set):
         """Updates the existing figures and nodes for a graph with the same nodes and links."""
