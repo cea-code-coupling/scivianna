@@ -10,6 +10,7 @@ from bokeh.palettes import Viridis11 as palette
 from bokeh.plotting import figure
 
 from scivianna.plotter_1d.generic_plotter import Plotter1D
+from scivianna.utils import render_debug
 
 
 class BokehPlotter1D(Plotter1D):
@@ -17,6 +18,7 @@ class BokehPlotter1D(Plotter1D):
 
     def __init__(self):
         """Create the Bokeh figure and wrap it in a Panel pane."""
+        render_debug.enable_if_requested()
 
         self.source_data_dict: Dict[str, ColumnDataSource] = {}
         """Dictionnary of x, y ColumnDataSource containing the data to plot"""
@@ -74,9 +76,15 @@ class BokehPlotter1D(Plotter1D):
         )
 
         self.line_dict[name] = renderer
+        render_debug.log(
+            "1D %s: added line %r -> %s, legends: %s",
+            render_debug.describe(self.fig), name, render_debug.describe(renderer),
+            [(render_debug.describe(l), [i.label.value for i in l.items]) for l in self.fig.legend],
+        )
 
     def _rebuild_figure(self):
         """Recreate the Bokeh figure while preserving data."""
+        old = render_debug.describe(self.fig)
 
         self._create_figure()
 
@@ -88,6 +96,7 @@ class BokehPlotter1D(Plotter1D):
         self.set_visible(self.visible)
 
         self.fig_pane.object = self.fig
+        render_debug.log("1D figure rebuilt: %s -> %s", old, render_debug.describe(self.fig))
 
     # -------------------------------------------------------------------------
     # Data

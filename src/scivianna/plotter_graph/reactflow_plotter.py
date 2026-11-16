@@ -35,6 +35,7 @@ except ImportError as exc:  # pragma: no cover - import guard
     ) from exc
 
 from scivianna.logging_config import get_logger
+from scivianna.utils import render_debug
 logger = get_logger(__name__)
 
 
@@ -132,6 +133,7 @@ class ReactFlowPlotter(PlotterGraph):
         # rotation itself, so no extra node CSS is needed here. flow_kwargs are
         # display options (min_zoom, max_zoom, show_minimap, ...).
         self.graph_builder = SciviannaGraph(**flow_kwargs)
+        render_debug.enable_if_requested()
         self.canvas = self.graph_builder.canvas
 
     # ------------------------------------------------------------------ PlotterGraph API
@@ -156,6 +158,10 @@ class ReactFlowPlotter(PlotterGraph):
         for i, link in enumerate(data.links):
             model.add_edge(self._make_edge(link))
         self.graph_builder.set_model(model)
+        render_debug.log(
+            "graph plot(): new figures %s, canvas documents %s",
+            {k: p.figure.id for k, p in self.plotters.items()}, self._documents_debug(),
+        )
         if self.labels_hidden:
             # The rebuild above reset the labels: hide them again.
             for key in data.datas:
@@ -188,6 +194,11 @@ class ReactFlowPlotter(PlotterGraph):
             self.plot(data)
             return
 
+        render_debug.log(
+            "graph update_plot(): figure documents %s, canvas documents %s, detached %s",
+            {k: id(p.figure.document) % 10000 if p.figure.document else None for k, p in self.plotters.items()},
+            self._documents_debug(), self._figures_detached(),
+        )
         if self._figures_detached():
             # The figures belong to another document than the one(s) showing the canvas
             # (canvas served in several sessions / tabs, or figures taken by an export):
@@ -204,6 +215,10 @@ class ReactFlowPlotter(PlotterGraph):
             # graph so that the next update rebuilds everything from scratch.
             self.graph = None
             raise
+
+    def _documents_debug(self) -> list:
+        """Short ids of the documents displaying the canvas (render debugging)."""
+        return [id(m.document) % 10000 if m.document else None for m, _ in list(self.canvas._models.values())]
 
     def _figures_detached(self) -> bool:
         """Whether in-place figure updates may not reach the browser.
