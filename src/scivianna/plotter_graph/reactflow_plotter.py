@@ -145,6 +145,10 @@ class ReactFlowPlotter(PlotterGraph):
         """
         self.graph = data
         self._scale = self._graph_scale(data)
+        # New figures for every node: drop the previous ones (a node that disappeared
+        # would otherwise keep a stale plotter, still reached by callbacks and mouse info).
+        self.plotters = {}
+        self.panes = {}
         model = GraphModel()
         for key in data.datas:
             node = self._make_node(key, data)
@@ -163,7 +167,10 @@ class ReactFlowPlotter(PlotterGraph):
 
         Nodes present in both the old and the new graph are updated in place
         (colors, then full frame if the geometry changed); nodes that appear
-        or disappear rebuild the whole canvas.
+        or disappear rebuild the whole canvas. The figures are also rebuilt when
+        they no longer belong to the document displaying the canvas (canvas shown
+        in several sessions, figures taken by another document): an in-place
+        change would not reach every browser.
 
         Parameters
         ----------
@@ -181,6 +188,30 @@ class ReactFlowPlotter(PlotterGraph):
             self.plot(data)
             return
 
+        if self._figures_detached():
+            # The figures belong to another document than the one(s) showing the canvas
+            # (canvas served in several sessions / tabs, or figures taken by an export):
+            # in-place changes would not reach every browser, or would raise. New figures
+            # are sent to every document, so rebuild instead.
+            logger.info("Graph figures are not owned by the displayed document: rebuilding them.")
+            self.plot(data)
+            return
+
+        try:
+            self._update_in_place(data, new_keys)
+        except Exception:
+            # Part of the figures may already hold the new data: forget the current
+            # graph so that the next update rebuilds everything from scratch.
+            self.graph = None
+            raise
+
+    def _figures_detached(self) -> bool:
+        """Whether in-place figure updates may not reach the browser (see ``SciviannaGraph.views_detached``)."""
+        check = getattr(self.graph_builder, "views_detached", None)
+        return bool(check()) if check is not None else False
+
+    def _update_in_place(self, data: DataGraph, new_keys: set):
+        """Updates the existing figures and nodes for a graph with the same nodes and links."""
         # The shared scale depends on every node: when one geometry changes it can
         # change the size of all the others.
         old_scale = self._scale
