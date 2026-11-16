@@ -338,6 +338,7 @@ class ReactFlowPlotter(PlotterGraph):
         self.colorbar_orientation = orientation
         self._update_colorbar()
 
+    @pn.io.hold()
     def set_labels_visible(self, visible: bool):
         """Shows or hides the label of every node.
 
