@@ -35,7 +35,7 @@ except ImportError as exc:  # pragma: no cover - import guard
     ) from exc
 
 from scivianna.logging_config import get_logger
-from scivianna.utils import render_debug
+from scivianna.utils import render_debug, shared_models
 logger = get_logger(__name__)
 
 
@@ -134,6 +134,7 @@ class ReactFlowPlotter(PlotterGraph):
         # display options (min_zoom, max_zoom, show_minimap, ...).
         self.graph_builder = SciviannaGraph(**flow_kwargs)
         render_debug.enable_if_requested()
+        shared_models.enable()
         self.canvas = self.graph_builder.canvas
 
     # ------------------------------------------------------------------ PlotterGraph API
@@ -243,6 +244,13 @@ class ReactFlowPlotter(PlotterGraph):
             doc = model.document
             if doc is not None and all(doc is not d for d in docs):
                 docs.append(doc)
+
+        def disconnected(doc) -> bool:
+            """Server session without browser connection (reloaded / closed tab)."""
+            session = getattr(getattr(doc, "session_context", None), "_session", None)
+            return getattr(session, "connection_count", None) == 0
+
+        docs = [doc for doc in docs if not disconnected(doc)] or docs
         if not docs:
             return False
         if len(docs) > 1:

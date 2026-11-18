@@ -16,6 +16,7 @@ from scivianna.component.overlay_component import Overlay
 from scivianna.data.data_container import DataContainer
 from scivianna.enums import UpdateEvent
 from scivianna.extension.extension import Extension
+from scivianna.utils import shared_models
 from scivianna.interface.generic_interface import Geometry2D
 from scivianna.logging_config import get_logger
 from scivianna.panel.gui import GUI
@@ -82,6 +83,8 @@ class VisualizationPanel(pn.viewable.Viewer):
         #   Initializing attributes
         #
         super().__init__()
+        # Figures shared between sessions must survive the destruction of a stale session.
+        shared_models.enable()
 
         self.panel_coupling_extension: Extension = None
         self.panel_name = name

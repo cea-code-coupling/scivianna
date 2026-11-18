@@ -273,5 +273,8 @@ def enable_if_requested() -> None:
     except Exception:  # no session / document locked: the session hook covers it
         pass
     if not _session_hook_installed:
-        _session_hook_installed = True
-        pn.state.on_session_created(lambda ctx: install(getattr(ctx, "_document", None)))
+        try:
+            pn.state.on_session_created(lambda ctx: install(getattr(ctx, "_document", None)))
+            _session_hook_installed = True
+        except RuntimeError:
+            pass  # inside a session (layout built per session): the current document is enough
