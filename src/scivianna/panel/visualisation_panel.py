@@ -269,14 +269,14 @@ class VisualizationPanel(pn.viewable.Viewer):
         """
         pass
 
-    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
+    def recompute_at(self, position: Tuple[float, float, float], cell_id: Union[int, str]):
         """Triggers a panel recomputation at the provided location. Called by layout update event.
 
         Parameters
         ----------
         position : Tuple[float, float, float]
             Location to provide to the slave
-        cell_id : str
+        cell_id : Union[int, str]
             cell id to provide to the slave
         """
         raise NotImplementedError()

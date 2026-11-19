@@ -326,7 +326,7 @@ class DummyTestInterface(Geometry2DPolygon):
         ----------
         value_label : str
             Field name to get values from
-        cells : List[Union,int,str]]
+        cells : List[Union[int, str]]
             List of cells names
         options : Dict[str, Any]
             Additional options for frame computation.

@@ -52,7 +52,7 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
     def get_1D_value(
         self,
         position: Tuple[float, float, float],
-        cell_index: str,
+        cell_index: Union[int, str],
         material_name: str,
         field: str,
         options: Dict[str, Any] = None,
@@ -63,7 +63,7 @@ class TimeDataFrame(Value1DAtLocation, CouplingInterface):
         ----------
         position : Tuple[float, float, float]
             Position at which the value is requested
-        cell_index : str
+        cell_index : Union[int, str]
             Index of the requested cell
         material_name : str
             Name of the requested material

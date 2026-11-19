@@ -1,6 +1,6 @@
 """Structured mesh containers used to define structured grid based geometries and results."""
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
@@ -50,14 +50,14 @@ class StructuredMesh:
         """
         self.grids[name] = grid
 
-    def get_cells_values(self, name: str, cell_ids: List[int]) -> np.ndarray:
+    def get_cells_values(self, name: str, cell_ids: List[Union[int, str]]) -> np.ndarray:
         """Returns a field values for a list of cell indexes
 
         Parameters
         ----------
         name : str
             field name
-        cell_ids : List[int]
+        cell_ids : List[Union[int, str]]
             cells indexes
 
         Returns
@@ -75,7 +75,7 @@ class StructuredMesh:
         if len(cell_ids) == 0:
             return []
 
-        xs, ys, zs = np.unravel_index(cell_ids, self.grids[name].shape)
+        xs, ys, zs = np.unravel_index(np.asarray(cell_ids, dtype=int), self.grids[name].shape)
 
         return self.grids[name][xs, ys, zs]
 

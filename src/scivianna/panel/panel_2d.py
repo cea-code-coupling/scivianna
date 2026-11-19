@@ -595,14 +595,14 @@ class Panel2D(VisualizationPanel):
         """
         self.field_change_callback = callback
 
-    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
+    def recompute_at(self, position: Tuple[float, float, float], cell_id: Union[int, str]):
         """Triggers a panel recomputation at the provided location. Called by layout update event.
 
         Parameters
         ----------
         position : Tuple[float, float, float]
             Location to provide to the slave
-        cell_id : str
+        cell_id : Union[int, str]
             cell id to provide to the slave
         """
         if not np.allclose(position, self.origin):

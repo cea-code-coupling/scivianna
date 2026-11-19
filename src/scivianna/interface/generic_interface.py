@@ -390,7 +390,7 @@ class ValueAtLocation(GenericInterface):
     def get_value(
         self,
         position: Tuple[float, float, float],
-        cell_index: str,
+        cell_index: Union[int, str],
         material_name: str,
         field: str,
         options: Dict[str, Any] = None,
@@ -401,7 +401,7 @@ class ValueAtLocation(GenericInterface):
         ----------
         position : Tuple[float, float, float]
             Position at which the value is requested
-        cell_index : str
+        cell_index : Union[int, str]
             Index of the requested cell
         material_name : str
             Name of the requested material
@@ -420,7 +420,7 @@ class ValueAtLocation(GenericInterface):
     def get_values(
         self,
         positions: List[Tuple[float, float, float]],
-        cell_indexes: List[str],
+        cell_indexes: List[Union[int, str]],
         material_names: List[str],
         field: str,
         options: Dict[str, Any] = None,
@@ -431,7 +431,7 @@ class ValueAtLocation(GenericInterface):
         ----------
         positions : List[Tuple[float, float, float]]
             List of position at which the value is requested
-        cell_indexes : List[str]
+        cell_indexes : List[Union[int, str]]
             Indexes of the requested cells
         material_names : List[str]
             Names of the requested materials
@@ -454,7 +454,7 @@ class Value1DAtLocation(GenericInterface):
     def get_1D_value(
         self,
         position: Tuple[float, float, float],
-        cell_index: str,
+        cell_index: Union[int, str],
         material_name: str,
         field: str,
         options: Dict[str, Any] = None,
@@ -465,7 +465,7 @@ class Value1DAtLocation(GenericInterface):
         ----------
         position : Tuple[float, float, float]
             Position at which the value is requested
-        cell_index : str
+        cell_index : Union[int, str]
             Index of the requested cell
         material_name : str
             Name of the requested material
@@ -487,7 +487,7 @@ class DataFrameInterface(GenericInterface):
 
     def get_dataframe(
         self,
-        cell_id: str,
+        cell_id: Union[int, str],
         origin: Tuple[float, float, float],
         options: Dict[str, Any] = None,
     ) -> pd.DataFrame:
@@ -495,7 +495,7 @@ class DataFrameInterface(GenericInterface):
 
         Parameters
         ----------
-        cell_id : str
+        cell_id : Union[int, str]
             Cell identifier
         origin : Tuple[float, float, float]
             Origin position

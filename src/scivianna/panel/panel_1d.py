@@ -1,6 +1,6 @@
 """Panel1D - 1D visualization panel for Scivianna."""
 
-from typing import Callable, Dict, List, Tuple, Type, Union
+from typing import Callable, Dict, List, Tuple, Type, Union, Optional
 
 import pandas as pd
 import panel as pn
@@ -29,7 +29,7 @@ class Panel1D(VisualizationPanel):
     """
     position: Tuple[float, float, float] = None
     """Position where request the plot"""
-    cell_id: str = None
+    cell_id: Optional[Union[int, str]] = None
     """cell ID where request the plot"""
 
     def __init__(
@@ -202,14 +202,14 @@ class Panel1D(VisualizationPanel):
         """
         return self.slave
 
-    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
+    def recompute_at(self, position: Tuple[float, float, float], cell_id: Union[int, str]):
         """Triggers a panel recomputation at the provided location. Called by layout update event.
 
         Parameters
         ----------
         position : Tuple[float, float, float]
             Location to provide to the slave
-        cell_id : str
+        cell_id : Union[int, str]
             cell id to provide to the slave
         """
         self.position = position

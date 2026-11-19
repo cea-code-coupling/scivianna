@@ -484,14 +484,14 @@ class Panel3D(VisualizationPanel):
             extension.on_range_change(self.origin, 1.0, 1.0)
             extension.on_frame_change(*self.plotter.get_uv())
 
-    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
+    def recompute_at(self, position: Tuple[float, float, float], cell_id: Union[int, str]):
         """Triggers a panel recomputation at the provided location. Called by layout update event.
 
         Parameters
         ----------
         position : Tuple[float, float, float]
             Location to provide to the slave
-        cell_id : str
+        cell_id : Union[int, str]
             cell id to provide to the slave
         """
         w = self.plotter.get_slice_normal()

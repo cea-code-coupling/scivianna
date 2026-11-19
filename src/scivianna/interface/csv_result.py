@@ -55,7 +55,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
     def get_value(
         self,
         position: Tuple[float, float, float],
-        cell_index: str,
+        cell_index: Union[int, str],
         material_name: str,
         field: str,
         options: Dict[str, Any] = None,
@@ -66,7 +66,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
         ----------
         position : Tuple[float, float, float]
             Position at which the value is requested
-        cell_index : str
+        cell_index : Union[int, str]
             Index of the requested cell
         material_name : str
             Name of the requested material (ignored for CSV interface)
@@ -92,7 +92,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
     def get_values(
         self,
         positions: List[Tuple[float, float, float]],
-        cell_indexes: List[str],
+        cell_indexes: List[Union[int, str]],
         material_names: List[str],
         field: str,
         options: Dict[str, Any] = None,
@@ -103,7 +103,7 @@ class CSVInterface(ValueAtLocation, CouplingInterface):
         ----------
         positions : List[Tuple[float, float, float]]
             List of position at which the value is requested
-        cell_indexes : List[str]
+        cell_indexes : List[Union[int, str]]
             Indexes of the requested cells
         material_names : List[str]
             Names of the requested materials (ignored for CSV interface)
