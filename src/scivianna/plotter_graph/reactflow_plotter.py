@@ -35,7 +35,7 @@ except ImportError as exc:  # pragma: no cover - import guard
     ) from exc
 
 from scivianna.logging_config import get_logger
-from scivianna.utils import render_debug, shared_models
+from scivianna.utils import shared_models
 logger = get_logger(__name__)
 
 
@@ -133,7 +133,7 @@ class ReactFlowPlotter(PlotterGraph):
         # rotation itself, so no extra node CSS is needed here. flow_kwargs are
         # display options (min_zoom, max_zoom, show_minimap, ...).
         self.graph_builder = SciviannaGraph(**flow_kwargs)
-        render_debug.enable_if_requested()
+        # Figures shared between sessions must survive the destruction of a stale session.
         shared_models.enable()
         self.canvas = self.graph_builder.canvas
 
@@ -159,10 +159,6 @@ class ReactFlowPlotter(PlotterGraph):
         for i, link in enumerate(data.links):
             model.add_edge(self._make_edge(link))
         self.graph_builder.set_model(model)
-        render_debug.log(
-            "graph plot(): new figures %s, canvas documents %s",
-            {k: p.figure.id for k, p in self.plotters.items()}, self._documents_debug(),
-        )
         if self.labels_hidden:
             # The rebuild above reset the labels: hide them again.
             for key in data.datas:
@@ -174,10 +170,7 @@ class ReactFlowPlotter(PlotterGraph):
 
         Nodes present in both the old and the new graph are updated in place
         (colors, then full frame if the geometry changed); nodes that appear
-        or disappear rebuild the whole canvas. The figures are also rebuilt when
-        they no longer belong to the document displaying the canvas (canvas shown
-        in several sessions, figures taken by another document): an in-place
-        change would not reach every browser.
+        or disappear rebuild the whole canvas.
 
         Parameters
         ----------
@@ -185,80 +178,16 @@ class ReactFlowPlotter(PlotterGraph):
             DataGraph object with updated node geometries and links
         """
         if self.graph is None:
-            render_debug.log("graph update_plot(): no current graph -> rebuild")
             self.plot(data)
             return
 
         old_keys = set(self.graph.datas.keys())
         new_keys = set(data.datas.keys())
         if old_keys != new_keys or self._links_signature(self.graph.links) != self._links_signature(data.links):
-            render_debug.log(
-                "graph update_plot(): structure changed -> rebuild. nodes removed %s, added %s, links changed: %s",
-                sorted(old_keys - new_keys), sorted(new_keys - old_keys),
-                self._links_signature(self.graph.links) != self._links_signature(data.links),
-            )
             # Structure changed: rebuild the whole canvas.
             self.plot(data)
             return
 
-        render_debug.log(
-            "graph update_plot(): figure documents %s, canvas documents %s, detached %s",
-            {k: id(p.figure.document) % 10000 if p.figure.document else None for k, p in self.plotters.items()},
-            self._documents_debug(), self._figures_detached(),
-        )
-        if self._figures_detached():
-            # The figures belong to another document than the one(s) showing the canvas
-            # (canvas served in several sessions / tabs, or figures taken by an export):
-            # in-place changes would not reach every browser, or would raise. New figures
-            # are sent to every document, so rebuild instead.
-            logger.info("Graph figures are not owned by the displayed document: rebuilding them.")
-            self.plot(data)
-            return
-
-        try:
-            self._update_in_place(data, new_keys)
-        except Exception:
-            # Part of the figures may already hold the new data: forget the current
-            # graph so that the next update rebuilds everything from scratch.
-            self.graph = None
-            raise
-
-    def _documents_debug(self) -> list:
-        """Short ids of the documents displaying the canvas (render debugging)."""
-        return [id(m.document) % 10000 if m.document else None for m, _ in list(self.canvas._models.values())]
-
-    def _figures_detached(self) -> bool:
-        """Whether in-place figure updates may not reach the browser.
-
-        ``pn.pane.Bokeh`` hands the same figure to every document showing the canvas,
-        and the last one takes it from the others. True when the canvas is shown in
-        several documents, or when a figure is owned by another document than the one
-        showing the canvas. Uses ``SciviannaGraph.views_detached`` when the installed
-        scivianna-graph provides it (>= 0.1.6), else the same check done here.
-        """
-        check = getattr(self.graph_builder, "views_detached", None)
-        if check is not None:
-            return bool(check())
-        docs = []
-        for model, _ in list(self.canvas._models.values()):
-            doc = model.document
-            if doc is not None and all(doc is not d for d in docs):
-                docs.append(doc)
-
-        def disconnected(doc) -> bool:
-            """Server session without browser connection (reloaded / closed tab)."""
-            session = getattr(getattr(doc, "session_context", None), "_session", None)
-            return getattr(session, "connection_count", None) == 0
-
-        docs = [doc for doc in docs if not disconnected(doc)] or docs
-        if not docs:
-            return False
-        if len(docs) > 1:
-            return True
-        return any(plotter.figure.document is not docs[0] for plotter in self.plotters.values())
-
-    def _update_in_place(self, data: DataGraph, new_keys: set):
-        """Updates the existing figures and nodes for a graph with the same nodes and links."""
         # The shared scale depends on every node: when one geometry changes it can
         # change the size of all the others.
         old_scale = self._scale
