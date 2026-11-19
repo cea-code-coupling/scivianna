@@ -35,6 +35,7 @@ except ImportError as exc:  # pragma: no cover - import guard
     ) from exc
 
 from scivianna.logging_config import get_logger
+from scivianna.utils import shared_models
 logger = get_logger(__name__)
 
 
@@ -132,6 +133,8 @@ class ReactFlowPlotter(PlotterGraph):
         # rotation itself, so no extra node CSS is needed here. flow_kwargs are
         # display options (min_zoom, max_zoom, show_minimap, ...).
         self.graph_builder = SciviannaGraph(**flow_kwargs)
+        # Figures shared between sessions must survive the destruction of a stale session.
+        shared_models.enable()
         self.canvas = self.graph_builder.canvas
 
     # ------------------------------------------------------------------ PlotterGraph API
@@ -145,6 +148,10 @@ class ReactFlowPlotter(PlotterGraph):
         """
         self.graph = data
         self._scale = self._graph_scale(data)
+        # New figures for every node: drop the previous ones (a node that disappeared
+        # would otherwise keep a stale plotter, still reached by callbacks and mouse info).
+        self.plotters = {}
+        self.panes = {}
         model = GraphModel()
         for key in data.datas:
             node = self._make_node(key, data)
