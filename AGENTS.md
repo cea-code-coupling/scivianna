@@ -267,7 +267,7 @@ Key methods: `recompute()`, `set_field()`, `set_colormap()`, `outline_color()`, 
 ### 6. Data Classes
 
 **Data2D** (`data/data2d.py`): Holds geometry + field values for plotting:
-- `cell_ids`: List of cell identifiers (strings)
+- `cell_ids`: List of cell identifiers (ints or strings)
 - `cell_values`: List of numeric/string values per cell
 - `polygons`: List of `PolygonElement` objects (exterior + holes with x/y coords)
 
@@ -287,7 +287,7 @@ class PolygonCoords:
 class PolygonElement:
     exterior_polygon: PolygonCoords
     holes: List[PolygonCoords]
-    cell_id: str
+    cell_id: Union[int, str]
 ```
 
 ---

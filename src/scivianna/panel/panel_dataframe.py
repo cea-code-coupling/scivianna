@@ -1,6 +1,6 @@
 """PanelDataFrame - table visualization panel for Scivianna."""
 
-from typing import Callable, Dict, List, Tuple, Type, Union
+from typing import Callable, Dict, List, Tuple, Type, Union, Optional
 
 import pandas as pd
 import panel as pn
@@ -17,7 +17,7 @@ default_extensions = [FileLoader]
 class PanelDataFrame(VisualizationPanel):
     """DataFrame visualisation panel associated to a DataFrameInterface code."""
 
-    cell_id: str = None
+    cell_id: Optional[Union[int, str]] = None
     """Cell identifier passed to get_dataframe"""
     origin: Tuple[float, float, float] = None
     """Origin position passed to get_dataframe"""
@@ -86,7 +86,7 @@ class PanelDataFrame(VisualizationPanel):
         """Stores a function to call everytime the displayed field is changed."""
         self.field_change_callback = callback
 
-    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
+    def recompute_at(self, position: Tuple[float, float, float], cell_id: Union[int, str]):
         """Not applicable for DataFrame panel."""
         self.cell_id = cell_id
         self.origin = position

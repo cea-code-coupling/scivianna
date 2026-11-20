@@ -16,7 +16,7 @@ The graph (node geometries, links and layout) is requested to a
 """
 
 import copy
-from typing import Callable, Dict, List, Optional, Tuple, Type
+from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import panel as pn
@@ -465,14 +465,14 @@ class PanelGraph(VisualizationPanel):
         for extension in self.extensions:
             extension.on_nodes_moved(moved_nodes)
 
-    def recompute_at(self, position: Tuple[float, float, float], cell_id: str):
+    def recompute_at(self, position: Tuple[float, float, float], cell_id: Union[int, str]):
         """A graph has no slice location: nothing to recompute. Kept for interface compatibility.
 
         Parameters
         ----------
         position : Tuple[float, float, float]
             Ignored
-        cell_id : str
+        cell_id : Union[int, str]
             Ignored
         """
         pass

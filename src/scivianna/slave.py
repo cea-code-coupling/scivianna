@@ -928,7 +928,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
     def get_value(
         self,
         position: Tuple[float, float, float],
-        cell_index: str,
+        cell_index: Union[int, str],
         material_name: str,
         field: str,
         options: Dict[str, Any] = None,
@@ -939,7 +939,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
         ----------
         position : Tuple[float, float, float]
             Position at which the value is requested
-        cell_index : str
+        cell_index : Union[int, str]
             Index of the requested cell
         material_name : str
             Name of the requested material
@@ -969,7 +969,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
     def get_values(
         self,
         positions: List[Tuple[float, float, float]],
-        cell_indexes: List[str],
+        cell_indexes: List[Union[int, str]],
         material_names: List[str],
         field: str,
         options: Dict[str, Any] = None,
@@ -980,7 +980,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
         ----------
         positions : List[Tuple[float, float, float]]
             List of position at which the value is requested
-        cell_indexes : List[str]
+        cell_indexes : List[Union[int, str]]
             Indexes of the requested cells
         material_names : List[str]
             Names of the requested materials
@@ -1012,7 +1012,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
     def get_1D_value(
         self,
         position: Tuple[float, float, float],
-        cell_index: str,
+        cell_index: Union[int, str],
         material_name: str,
         field: str,
         options: Dict[str, Any] = None,
@@ -1023,7 +1023,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
         ----------
         position : Tuple[float, float, float]
             Position at which the value is requested
-        cell_index : str
+        cell_index : Union[int, str]
             Index of the requested cell
         material_name : str
             Name of the requested material
@@ -1053,7 +1053,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
     #   DataFrameInterface functions
     def get_dataframe(
         self,
-        cell_id: str,
+        cell_id: Union[int, str],
         origin: Tuple[float, float, float],
         options: Dict[str, Any] = None,
     ) -> pd.DataFrame:
@@ -1061,7 +1061,7 @@ See https://docs.python.org/3/library/__main__.html for more information.
 
         Parameters
         ----------
-        cell_id : str
+        cell_id : Union[int, str]
             Cell identifier
         origin : Tuple[float, float, float]
             Origin position

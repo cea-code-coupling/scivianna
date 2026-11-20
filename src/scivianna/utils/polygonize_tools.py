@@ -124,7 +124,7 @@ class PolygonCoords:
 class PolygonElement:
     """Object containing the exterior polygon and the holes of a polygonal object"""
 
-    def __init__(self, exterior_polygon: PolygonCoords, holes: List[PolygonCoords], cell_id: str):
+    def __init__(self, exterior_polygon: PolygonCoords, holes: List[PolygonCoords], cell_id: Union[int, str]):
         """PolygonCoords object constructor.
 
         Parameters
@@ -133,7 +133,7 @@ class PolygonElement:
             Polygon that surrounds a polygonal object
         holes : List[PolygonCoords]
             List of polygonal holes in a polygon object
-        cell_id : str
+        cell_id : Union[int, str]
             cell, associated to the polygon, id
         """
         if not isinstance(exterior_polygon, PolygonCoords):
@@ -155,7 +155,7 @@ class PolygonElement:
         self.holes: List[PolygonCoords] = holes
         """ List of polygonal holes in a polygon object
         """
-        self.cell_id: str = cell_id
+        self.cell_id: Union[int, str] = cell_id
         """ Cell, associated to the polygon, id
         """
         self.compo: str = ""
