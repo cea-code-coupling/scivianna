@@ -75,3 +75,15 @@ def test_extruded_mesh(plot=False):
 
 if __name__ == "__main__":
     test_extruded_mesh(plot=True)
+
+@pytest.mark.medcoupling
+def test_extruded_mesh_respects_z_coords():
+    """The 3D mesh must span [z_coords[0], z_coords[-1]], not start at 0."""
+    square = PolygonElement(PolygonCoords([0, 1, 1, 0], [0, 0, 1, 1]), [], 0)
+    mesh = ExtrudedStructuredMesh(xy_mesh=[square], z_coords=[10.0, 12.0, 15.0])
+    mesh.build_medcoupling_geometry()
+
+    z = mesh.unstructured_mesh.getCoords().toNumPyArray()[:, 2]
+    assert z.min() == pytest.approx(10.0)
+    assert z.max() == pytest.approx(15.0)
+    assert sorted(set(np.round(z, 9))) == [10.0, 12.0, 15.0]

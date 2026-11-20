@@ -357,6 +357,12 @@ class ExtrudedStructuredMesh(Geometry2DPolygon, Geometry3D):
         mesh2d, base_cell_polygon_id = self._build_base_2d_mesh()
         mesh1d = self._build_1d_path_mesh()
 
+        # buildExtrudedMesh only translates mesh2d by each segment vector of
+        # mesh1d, starting from mesh2d's own position: it ignores where mesh1d's
+        # first node sits. Move the base mesh onto the first extrusion level so
+        # the 3D mesh spans [z_coords[0], z_coords[-1]] rather than starting at 0.
+        mesh2d.translate([float(c) for c in self.z_coords[0] * self.extrusion_vector])
+
         self.base_cell_polygon_id_dict = dict(
             zip(range(len(base_cell_polygon_id)), base_cell_polygon_id)
         )
