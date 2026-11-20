@@ -66,7 +66,8 @@ def set_colors_list(
     max_value: float = None,
     offset: int = -20,
     seed: int = 42,
-    log_scale: bool = False
+    log_scale: bool = False,
+    coloring_mode: VisualizationMode = None,
 ):
     """Sets in a Data2D the list of colors for a field per polygon.
 
@@ -75,7 +76,7 @@ def set_colors_list(
     data : Data2D
         Geometry data
     slave : ComputeSlave
-        Slave to which request values
+        Slave to which request the field coloring mode. Can be None if coloring_mode is provided.
     coloring_label : str
         Field to color
     color_map : str
@@ -94,6 +95,8 @@ def set_colors_list(
         String hasing seed for FROM_STRING display mode
     log_scale : int
         Sets colors from values logarithmic in FROM_VALUE display mode, by default False
+    coloring_mode : VisualizationMode
+        Coloring mode of the field. If None (default), requested from the slave.
 
     Raises
     ------
@@ -103,7 +106,8 @@ def set_colors_list(
     if profile_time:
         start_time = time.time()
 
-    coloring_mode = slave.get_label_coloring_mode(coloring_label)
+    if coloring_mode is None:
+        coloring_mode = slave.get_label_coloring_mode(coloring_label)
 
     cell_values = data.cell_values
 

@@ -29,21 +29,20 @@ def get_data(
     origin: Tuple[float, float, float] = None,
     size_u: float = 1.0,
     size_v: float = 1.0,
-    color_map: str = "BuRd",
     options={},
-    custom_colors: Dict[str, Dict[str, str]] = {},
     caller: str = "MatplotlibAPI",
-    color_seed: int = randint(0, 1000),
-    log_scale: bool = False,
 ) -> Data2D:
-    """Computes a 2D slice of a geometry and colors its cells according to a field
+    """Computes a 2D slice of a geometry with the values of a field per cell.
+
+    The returned data is not colored: its cell values can be modified (normalized, rescaled...)
+    before being given to plot_data or plot_data_in_axes, which compute the colors.
 
     Parameters
     ----------
     slave : Union[ComputeSlave, Geometry2D]
         Slave from which get the geometry polygons or Geometry2D interface object
     coloring_label : str
-        Field used to color the cells
+        Field whose values are set in the cells
     u : Tuple[float, float, float], optional
         Horizontal coordinate director vector, by default X
     v : Tuple[float, float, float], optional
@@ -54,27 +53,15 @@ def get_data(
         Size of the slice along the u axis, by default 1.
     size_v : float, optional
         Size of the slice along the v axis, by default 1.
-    color_map : str, optional
-        Colormap used to color the polygons, by default "BuRd"
     options : dict, optional
-        Extra coloring options, by default {}
-    custom_colors : Dict[str, Dict[str, str]], optional
-        HTML color code per field value. Expects a dictionnary such as:
-        {
-            MATERIAL:{"iron" : #ffffff, "water" : #aa6868ff}
-        }
-        where MATERIAL is a displayed field name, and iron/water are its values. This parameter is only used for string based field.
+        Extra options given to the interface, by default {}
     caller : str, optional
         Name of the caller, by default "MatplotlibAPI"
-    color_seed : int
-        Seed used to randomize the colors in FROM_STRING display mode. By default randomized from 0 to 1000.
-    log_scale : bool
-        Use logarithmic scale. By default False.
 
     Returns
     ----------
         Data2D
-            Sliced geometry, with cell values and colors set
+            Sliced geometry, with the field values set in data.cell_values
     """
     # If origin is None, default to (0, 0, 0)
     if origin is None:
@@ -92,54 +79,77 @@ def get_data(
         caller=caller,
     )
 
-    set_colors_list(
-        data=data,
-        slave=slave,
-        coloring_label=coloring_label,
-        color_map=color_map,
-        center_colormap_on_zero=False,
-        options=options,
-        seed=color_seed,
-        log_scale=log_scale,
-    )
-
-    pw = PolygonSorter()
-    pw.sort_from_value(data)
-
-    # Replacing provided colors
-    if (
-        coloring_label in custom_colors
-        and slave.get_label_coloring_mode(coloring_label) == VisualizationMode.FROM_STRING
-    ):
-        compo_list = data.cell_values
-        cell_color_list = data.cell_colors
-
-        compos = np.unique(compo_list)
-
-        for compo in compos:
-            if compo in custom_colors[coloring_label]:
-                color_array = np.array(
-                    [[int(c * 255) for c in to_rgb(custom_colors[coloring_label][compo])] + [255]]
-                    * len(compo_list)
-                )
-                compo_array = np.repeat(np.expand_dims(compo_list, axis=1), 4, axis=1)
-                cell_color_list = np.where(compo_array == compo, color_array, cell_color_list)
-
-        data.cell_values = compo_list
-        data.cell_colors = cell_color_list
-        data.cell_edge_colors = get_edges_colors(cell_color_list)
-
     return data
 
 
 def _guess_coloring_mode(data: Data2D) -> VisualizationMode:
     """Guesses the coloring mode of a Data2D from its cell values: numeric
-    values are displayed with a colorbar, other values with a legend."""
+    values are colored from a colormap, other values get one color per value."""
     try:
         np.array(data.cell_values).astype(float)
         return VisualizationMode.FROM_VALUE
     except (TypeError, ValueError):
         return VisualizationMode.FROM_STRING
+
+
+def color_data(
+    data: Data2D,
+    color_map: str = "BuRd",
+    custom_colors: Optional[Dict[str, str]] = None,
+    color_seed: int = randint(0, 1000),
+    log_scale: bool = False,
+    coloring_mode: Optional[VisualizationMode] = None,
+):
+    """Sets the cell colors of a Data2D from its cell values, and sorts its cells per value.
+
+    Parameters
+    ----------
+    data : Data2D
+        Geometry data, modified in place
+    color_map : str, optional
+        Colormap used to color the polygons, by default "BuRd"
+    custom_colors : Optional[Dict[str, str]], optional
+        HTML color code per cell value, such as {"iron" : "#ffffff", "water" : "#aa6868ff"}. Only used for string based values.
+    color_seed : int
+        Seed used to randomize the colors in FROM_STRING display mode. By default randomized from 0 to 1000.
+    log_scale : bool
+        Use logarithmic scale. By default False.
+    coloring_mode : Optional[VisualizationMode]
+        Coloring mode of the values. By default guessed from the cell values (numeric: FROM_VALUE, otherwise FROM_STRING).
+    """
+    if coloring_mode is None:
+        coloring_mode = _guess_coloring_mode(data)
+
+    set_colors_list(
+        data=data,
+        slave=None,
+        coloring_label=None,
+        color_map=color_map,
+        center_colormap_on_zero=False,
+        options={},
+        seed=color_seed,
+        log_scale=log_scale,
+        coloring_mode=coloring_mode,
+    )
+
+    PolygonSorter().sort_from_value(data)
+
+    # Replacing provided colors
+    if custom_colors and coloring_mode == VisualizationMode.FROM_STRING:
+        compo_list = data.cell_values
+        cell_color_list = data.cell_colors
+
+        for compo in np.unique(compo_list):
+            if compo in custom_colors:
+                color_array = np.array(
+                    [[int(c * 255) for c in to_rgb(custom_colors[compo])] + [255]]
+                    * len(compo_list)
+                )
+                compo_array = np.repeat(np.expand_dims(compo_list, axis=1), 4, axis=1)
+                cell_color_list = np.where(compo_array == compo, color_array, cell_color_list)
+
+        data.cell_colors = cell_color_list
+        data.cell_edge_colors = get_edges_colors(cell_color_list)
 
 
 def plot_data_in_axes(
@@ -149,41 +159,61 @@ def plot_data_in_axes(
     display_colorbar: bool = False,
     edge_width: float = 1.0,
     plot_options={},
+    custom_colors: Optional[Dict[str, str]] = None,
     rename_values: Optional[Dict[str, str]] = None,
     legend_options: Dict[str, Any] = {},
     polygonize: bool = True,
+    color_seed: int = randint(0, 1000),
     log_scale: bool = False,
     coloring_mode: Optional[VisualizationMode] = None,
 ):
-    """Plots an already computed and colored Data2D (see get_data) in a matplotlib axes
+    """Colors a Data2D from its cell values (see get_data) and plots it in a matplotlib axes.
+
+    The colors are computed from data.cell_values at plot time, so the values can be
+    modified (normalized, rescaled...) between get_data and this call.
 
     Parameters
     ----------
     data : Data2D
-        Geometry data, with cell values and colors set
+        Geometry data with cell values set. Its colors are set and its cells sorted in place.
     axes : matplotlib.axes.Axes
         matplotlib axis object (obtainable from a plt.subplot call)
     color_map : str, optional
-        Colormap displayed in the colorbar, by default "BuRd". Should match the one used to color the data.
+        Colormap used to color the polygons, by default "BuRd"
     display_colorbar : bool, optional
         Display the colorbar (FROM_VALUE) or legend (FROM_STRING), by default False
     edge_width : float, optional
         Cells edge width, by default 1.
     plot_options : dict, optional
         Extra plot options given to geopandas, by default {}
+    custom_colors : Optional[Dict[str, str]], optional
+        HTML color code per cell value, such as {"iron" : "#ffffff", "water" : "#aa6868ff"}. Only used for string based values.
     rename_values : Optional[Dict[str, str]], optional
         Renames the values present in the data for the legend, such as {"iron" : "Iron", "water" : "Water"}.
-        If provided, only the values present in this dictionnary are added to the legend. Only used for string based field.
+        If provided, only the values present in this dictionnary are added to the legend. Only used for string based values.
     legend_options : Dict[str, Any]
         Dictionnary of options provided when creating the legend
     polygonize : bool
         Plot the geometry as polygons
+    color_seed : int
+        Seed used to randomize the colors in FROM_STRING display mode. By default randomized from 0 to 1000.
     log_scale : bool
         Use logarithmic scale. By default False.
     coloring_mode : Optional[VisualizationMode]
-        Coloring mode of the displayed field, used for the colorbar/legend.
-        By default guessed from the cell values (numeric: FROM_VALUE, otherwise FROM_STRING).
+        Coloring mode of the values. By default guessed from the cell values (numeric: FROM_VALUE, otherwise FROM_STRING).
     """
+    if coloring_mode is None:
+        coloring_mode = _guess_coloring_mode(data)
+
+    color_data(
+        data,
+        color_map=color_map,
+        custom_colors=custom_colors,
+        color_seed=color_seed,
+        log_scale=log_scale,
+        coloring_mode=coloring_mode,
+    )
+
     if polygonize:
         plotter = Matplotlib2DPolygonPlotter()
     else:
@@ -191,9 +221,6 @@ def plot_data_in_axes(
     plotter.line_width = edge_width
 
     if display_colorbar:
-        if coloring_mode is None:
-            coloring_mode = _guess_coloring_mode(data)
-
         compo_list = data.cell_values
         cell_color_list = data.cell_colors
 
@@ -247,13 +274,15 @@ def plot_data(
     display_colorbar: bool = False,
     edge_width: float = 1.0,
     plot_options={},
+    custom_colors: Optional[Dict[str, str]] = None,
     rename_values: Optional[Dict[str, str]] = None,
     legend_options: Dict[str, Any] = {},
     polygonize: bool = True,
+    color_seed: int = randint(0, 1000),
     log_scale: bool = False,
     coloring_mode: Optional[VisualizationMode] = None,
 ) -> Tuple[plt.Figure, matplotlib.axes.Axes]:
-    """Creates a figure and plots an already computed and colored Data2D (see get_data) in it
+    """Creates a figure, colors a Data2D from its cell values (see get_data) and plots it.
 
     Parameters
     ----------
@@ -274,9 +303,11 @@ def plot_data(
         display_colorbar=display_colorbar,
         edge_width=edge_width,
         plot_options=plot_options,
+        custom_colors=custom_colors,
         rename_values=rename_values,
         legend_options=legend_options,
         polygonize=polygonize,
+        color_seed=color_seed,
         log_scale=log_scale,
         coloring_mode=coloring_mode,
     )
@@ -371,12 +402,8 @@ def plot_frame_in_axes(
         origin=origin,
         size_u=size_u,
         size_v=size_v,
-        color_map=color_map,
         options=options,
-        custom_colors=custom_colors,
         caller=caller,
-        color_seed=color_seed,
-        log_scale=log_scale,
     )
 
     plot_data_in_axes(
@@ -386,11 +413,13 @@ def plot_frame_in_axes(
         display_colorbar=display_colorbar,
         edge_width=edge_width,
         plot_options=plot_options,
-        rename_values=rename_values.get(coloring_label) if coloring_label in rename_values else None,
+        custom_colors=custom_colors.get(coloring_label),
+        rename_values=rename_values.get(coloring_label),
         legend_options=legend_options,
         polygonize=polygonize,
+        color_seed=color_seed,
         log_scale=log_scale,
-        coloring_mode=slave.get_label_coloring_mode(coloring_label) if display_colorbar else None,
+        coloring_mode=slave.get_label_coloring_mode(coloring_label),
     )
 
 
